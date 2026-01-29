@@ -173,174 +173,178 @@ export function CreateSiteConfigModal({
         <Form {...form}>
           <form
             className="space-y-4"
-            onSubmit={form.handleSubmit(onSubmit)}
             id="site-config-form"
+            onSubmit={form.handleSubmit(onSubmit)}
           >
-            <FormField
-              control={form.control}
-              name="siteId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>所属站点 （必填）</FormLabel>
-                  <FormControl>
-                    <SiteSelect
-                      disabled={isEdit}
-                      onChange={field.onChange}
-                      placeholder="请选择站点"
-                      value={field.value}
-                    />
-                  </FormControl>
-                  <FormDescription>选择此配置项所属的站点</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* --- 增加滚动区域容器 --- */}
+            <div className="max-h-[60vh] overflow-y-auto px-1 py-2">
+              <div className="space-y-4">
+                {" "}
+                {/* 内部间距保持一致 */}
+                <FormField
+                  control={form.control}
+                  name="siteId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>所属站点 （必填）</FormLabel>
+                      <FormControl>
+                        <SiteSelect
+                          disabled={isEdit}
+                          onChange={field.onChange}
+                          placeholder="请选择站点"
+                          value={field.value}
+                        />
+                      </FormControl>
+                      <FormDescription>选择此配置项所属的站点</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="key"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>配置类型 （必填）</FormLabel>
+                      <Select
+                        disabled={isEdit}
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="请选择配置类型" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SITE_CONFIG_KEY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>选择配置项的类型</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>配置内容 （必填）</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="min-h-[80px]"
+                          placeholder="请输入配置内容"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        你所需要修改的内容，支持文本、链接等多种格式
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>配置说明（选填）</FormLabel>
+                      <FormControl>
+                        <Input placeholder="配置项的说明" {...field} />
+                      </FormControl>
+                      <FormDescription>简要描述此配置项的用途</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>所属公司分类 （必填）</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="请选择工厂/公司分类" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SITE_CATEGORY_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        选择配置项所属的工厂/公司分类
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>url</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com" {...field} />
+                      </FormControl>
+                      <FormDescription>可选的关联链接地址</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-4">
+                  <FormField
+                    control={form.control}
+                    name="translatable"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>可翻译</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>是否支持多语言翻译</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <FormField
-              control={form.control}
-              name="key"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>配置类型 （必填）</FormLabel>
-                  <Select
-                    disabled={isEdit}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="请选择配置类型" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {SITE_CONFIG_KEY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>选择配置项的类型</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="value"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>配置内容 （必填）</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      className="min-h-[80px]"
-                      placeholder="请输入配置内容"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    你所需要修改的内容，支持文本、链接等多种格式
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>配置说明（选填）</FormLabel>
-                  <FormControl>
-                    <Input placeholder="配置项的说明" {...field} />
-                  </FormControl>
-                  <FormDescription>简要描述此配置项的用途</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>所属公司分类 （必填）</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="请选择工厂/公司分类" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {SITE_CATEGORY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    选择配置项所属的工厂/公司分类
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>url</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com" {...field} />
-                  </FormControl>
-                  <FormDescription>可选的关联链接地址</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-4">
-              <FormField
-                control={form.control}
-                name="translatable"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>可翻译</FormLabel>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormDescription>是否支持多语言翻译</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="visible"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>前端可见</FormLabel>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormDescription>是否在前端展示</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="visible"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>前端可见</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormDescription>是否在前端展示</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             </div>
           </form>
         </Form>
@@ -354,11 +358,7 @@ export function CreateSiteConfigModal({
           >
             取消
           </Button>
-          <Button
-            disabled={isLoading}
-            form="site-config-form"
-            type="submit"
-          >
+          <Button disabled={isLoading} form="site-config-form" type="submit">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
