@@ -650,25 +650,31 @@ export class InquiryService {
 
       // 6. 发送邮件
       console.log("[20] 开始发送邮件...");
+
+      // 构建附件列表（只在 Excel 生成成功时添加）
+      const attachments = excelBuffer
+        ? [
+            {
+              filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
+              content: excelBuffer,
+              contentType:
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            },
+          ]
+        : [];
+
       const emailPayload = {
         to: targetRep.user.email,
         template: {
           ...emailTemplate,
-          attachments: [
-            {
-              filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
-              content: excelBuffer || Buffer.from(""),
-              contentType:
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            },
-          ],
+          attachments,
         },
       };
       console.log("[21] 邮件载荷:", {
         to: emailPayload.to,
         subject: emailPayload.template.subject,
-        hasAttachments: !!emailPayload.template.attachments,
-        attachmentSize: emailPayload.template.attachments[0].content?.length,
+        hasAttachments: attachments.length > 0,
+        attachmentSize: attachments[0]?.content?.length || 0,
       });
 
       await sendEmail(emailPayload);

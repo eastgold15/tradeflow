@@ -5,7 +5,6 @@
  * --------------------------------------------------------
  */
 import type { Elysia } from "elysia";
-
 import { adController } from "./ad.controller";
 import { customerController } from "./customer.controller";
 import { dailyInquiryCounterController } from "./daily-inquiry-counter.controller";
@@ -15,26 +14,24 @@ import { inquiryController } from "./inquiry.controller";
 import { masterCategoryController } from "./master-category.controller";
 import { mediaController } from "./media.controller";
 import { permissionController } from "./permission.controller";
-
 import {
   productVariantController,
   productVariantMediaController,
 } from "./product-variant-media.controller";
 import { quotationController } from "./quotation.controller";
 import { roleController } from "./role.controller";
-import { siteController } from "./site.controller";
 import { siteCategoryController } from "./site-category.controller";
 import { siteConfigController } from "./site-config.controller";
 import { siteProductController } from "./site-product.controller";
+import { siteController } from "./site.controller";
 import { skuController } from "./sku.controller";
 import { statisticsController } from "./statistics.controller";
 import { templateController } from "./template.controller";
-
 import { tenantController } from "./tenant.controller";
 import { userController } from "./user.controller";
-
 export const appRouter = (app: Elysia) =>
   app
+
     .use(adController)
     .use(customerController)
     .use(dailyInquiryCounterController)

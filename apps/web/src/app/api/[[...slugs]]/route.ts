@@ -13,9 +13,11 @@ process.on("unhandledRejection", (reason, promise) => {
 process.on("uncaughtException", (error) => {
   console.error("❌ 未捕获的异常:", error);
 });
+
 /**
  * 使用 server.ts 中定义的服务器实例
  * 设置 /api 前缀以匹配路由路径
+ * 注意：启动检查已在 instrumentation.ts 中执行
  */
 const app = new Elysia({ name: "app", prefix: "/api" })
   .use(dbPlugin)

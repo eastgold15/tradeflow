@@ -7,11 +7,13 @@ import { appRouter } from "./controllers/app-router";
 import { dbPlugin } from "./db/connection";
 import { auth } from "./lib/auth";
 import { envConfig } from "./lib/env";
+import { startupCheckPlugin } from "./lib/startup/startup-check";
 import { authGuardMid } from "./middleware/auth";
 import { loggerPlugin } from "./middleware/logger";
 import { errorSuite } from "./utils/err/errorSuite.plugin";
 
 const api = new Elysia({ name: "api", prefix: "/api" })
+
   .use(
     openapi({
       documentation: {
@@ -37,6 +39,7 @@ const api = new Elysia({ name: "api", prefix: "/api" })
   .group("/v1", (app) => app.use(authGuardMid).use(appRouter));
 
 export const server = new Elysia({ name: "server" })
+  .use(startupCheckPlugin) // 🔥 在应用启动时执行验证
   .use(
     cors({
       origin: [...envConfig.TRUSTED_ORIGINS.split(",")],
@@ -48,12 +51,7 @@ export const server = new Elysia({ name: "server" })
   // 2. 核心错误处理插件 (拦截所有错误，进行转换和手动日志记录)
   .use(errorSuite)
   .use(localeMiddleware) // 在全局级别添加语言中间件
-
   .use(dbPlugin)
-
-  // .all("/api/auth/*", (ctx) => auth.handler(ctx.request))
-  // .mount("/", auth.handler) // 使用 Better Auth 认证中间件
-
   .all("/api/auth/*", (ctx) => {
     console.log("Auth Request URL:", ctx.request.url); // 观察远程输出的 URL 是否包含 /api/auth
     return auth.handler(ctx.request);
