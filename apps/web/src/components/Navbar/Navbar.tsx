@@ -87,7 +87,7 @@ const Navbar = () => {
       <div className="max-w-full px-4 md:px-8 lg:px-12">
         <div className="flex h-full items-center justify-between md:h-full">
           {/* ... Left Section (Menu Toggle / Lang) ... */}
-          <div className="flex w-1/4 items-center">
+          <div className="flex w-1/5 items-center">
             <button
               className="mr-4 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -108,20 +108,25 @@ const Navbar = () => {
             </Link> */}
           </div>
 
-          {/* ... Center Logo ... */}
-          <div className="flex w-1/2 justify-center">
+          <div className="flex w-3/5 justify-center overflow-hidden">
             <Link
-              className="pt-2 font-serif text-4xl tracking-widest md:text-5xl"
+              className="flex w-full items-center justify-center pt-2 font-serif tracking-widest"
               href="/"
             >
-              <span className="animate-spin" key={site_name?.[0]?.value}>
+              <span
+                className="whitespace-nowrap text-4xl md:text-5xl"
+                key={site_name?.[0]?.value}
+                style={{
+                  fontSize: "clamp(1rem, 10vw, 3rem)", // 根据屏幕宽度自动缩放字号
+                }}
+              >
                 {site_name?.[0]?.value || "Welcome"}
               </span>
             </Link>
           </div>
 
           {/* ... Right Icons ... */}
-          <div className="flex w-1/4 items-center justify-end space-x-4">
+          <div className="flex w-1/5 items-center justify-end space-x-4">
             <SearchDropdown />
 
             {/* 导航图标：使用配置数据映射 */}
