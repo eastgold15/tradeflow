@@ -20,10 +20,10 @@ import {
 } from "./product-variant-media.controller";
 import { quotationController } from "./quotation.controller";
 import { roleController } from "./role.controller";
+import { siteController } from "./site.controller";
 import { siteCategoryController } from "./site-category.controller";
 import { siteConfigController } from "./site-config.controller";
 import { siteProductController } from "./site-product.controller";
-import { siteController } from "./site.controller";
 import { skuController } from "./sku.controller";
 import { statisticsController } from "./statistics.controller";
 import { templateController } from "./template.controller";
