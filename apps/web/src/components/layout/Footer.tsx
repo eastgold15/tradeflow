@@ -287,13 +287,15 @@ const Footer: React.FC = () => {
             </span>
 
             {site_erweima?.[0]?.value ? (
-              <Image
-                alt="WhatsApp QR Code"
-                className="h-16 w-16"
-                height={64}
-                src={site_erweima?.[0]?.value}
-                width={64}
-              />
+              <div className="relative inline-block">
+                <Image
+                  alt="WhatsApp QR Code"
+                  className="h-16 w-16 transition-all duration-300 ease-out hover:scale-200 hover:z-50 hover:shadow-2xl rounded cursor-pointer"
+                  height={256}
+                  src={site_erweima?.[0]?.value}
+                  width={256}
+                />
+              </div>
             ) : null}
 
             <span>{site_email?.[0]?.value}</span>
