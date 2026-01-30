@@ -3,7 +3,7 @@
 import { performStartupCheck } from "~/lib/startup/startup-check";
 
 export async function register() {
-  console.log("--- NEXT.JS RUNTIME STARTING ---");
+  console.log("--- NEXT.JS RUNTIME STARTING 打印环境变量 ---");
   console.log("PORT:", process.env.PORT);
   console.log("APP_HOST:", process.env.APP_HOST);
   console.log("APP_URL:", process.env.APP_URL);

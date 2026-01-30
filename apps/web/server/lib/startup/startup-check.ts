@@ -10,7 +10,7 @@
 import { db } from "~/db/connection";
 import { verifyEmailConnection } from "~/lib/email/email";
 
-let checkPerformed = false;
+const checkPerformed = false;
 
 /**
  * 数据库连接验证
@@ -169,27 +169,28 @@ async function validateEmailConfig(): Promise<void> {
  *
  * @returns {Promise<boolean>} 数据库连接是否成功
  */
-export async function performStartupCheck(): Promise<boolean> {
-  // 使用单例模式，确保只执行一次
-  if (checkPerformed) {
-    return true;
+let checkPromise: Promise<boolean> | null = null;
+
+export function performStartupCheck(): Promise<boolean> {
+  // 使用 promise 缓存，确保只执行一次且等待完成
+  if (checkPromise) {
+    return checkPromise;
   }
-  checkPerformed = true;
 
   console.log("\n🚀 启动系统检查...\n");
 
-  // 并行执行数据库和邮件验证
-  const [dbOk] = await Promise.all([
-    validateDatabaseConnection(),
-    validateEmailConfig().catch(() => {
-      // 邮件验证失败不阻止应用启动
-      return undefined;
-    }),
-  ]);
+  checkPromise = (async () => {
+    const [dbOk] = await Promise.all([
+      validateDatabaseConnection(),
+      validateEmailConfig().catch(() => {
+        return undefined;
+      }),
+    ]);
+    console.log("✅ 启动检查完成\n");
+    return dbOk ?? false;
+  })();
 
-  console.log("✅ 启动检查完成\n");
-
-  return dbOk ?? false;
+  return checkPromise;
 }
 
 /**

@@ -108,20 +108,12 @@ const Navbar = () => {
             </Link> */}
           </div>
 
-          <div className="flex w-3/5 justify-center overflow-hidden">
+          <div className="w-3/5 justify-center">
             <Link
-              className="flex w-full items-center justify-center pt-2 font-serif tracking-widest"
+              className="grid w-full origin-center place-items-center whitespace-nowrap pt-2 text-center font-serif text-base md:text-4xl"
               href="/"
             >
-              <span
-                className="whitespace-nowrap text-4xl md:text-5xl"
-                key={site_name?.[0]?.value}
-                style={{
-                  fontSize: "clamp(1rem, 10vw, 3rem)", // 根据屏幕宽度自动缩放字号
-                }}
-              >
-                {site_name?.[0]?.value || "Welcome"}
-              </span>
+              {site_name?.[0]?.value || "Welcome"}
             </Link>
           </div>
 
@@ -155,6 +147,7 @@ const Navbar = () => {
           {/* 直接复用 MobileMenu 组件 */}
           <MobileMenu
             categories={categories}
+            className="text-base"
             onClose={() => setIsMobileMenuOpen(false)}
           />
 

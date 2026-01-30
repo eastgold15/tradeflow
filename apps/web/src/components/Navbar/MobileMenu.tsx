@@ -1,12 +1,14 @@
 "use client";
+import { ComponentProps } from "react";
+import { twMerge } from "tailwind-merge";
 import type { CategoryWithChildren } from "./DesktopMenu";
 import { useNavAction } from "./hook/useNavAction";
 import { NAV_STYLES, NavLink } from "./NavParts";
 
-interface MobileMenuProps {
+type MobileMenuProps = ComponentProps<"div"> & {
   categories: CategoryWithChildren[];
   onClose: () => void;
-}
+};
 
 // 判断是否为外部链接
 const isExternalUrl = (url: string) => {
@@ -76,8 +78,12 @@ const MobileCategoryItem = ({
   );
 };
 
-export const MobileMenu = ({ categories, onClose }: MobileMenuProps) => (
-  <div className="flex flex-col">
+export const MobileMenu = ({
+  categories,
+  onClose,
+  ...props
+}: MobileMenuProps) => (
+  <div className={twMerge("flex flex-col", props.className)}>
     {categories.map((cat) => (
       <MobileCategoryItem category={cat} key={cat.id} onClose={onClose} />
     ))}
