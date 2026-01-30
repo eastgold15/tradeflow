@@ -1,6 +1,6 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import { type MediaContract, mediaTable } from "@repo/contract";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { envConfig } from "~/lib/env";
 import { BunS3StorageImpl } from "~/lib/media/storage/impl/BunS3StorageImpl";
 import { getMediaUrl } from "~/lib/media-url";
@@ -71,10 +71,10 @@ export class MediaService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-            tenantId: ctx.user.context.tenantId!,
-            createdBy: ctx.user.id,
-            deptId: ctx.currentDeptId,
-          }
+          tenantId: ctx.user.context.tenantId!,
+          createdBy: ctx.user.id,
+          deptId: ctx.currentDeptId,
+        }
         : {}),
     };
     const [res] = await ctx.db
@@ -92,10 +92,10 @@ export class MediaService {
         deptId: ctx.currentDeptId,
         ...(ids
           ? {
-              id: {
-                in: ids,
-              },
-            }
+            id: {
+              in: ids,
+            },
+          }
           : {}),
         ...(category ? { category } : {}),
         ...(search ? { originalName: { ilike: `%${search}%` } } : {}),

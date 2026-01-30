@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import { dailyInquiryCounterTable } from "@repo/contract";
 import { eq, sql } from "drizzle-orm";
 
@@ -36,7 +37,7 @@ export async function generateInquiryNumber(): Promise<string> {
     .where(eq(dailyInquiryCounterTable.date, dateKey));
 
   if (!row) {
-    throw new Error("Failed to generate inquiry number");
+    throw new HttpError.BadGateway("Failed to generate inquiry number");
   }
 
   const seq = String(row.count).padStart(3, "0"); // 001, 002, ..., 999

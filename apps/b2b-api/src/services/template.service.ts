@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   productVariantMediaTable,
   type TemplateContract,
@@ -6,7 +7,6 @@ import {
   templateValueTable,
 } from "@repo/contract";
 import { asc, eq, inArray, like } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import type { Transaction } from "~/db/connection";
 import { type ServiceContext } from "../lib/type";
 

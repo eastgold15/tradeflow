@@ -1,4 +1,4 @@
-import { HttpError } from "elysia-http-problem-json";
+import { HttpError } from "@pori15/elysia-unified-error";
 
 // storage/Storage.ts
 export abstract class Storage {

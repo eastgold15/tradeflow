@@ -43,7 +43,7 @@ server/
 
 ```typescript
 // 在控制器中抛出业务错误
-import { HttpError } from "elysia-http-problem-json";
+import {  HttpError  } from "@pori15/elysia-unified-error";
 
 app.get("/users/:id", async ({ params }) => {
   const user = await getUserById(params.id);

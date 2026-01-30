@@ -1,4 +1,6 @@
 // storage/impl/BunS3StorageImpl.ts
+
+import { HttpError } from "@pori15/elysia-unified-error";
 import { S3Client } from "bun"; // 必须使用 Bun 原生 S3
 import { type S3Config, Storage, type UploadResponse } from "../Storage";
 
@@ -77,8 +79,7 @@ export class BunS3StorageImpl extends Storage {
         mimeType: type,
       };
     } catch (error) {
-      console.error("Bun S3 Write Error:", error);
-      throw error;
+      throw new HttpError.BadGateway("Bun S3 Write Error");
     }
   }
 

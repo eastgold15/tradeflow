@@ -1,4 +1,5 @@
 import { randomBytes, scryptSync } from "node:crypto";
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   type DepartmentContract,
   departmentTable,
@@ -8,7 +9,6 @@ import {
   userTable,
 } from "@repo/contract";
 import { eq, inArray } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { auth } from "~/lib/auth";
 import { type ServiceContext } from "../lib/type";
 
@@ -31,10 +31,10 @@ export class DepartmentService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-            tenantId: ctx.user.context.tenantId!,
-            createdBy: ctx.user.id,
-            deptId: ctx.currentDeptId,
-          }
+          tenantId: ctx.user.context.tenantId!,
+          createdBy: ctx.user.id,
+          deptId: ctx.currentDeptId,
+        }
         : {}),
     };
     const [res] = await ctx.db
@@ -67,7 +67,7 @@ export class DepartmentService {
         },
       });
       if (!dept) {
-        throw new Error("不存在");
+        throw new HttpError.NotFound("不存在");
       }
       const allRelatedIds = [
         currentDeptId, // 包含自己
@@ -114,10 +114,10 @@ export class DepartmentService {
       const manager =
         managers.length > 0
           ? managers.sort(
-              (a, b) =>
-                new Date(b.updatedAt).getTime() -
-                new Date(a.updatedAt).getTime()
-            )[0]
+            (a, b) =>
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime()
+          )[0]
           : null;
 
       const { users, ...deptWithoutUsers } = dept;
@@ -125,11 +125,11 @@ export class DepartmentService {
         ...deptWithoutUsers,
         manager: manager
           ? {
-              id: manager.id,
-              name: manager.name,
-              email: manager.email,
-              phone: manager.phone,
-            }
+            id: manager.id,
+            name: manager.name,
+            email: manager.email,
+            phone: manager.phone,
+          }
           : null,
       };
     });
@@ -245,9 +245,9 @@ export class DepartmentService {
     const manager =
       managers.length > 0
         ? managers.sort(
-            (a, b) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          )[0]
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        )[0]
         : null;
 
     console.log("找到的管理员:", JSON.stringify(manager, null, 2));
@@ -256,11 +256,11 @@ export class DepartmentService {
       ...department,
       manager: manager
         ? {
-            id: manager.id,
-            name: manager.name,
-            email: manager.email,
-            phone: manager.phone,
-          }
+          id: manager.id,
+          name: manager.name,
+          email: manager.email,
+          phone: manager.phone,
+        }
         : null,
     };
 

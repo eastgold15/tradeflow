@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   mediaTable,
   productMasterCategoryTable,
@@ -28,7 +29,6 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import type { Transaction } from "~/db/connection";
 import { SiteSWithManageAble } from "~/db/utils";
 import { type ServiceContext } from "../lib/type";
@@ -1205,13 +1205,10 @@ export class SiteProductService {
    * @param ids 站点商品 ID 列表 (site_product.id)
    */
   public async batchDelete(ids: string[], ctx: ServiceContext) {
-    const siteId = ctx.user.context.site?.id;
+    const siteId = ctx.user.context.site.id;
     const siteType = ctx.user.context.site?.siteType || "group";
 
-    if (!siteId) {
-      throw new HttpError.BadRequest("当前部门未绑定站点");
-    }
-    if (!ids || ids.length === 0) return { count: 0 };
+    if (ids.length === 0) return { count: 0 };
 
     return await ctx.db.transaction(async (tx) => {
       // =========================================================
@@ -1238,6 +1235,7 @@ export class SiteProductService {
             "未找到对应的商品，请检查商品ID是否正确"
           );
         }
+
 
         const physicalProductIds = siteProducts.map((sp) => sp.productId);
 

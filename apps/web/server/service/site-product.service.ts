@@ -5,6 +5,7 @@
  * 🛡️ 自动化脚本永远不会覆盖此文件。
  * --------------------------------------------------------
  */
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   mediaTable,
   type ProductContract,
@@ -204,7 +205,7 @@ export class SiteProductService {
   //     },
   //   });
 
-  //   if (!result) throw new Error("商品不存在");
+  //   if (!result) throw new HttpError.NotFound("商品不存在");
 
   //   // --- 开始清洗数据 ---
   //   // --- 开始清洗数据 ---
@@ -307,7 +308,7 @@ export class SiteProductService {
       },
     });
 
-    if (!result) throw new Error("商品不存在");
+    if (!result) throw new HttpError.NotFound("商品不存在");
 
     // 🔥 识别颜色属性
     const identifyColorAttribute = async () => {

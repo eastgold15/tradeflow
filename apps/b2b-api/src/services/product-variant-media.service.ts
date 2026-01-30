@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   mediaTable,
   ProductVariantContract,
@@ -11,7 +12,6 @@ import {
   templateValueTable,
 } from "@repo/contract";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import type { ServiceContext } from "~/lib/type";
 
 export class ProductVariantMediaService {

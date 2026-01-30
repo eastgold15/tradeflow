@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   type HeroCardContract,
   heroCardTable,
@@ -15,7 +16,6 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { type ServiceContext } from "../lib/type";
 
 export class HeroCardService {
@@ -120,11 +120,11 @@ export class HeroCardService {
         tenantId: ctx.user.context.tenantId!,
         ...(search
           ? {
-              OR: [
-                { title: { ilike: `%${search}%` } },
-                { description: { ilike: `%${search}%` } },
-              ],
-            }
+            OR: [
+              { title: { ilike: `%${search}%` } },
+              { description: { ilike: `%${search}%` } },
+            ],
+          }
           : {}),
       },
       with: {

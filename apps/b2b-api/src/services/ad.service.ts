@@ -1,6 +1,6 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import { type AdContract, adTable } from "@repo/contract";
 import { and, eq, inArray } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { type ServiceContext } from "../lib/type";
 
 export class AdService {

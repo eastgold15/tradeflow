@@ -10,7 +10,7 @@ import { envConfig } from "./lib/env";
 import { startupCheckPlugin } from "./lib/startup/startup-check";
 import { authGuardMid } from "./middleware/auth";
 import { loggerPlugin } from "./middleware/logger";
-import { errorSuite } from "./utils/err/errorSuite.plugin";
+import { errorSuite } from "./utils/err/03errorSuite.plugin";
 
 const api = new Elysia({ name: "api", prefix: "/api" })
 

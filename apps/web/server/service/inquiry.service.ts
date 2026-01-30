@@ -10,6 +10,7 @@
  * --------------------------------------------------------
  */
 
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   customerTable,
   type InquiryContract,
@@ -20,7 +21,6 @@ import {
   templateValueTable,
 } from "@repo/contract";
 import { and, eq } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { db } from "~/db/connection";
 import { sendEmail } from "~/lib/email/email";
 import type { ServiceContext } from "~/middleware/site";
@@ -152,11 +152,11 @@ export class InquiryService {
       "[业务员匹配结果]:",
       result.targetRep
         ? {
-            userId: result.targetRep.userId,
-            userName: result.targetRep.user?.name,
-            userEmail: result.targetRep.user?.email,
-            responsibilityId: result.targetRep.id,
-          }
+          userId: result.targetRep.userId,
+          userName: result.targetRep.user?.name,
+          userEmail: result.targetRep.user?.email,
+          responsibilityId: result.targetRep.id,
+        }
         : "未匹配到业务员"
     );
 
@@ -581,8 +581,8 @@ export class InquiryService {
       console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
       const media = skuMediaId
         ? await db.query.mediaTable.findFirst({
-            where: { id: skuMediaId },
-          })
+          where: { id: skuMediaId },
+        })
         : null;
       console.log(
         "[8] 媒体查询结果:",
@@ -654,13 +654,13 @@ export class InquiryService {
       // 构建附件列表（只在 Excel 生成成功时添加）
       const attachments = excelBuffer
         ? [
-            {
-              filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
-              content: excelBuffer,
-              contentType:
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            },
-          ]
+          {
+            filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
+            content: excelBuffer,
+            contentType:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        ]
         : [];
 
       const emailPayload = {
@@ -758,10 +758,10 @@ export class InquiryService {
       clientPhone: Number.parseInt(inquiry.customerPhone!, 10) || 0,
       photoForRefer: photo
         ? {
-            buffer: photo.buffer,
-            mimeType: photo.mimeType,
-            name: `ref-${inquiry.inquiryNum}`,
-          }
+          buffer: photo.buffer,
+          mimeType: photo.mimeType,
+          name: `ref-${inquiry.inquiryNum}`,
+        }
         : null,
 
       // Terms (报价项) - 使用第一个 SKU 信息填充第一行

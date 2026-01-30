@@ -5,6 +5,7 @@
 
 import fs, { promises as fsPromises } from "node:fs";
 import path from "node:path";
+import { HttpError } from "@pori15/elysia-unified-error";
 // main.js
 import ExcelJS from "exceljs";
 import type { QuotationData } from "../excelTemplate/QuotationData";
@@ -46,7 +47,7 @@ export const TEMPLATE_PATH = getTemplatePath();
 export async function generateQuotationExcel(quotationData: QuotationData) {
   // 1. 检查模板是否存在
   if (!fs.existsSync(TEMPLATE_PATH)) {
-    throw new Error(`模板不存在: ${TEMPLATE_PATH}`);
+    throw new HttpError.NotFound(`模板不存在: ${TEMPLATE_PATH}`);
   }
 
   console.log("✅ 模板存在");
@@ -66,7 +67,7 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
-    throw new Error("❌ 无法获取工作表！");
+    throw new HttpError.BadGateway("❌ 无法获取工作表！");
   }
   console.log("✅ 成功获取工作表:", worksheet.name);
 

@@ -1,9 +1,9 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   type MasterCategoryContract,
   masterCategoryTable,
 } from "@repo/contract";
 import { eq } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import { type ServiceContext } from "../lib/type";
 
 export class MasterCategoryService {
@@ -13,7 +13,7 @@ export class MasterCategoryService {
     ctx: ServiceContext
   ) {
     if (!ctx.user?.context?.tenantId) {
-      throw new Error("User context or tenantId is required");
+      throw new HttpError.BadGateway("User context or tenantId is required");
     }
 
     const insertData = {

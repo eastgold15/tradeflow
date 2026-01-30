@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import {
   salesResponsibilityTable,
   type UserContract,
@@ -32,7 +33,7 @@ export class UserService {
         },
       });
       if (!dept) {
-        throw new Error("没有");
+        throw new HttpError.NotFound("没有");
       }
       targetDeptIds = [currentDeptId, ...dept.childrens.map((c) => c.id)];
     } else if (dataScope === "current") {
@@ -175,7 +176,7 @@ export class UserService {
 
     const originalDeptId = rawUser?.deptId;
     if (!originalDeptId) {
-      throw new Error("用户没有归属部门");
+      throw new HttpError.BadRequest("用户没有归属部门");
     }
 
     // 查询原始部门的信息
@@ -262,11 +263,11 @@ export class UserService {
         parentId: dept.parentId,
         site: dept.site
           ? {
-              id: dept.site.id,
-              name: dept.site.name,
-              domain: dept.site.domain,
-              siteType: dept.site.siteType,
-            }
+            id: dept.site.id,
+            name: dept.site.name,
+            domain: dept.site.domain,
+            siteType: dept.site.siteType,
+          }
           : null,
       })),
     };

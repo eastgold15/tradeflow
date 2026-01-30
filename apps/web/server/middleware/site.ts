@@ -1,5 +1,5 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import Elysia from "elysia";
-import { HttpError } from "elysia-http-problem-json";
 import { type db, dbPlugin } from "../db/connection";
 
 /**

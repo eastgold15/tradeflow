@@ -6,7 +6,7 @@
  * --------------------------------------------------------
  */
 
-import { HttpError } from "@pori15/elysia-http-problem-json";
+import { HttpError } from "@pori15/elysia-unified-error";
 import { Elysia } from "elysia";
 import { db } from "~/db/connection";
 

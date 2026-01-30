@@ -1,3 +1,4 @@
+import { HttpError } from "@pori15/elysia-unified-error";
 import { type InquiryContract, inquiryTable } from "@repo/contract";
 import { eq } from "drizzle-orm";
 import { type ServiceContext } from "../lib/type";
@@ -9,11 +10,11 @@ export class InquiryService {
     ctx: ServiceContext
   ) {
     if (!ctx.user?.context?.tenantId) {
-      throw new Error("User context or tenantId is required");
+      throw new HttpError.BadGateway("User context or tenantId is required");
     }
 
     if (!ctx.user?.context?.site?.id) {
-      throw new Error("Site context is required");
+      throw new HttpError.BadGateway("Site context is required");
     }
 
     const insertData = {

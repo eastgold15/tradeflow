@@ -1,44 +1,19 @@
 // src/errors/database-error-mapper.ts
 // src/errors/database-error-mapper.ts
-import { HttpError } from "elysia-http-problem-json";
-
-// 这是一个 TypeScript 技巧：创建一个继承自 ProblemError 的新类，
-// 它的签名与 BadRequest 一致，但类型是 503 Service Unavailable。
-class ServiceUnavailable extends HttpError.ServiceUnavailable {
-  // 强制构造函数支持 extensions
-
-  constructor(detail: string, extensions?: Record<string, any>) {
-    super(detail);
-    // 在 toJSON 方法中，这些 extensions 会被 Problem JSON 库拾取
-  }
-}
-
-// 同理，创建支持 extensions 的 InternalServerError (500)
-class InternalServerError extends HttpError.InternalServerError {
-  constructor(detail: string, extensions?: Record<string, any>) {
-    super(detail);
-  }
-}
+import { HttpError } from "@pori15/elysia-unified-error";
+import { type DrizzleError, getPostgresError } from "./01guards";
 
 /**
  * 将底层数据库错误(如 Drizzle/PostgreSQL 抛出的)映射为语义化自定义错误
  * 同时附加原始 DB 错误信息作为扩展字段。
  */
-export function mapDatabaseError(error: {
-  code: string;
-  detail?: string;
-  message?: string;
-  constraint?: string;
-  column?: string;
-}) {
-  // 提取原始 PostgreSQL 错误对象（适配 Drizzle/或其他 ORM 包装的错误）
-  const pgError = extractOriginalPgError(error);
+export function mapDatabaseError(error: DrizzleError) {
+  // ✅ 1. 安全提取原始错误 (利用 guards 中的辅助函数)
+  const pgError = getPostgresError(error);
 
-  const code = pgError?.code;
-  const detail = pgError?.detail ?? "";
-  const constraint = pgError?.constraint ?? "";
-  const column = pgError?.column ?? "";
-  const rawMsg = pgError?.message ?? "";
+  // ✅ 2. 这里的属性都有自动补全了，不再需要 ?. 瞎猜
+  const { code, detail, constraint, message: rawMsg } = pgError;
+  const column = pgError.column ?? "";
 
   // Problem JSON 扩展字段
   const extensions = {
@@ -46,24 +21,24 @@ export function mapDatabaseError(error: {
     "x-constraint": constraint,
   };
 
+  // ✅ 3. 根据错误码映射
   switch (code) {
-    case "08006": // connection_failure (连接失败)
-      return new ServiceUnavailable("数据库连接失败，请稍后重试", extensions);
-    case "28P01": // invalid_password (认证失败)
-      return new HttpError.InternalServerError("数据库认证失败");
-    case "23502": // not_null_violation (非空约束冲突)
+    case "08006":
+      return new HttpError.ServiceUnavailable("数据库连接失败，请稍后重试", extensions);
+    case "23502":
       return new HttpError.BadRequest(
         `缺少必填字段: ${column || parseColumnFromMessage(rawMsg) || "必填字段为空"}`,
         extensions
       );
-    case "23503": // foreign_key_violation (外键约束冲突)
+    case "23503":
       return new HttpError.BadRequest(
-        `外键违反: ${parseConstraint(constraint) || detail || "引用的记录不存在"}`,
+        `引用错误: 该记录正在被使用，无法删除或修改 (${parseConstraint(constraint)})`,
         extensions
       );
-    case "23505": // unique_violation (唯一性约束冲突)
+    case "23505":
       return new HttpError.Conflict(
-        `重复值错误: ${parseConstraint(constraint) || detail || "唯一字段已存在"}`
+        `重复数据: ${parseConstraint(constraint) || "该记录已存在"}`,
+        extensions
       );
     case "23514": // check_violation (数据检查约束冲突)
       return new HttpError.BadRequest(
@@ -76,16 +51,13 @@ export function mapDatabaseError(error: {
       return new HttpError.InternalServerError("数据库操作超时");
     default:
       return new HttpError.InternalServerError(
-        `数据库错误${code ? ` [${code}]` : ""}: ${stripQuery(rawMsg) || "未知数据库错误"}`
+        `数据库错误 [${code}]: ${stripQuery(rawMsg)}`,
+        extensions
       );
   }
 }
 
-// 提取原始 PostgreSQL 错误
-function extractOriginalPgError(err: any): any {
-  if (err?.cause && typeof err.cause === "object") return err.cause;
-  return err;
-}
+
 
 // 解析约束名称为可读消息
 function parseConstraint(constraint: string): string {

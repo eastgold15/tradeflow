@@ -3,6 +3,7 @@
  * 提供统一的URL解析和key提取功能
  */
 
+import { HttpError } from "@pori15/elysia-unified-error";
 import { envConfig } from "~/lib/env";
 
 // 顶层正则表达式常量，提升性能
@@ -15,7 +16,7 @@ const URL_KEY_REGEX = /^https?:\/\/[^/]+\/(.+)$/;
  */
 export function extractOssKeyFromUrl(fileUrl: string): string {
   if (!fileUrl) {
-    throw new Error("文件URL不能为空");
+    throw new HttpError.BadRequest("文件URL不能为空");
   }
 
   try {
@@ -61,9 +62,9 @@ export function extractOssKeyFromUrl(fileUrl: string): string {
       }
 
       // 如果匹配失败，抛出错误
-      throw new Error("无法从URL中提取文件key");
+      throw new HttpError.BadRequest("无法从URL中提取文件key");
     } catch (_error) {
-      throw new Error(`无效的文件URL格式: ${fileUrl}`);
+      throw new HttpError.BadRequest(`无效的文件URL格式: ${fileUrl}`);
     }
   }
 }
