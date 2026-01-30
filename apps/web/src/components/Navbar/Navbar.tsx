@@ -104,7 +104,7 @@ const Navbar = () => {
 
           <div className="w-3/5 justify-center">
             <Link
-              className="grid w-full origin-center place-items-center whitespace-nowrap pt-2 text-center font-serif text-base md:text-4xl"
+              className="grid w-full origin-center place-items-center whitespace-nowrap pt-2 text-center font-serif text-sm md:text-3xl"
               href="/"
             >
               {site_name?.[0]?.value || "Welcome"}
