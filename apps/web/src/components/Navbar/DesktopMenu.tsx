@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import type { SiteCategoryListRes } from "@/hooks/api/site-category";
+import { isExternalUrl } from "@/lib/utils";
 import { useNavAction } from "./hook/useNavAction";
 import { DropdownIndicator, NAV_STYLES, NavLink } from "./NavParts";
 
@@ -10,11 +11,6 @@ export type CategoryWithChildren = Omit<
 > & {
   children?: CategoryWithChildren[];
   url?: string | null; // 添加 url 字段，匹配数据库返回类型
-};
-
-// 判断是否为外部链接
-const isExternalUrl = (url: string) => {
-  return url.startsWith("http://") || url.startsWith("https://");
 };
 
 // 单个菜单项组件（递归核心）

@@ -1,25 +1,6 @@
 // src/errors/database-error-mapper.ts
 // src/errors/database-error-mapper.ts
-import { HttpError } from "elysia-http-problem-json";
-
-// 这是一个 TypeScript 技巧：创建一个继承自 ProblemError 的新类，
-// 它的签名与 BadRequest 一致，但类型是 503 Service Unavailable。
-class ServiceUnavailable extends HttpError.ServiceUnavailable {
-  // 强制构造函数支持 extensions
-  // biome-ignore lint/style/noParameterProperties: <explanation>
-  constructor(detail: string, extensions?: Record<string, any>) {
-    super(detail);
-    // 在 toJSON 方法中，这些 extensions 会被 Problem JSON 库拾取
-  }
-}
-
-// 同理，创建支持 extensions 的 InternalServerError (500)
-class InternalServerError extends HttpError.InternalServerError {
-  // biome-ignore lint/style/noParameterProperties: <explanation>
-  constructor(detail: string, extensions?: Record<string, any>) {
-    super(detail);
-  }
-}
+import { HttpError } from "@pori15/elysia-http-problem-json";
 
 /**
  * 将底层数据库错误(如 Drizzle/PostgreSQL 抛出的)映射为语义化自定义错误
@@ -49,7 +30,10 @@ export function mapDatabaseError(error: {
 
   switch (code) {
     case "08006": // connection_failure (连接失败)
-      return new ServiceUnavailable("数据库连接失败，请稍后重试", extensions);
+      return new HttpError.ServiceUnavailable(
+        "数据库连接失败，请稍后重试",
+        extensions
+      );
     case "28P01": // invalid_password (认证失败)
       return new HttpError.InternalServerError("数据库认证失败");
     case "23502": // not_null_violation (非空约束冲突)

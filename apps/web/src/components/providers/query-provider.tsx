@@ -1,8 +1,12 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import React from "react";
-
+import { toast } from "sonner";
 /**
  * QueryProvider component
  * Sets up a QueryClientProvider for React Query to manage and cache API requests.
@@ -21,6 +25,12 @@ export default function QueryProvider({
     () =>
       new QueryClient({
         defaultOptions: { queries: { refetchOnWindowFocus: false } },
+        queryCache: new QueryCache({
+          onError: (error) => {
+            toast.error(error.message);
+            console.error("Query error:", error);
+          },
+        }),
       })
   );
 

@@ -1,3 +1,5 @@
+import { HttpError } from "elysia-http-problem-json";
+
 // storage/Storage.ts
 export abstract class Storage {
   protected config: S3Config;
@@ -68,8 +70,8 @@ export abstract class Storage {
       body = Buffer.from(file);
       size = body.length;
     } else {
-      // Handle other cases or throw error
-      throw new Error("Unsupported file type");
+
+      throw new HttpError.BadRequest("Unsupported file type");
     }
     return { body, size, type };
   }

@@ -1,6 +1,7 @@
 "use client";
 import { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
+import { isExternalUrl } from "@/lib/utils";
 import type { CategoryWithChildren } from "./DesktopMenu";
 import { useNavAction } from "./hook/useNavAction";
 import { NAV_STYLES, NavLink } from "./NavParts";
@@ -8,11 +9,6 @@ import { NAV_STYLES, NavLink } from "./NavParts";
 type MobileMenuProps = ComponentProps<"div"> & {
   categories: CategoryWithChildren[];
   onClose: () => void;
-};
-
-// 判断是否为外部链接
-const isExternalUrl = (url: string) => {
-  return url.startsWith("http://") || url.startsWith("https://");
 };
 
 // 递归渲染移动端列表
@@ -32,9 +28,10 @@ const MobileCategoryItem = ({
   const isExternal = category.url ? isExternalUrl(category.url) : false;
 
   // 根据深度选择样式
-  const linkClass =
-    depth === 0 ? NAV_STYLES.mobileLink : NAV_STYLES.mobileSubLink;
-
+  const linkClass = twMerge(
+    depth === 0 ? NAV_STYLES.mobileLink : NAV_STYLES.mobileSubLink,
+    depth > 0 && "pl-4 text-sm opacity-80" // 子级自动缩进
+  );
   return (
     <div className={depth === 0 ? "border-gray-100 border-b" : ""}>
       {/* 有子分类的父级不可点击，只展示名称 */}
@@ -83,7 +80,7 @@ export const MobileMenu = ({
   onClose,
   ...props
 }: MobileMenuProps) => (
-  <div className={twMerge("flex flex-col", props.className)}>
+  <div className={twMerge("flex flex-col divide-gray-100", props.className)}>
     {categories.map((cat) => (
       <MobileCategoryItem category={cat} key={cat.id} onClose={onClose} />
     ))}

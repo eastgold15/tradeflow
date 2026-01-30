@@ -1,7 +1,11 @@
 // src/plugins/error-logger.plugin.ts
+
+import {
+  HttpError,
+  httpProblemJsonPlugin,
+} from "@pori15/elysia-http-problem-json";
 import chalk from "chalk";
 import { Elysia } from "elysia";
-import { HttpError, httpProblemJsonPlugin } from "elysia-http-problem-json";
 import { mapDatabaseError } from "./database-error-mapper";
 import { filterStack, getValidationSummary } from "./errorSuite.plugin.utils";
 import { isDatabaseError } from "./guards";

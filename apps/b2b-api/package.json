@@ -21,6 +21,7 @@
     "drizzle-orm": "catalog:",
     "elysia": "catalog:",
     "elysia-http-problem-json": "^0.1.4",
+    "@pori15/elysia-http-problem-json": "catalog:",
     "env-var": "^7.5.0",
     "logixlysia": "catalog:",
     "nodemailer": "^7.0.12",

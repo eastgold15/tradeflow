@@ -6,13 +6,9 @@ import { useEffect, useState } from "react";
 import { useSiteConfigList } from "@/hooks/api/site-config";
 import { useCategoryNavigation } from "@/hooks/useCategoryNavigation";
 import { DesktopMenu } from "./DesktopMenu";
-import { useNavAction } from "./hook/useNavAction";
 import { MobileMenu } from "./MobileMenu";
 import { SearchDropdown } from "./SearchDropdown";
 
-// 引入你原来的 useNavigation 或直接写在这里
-// 引入 NavIcon 组件（可以保持你原来的不变，或者也移到 NavParts）
-// 统一样式管理
 const styles = {
   navIcon: "text-black transition-colors hover:text-gray-500",
   icon: "h-4 w-4 md:h-5 md:w-5",
@@ -67,9 +63,7 @@ const Navbar = () => {
     },
   });
 
-  // 获取分类数据 (这里假设 hook 返回 { categories, loading })
   const { categories } = useCategoryNavigation();
-  const { handleNavigate } = useNavAction();
   // 滚动监听逻辑保持不变...
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -89,7 +83,7 @@ const Navbar = () => {
           {/* ... Left Section (Menu Toggle / Lang) ... */}
           <div className="flex w-1/5 items-center">
             <button
-              className="mr-4 md:hidden"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? (

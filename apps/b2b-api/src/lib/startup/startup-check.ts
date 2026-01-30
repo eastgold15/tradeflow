@@ -6,9 +6,9 @@
  * --------------------------------------------------------
  */
 
+import { HttpError } from "@pori15/elysia-http-problem-json";
 import { Elysia } from "elysia";
 import { db } from "~/db/connection";
-
 
 /**
  * 数据库连接验证
@@ -70,7 +70,7 @@ export const startupCheckPlugin = new Elysia({ name: "startup-check" })
 
     // 数据库连接失败则阻止应用启动
     if (!dbOk) {
-      throw new Error("数据库连接失败，应用无法启动");
+      throw new HttpError.InternalServerError("数据库连接失败，应用无法启动");
     }
 
     console.log("✅ 启动检查完成\n");

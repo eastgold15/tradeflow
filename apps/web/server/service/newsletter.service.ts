@@ -1,6 +1,6 @@
+import { HttpError } from "@pori15/elysia-http-problem-json";
 import { newsletterSubscriptionTable } from "@repo/contract";
 import { eq } from "drizzle-orm";
-import { HttpError } from "elysia-http-problem-json";
 import type { ServiceContext } from "~/middleware/site";
 
 export class NewsletterService {
