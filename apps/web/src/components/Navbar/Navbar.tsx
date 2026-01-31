@@ -7,7 +7,7 @@ import { NavbarClient } from "../NavbarClient";
 async function getSiteName() {
   try {
 
-    const { data } = await rpc["site-config"].get({
+    const { data } = await rpc.site_config.get({
       query: { key: SITE_CONFIG_KEY_ENUM.SITE_NAME }
     });
     console.log('data:', data)

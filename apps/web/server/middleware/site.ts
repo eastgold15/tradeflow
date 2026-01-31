@@ -44,7 +44,7 @@ async function getSite(domain: string, db: DBtype) {
   if (!res) {
     // 这里打印的日志就能准确反应数据库到底在查什么
     console.error(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
-    return null; // 建议这里返回 null，在 derive 里 throw，逻辑更清晰
+    throw new HttpError.NotFound(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
   }
 
   return res;

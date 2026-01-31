@@ -2,7 +2,7 @@ import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/Navbar/Navbar";
 import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
-
+export const dynamic = "force-dynamic";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 
 // 1. 无衬线体：用于正文，极具现代感
