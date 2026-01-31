@@ -84,14 +84,14 @@ export default function MediaLibrary() {
   const handleDelete = async (ids: string[]) => {
     if (!window.confirm(`确定要删除选中的 ${ids.length} 个文件吗？`)) return;
 
-    try {
-      await deleteMediaMutation.mutateAsync(ids);
-      toast.success("删除成功");
-      setSelectedItems([]);
-      refetch();
-    } catch (err) {
-      toast.error("删除失败");
-    }
+    // 使用 mutate 而不是 mutateAsync，让全局 QueryProvider 处理错误
+    deleteMediaMutation.mutate(ids, {
+      onSuccess: () => {
+        toast.success("删除成功");
+        setSelectedItems([]);
+        refetch();
+      },
+    });
   };
 
   // 3. 全选逻辑

@@ -59,8 +59,23 @@ async function request<
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || "Request Failed");
+    // 尝试解析后端传回的 Problem Details JSON
+    const errorPayload = await response.json().catch(() => ({}));
+
+    console.log("❌ [api-client] 请求失败, response.status:", response.status);
+    console.log("❌ [api-client] errorPayload:", errorPayload);
+
+    // 🚨 重点：不要包装成 new Error(message)，而是直接把 RFC 对象 reject 掉
+    // 这样在 QueryProvider 里的 onError(error) 拿到的就是完整的对象了
+    const rejectionError = {
+      ...errorPayload,
+      // 兜底：如果后端没传 status 或 title，用 HTTP 响应补全
+      status: errorPayload.status || response.status,
+      title: errorPayload.title || response.statusText,
+    };
+
+    console.log("❌ [api-client] 准备 reject:", rejectionError);
+    return Promise.reject(rejectionError);
   }
 
   return response.json() as Promise<TRes>;

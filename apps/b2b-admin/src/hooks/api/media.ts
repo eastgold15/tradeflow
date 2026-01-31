@@ -72,9 +72,7 @@ export function useDeleteMedia() {
       toast.success("Media删除成功");
       queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "删除Media失败");
-    },
+    // 🔥 移除 onError，让全局 QueryProvider 的 mutationCache.onError 处理
   });
 }
 
@@ -143,10 +141,19 @@ export function useUpdateMedia() {
 export function useBatchDeleteMedia() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string | string[]) =>
-      api.delete<any, any>("/api/v1/media/batch", { ids }),
-    onSuccess: () => {
+    mutationFn: async (ids: string | string[]) => {
+      console.log("🔥 [useBatchDeleteMedia] mutationFn 被调用, ids:", ids);
+      const result = await api.delete<any, any>("/api/v1/media/batch", { ids });
+      console.log("✅ [useBatchDeleteMedia] 请求成功:", result);
+      return result;
+    },
+    onSuccess: (data) => {
+      console.log("✅ [useBatchDeleteMedia] onSuccess 被调用, data:", data);
       queryClient.invalidateQueries({ queryKey: mediaKeys.lists() });
+    },
+    // 🔥 移除 onError，让全局 QueryProvider 的 mutationCache.onError 处理
+    onSettled: (data, error) => {
+      console.log("🏁 [useBatchDeleteMedia] onSettled 被调用, data:", data, "error:", error);
     },
   });
 }

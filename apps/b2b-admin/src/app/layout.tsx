@@ -1,4 +1,4 @@
-import { Providers } from "@/components/providers";
+import { Providers } from "@/providers/query-provider";
 import "./globals.css";
 
 // 禁用静态预渲染，因为应用完全依赖客户端状态
