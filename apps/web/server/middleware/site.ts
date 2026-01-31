@@ -8,48 +8,45 @@ import { type db, dbPlugin } from "../db/connection";
 export const siteMiddleware = new Elysia({ name: "site-middleware" })
   .use(dbPlugin)
   .derive(async ({ db, request }) => {
-    const hostname = request.headers.get("host") || "";
-    // 1. 统一转小写并去掉端口
-    let domain = hostname.split(":")[0].toLowerCase();
+    // 1. 获取原始 host (例如 "localhost:8001")
+    const rawHost = request.headers.get("host") || "";
 
-    // 2. 关键：如果是 www 开头，去掉它
-    // 这样 www.dongqifootwear.com 就会变成 dongqifootwear.com
-    if (domain.startsWith("www.")) {
-      domain = domain.replace(/^www\./, "");
+    // 2. 统一处理函数：剥离端口、转小写、去 www
+    const normalize = (h: string) => h.split(":")[0].toLowerCase().replace(/^www\./, "");
+
+    let domain = normalize(rawHost);
+
+    // 3. 兜底逻辑：如果是本地地址或为空，强行使用 DOMAIN 环境变量
+    if (!domain || domain === "localhost" || domain === "127.0.0.1") {
+      // 关键：对环境变量也要做一次 normalize，防止环境变量里误写了端口或大写
+      domain = normalize(process.env.DOMAIN || "");
     }
 
-    // 3. 查数据库。此时 domain 已经是干净的 "dongqifootwear.com"
+    // 4. 最后的防御：如果还是没拿到（环境变量也没配），报错
+    if (!domain) {
+      console.error("[CRITICAL] No domain found in Host header or DOMAIN env");
+      throw new HttpError.NotFound("Domain configuration missing");
+    }
+
     const site = await getSite(domain, db);
-
-    if (!site) {
-      console.error(`[SiteMiddleware] Domain mismatch: ${domain}`);
-      throw new HttpError.NotFound(`Site not found`);
-    }
-
     return { site };
   })
   .as("global");
 
 async function getSite(domain: string, db: DBtype) {
-  let res = await db.query.siteTable.findFirst({
+  // 此时传入的 domain 应该是纯净的 "dongqifootwear.com"
+  const res = await db.query.siteTable.findFirst({
     where: {
-      domain,
-    },
+      domain
+    }
   });
-  // 如果你是希望三级域名共享二级域名的配置
-  if (!res && domain.split('.').length > 2) {
-    const mainDomain = domain.split('.').slice(-2).join('.'); // 取 brand.com
-    res = await db.query.siteTable.findFirst({
-      where: {
-        domain: mainDomain,
-      }
-    });
-  }
 
   if (!res) {
-    console.error(`[SiteMiddleware] 未找到域名映射: ${domain}`);
-    throw new HttpError.NotFound(`Site not found`);
+    // 这里打印的日志就能准确反应数据库到底在查什么
+    console.error(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
+    return null; // 建议这里返回 null，在 derive 里 throw，逻辑更清晰
   }
+
   return res;
 }
 

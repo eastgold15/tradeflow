@@ -8,6 +8,7 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" }).use(
   logixlysia({
     // Phase 1: Transform - 将原始错误映射为标准错误
     transform: (error) => {
+      console.log('[error]:', error)
       return isDatabaseError(error) ? mapDatabaseError(error) : null;
     },
     config: {
@@ -17,7 +18,6 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" }).use(
       customLogFormat:
         "🦊 {now} {level} {duration} {method} {pathname} {status} {message} {ip}",
       ip: true,
-      logFilePath: "./logs/app.log",
       error: {
         problemJson: {
           typeBaseUrl: "https://gin-shopping.com",

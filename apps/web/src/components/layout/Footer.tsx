@@ -7,7 +7,7 @@ import { rpc } from "@/lib/rpc";
 // 获取 Footer 配置数据
 async function getFooterConfig(): Promise<FooterContent | null> {
   try {
-    const { data, error } = await rpc["site-config"].get({
+    const { data, error } = await rpc.site_config.get({
       query: {
         key: SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT,
       }
@@ -28,7 +28,7 @@ async function getFooterConfig(): Promise<FooterContent | null> {
 // 获取单个配置
 async function getSiteConfigValue(key: string): Promise<string | null> {
   try {
-    const { data, error } = await rpc["site-config"].get({
+    const { data, error } = await rpc.site_config.get({
       query: {
         key,
       }

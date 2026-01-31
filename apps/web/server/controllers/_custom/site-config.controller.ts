@@ -6,7 +6,7 @@ import { SiteConfigService } from "~/service/site-config.service";
 
 const siteConfigService = new SiteConfigService();
 
-export const siteConfigController = new Elysia({ prefix: "/site-config" })
+export const siteConfigController = new Elysia({ prefix: "/site_config" })
   .use(dbPlugin)
   .use(siteMiddleware)
   .get(

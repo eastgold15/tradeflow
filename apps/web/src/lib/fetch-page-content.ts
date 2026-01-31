@@ -8,7 +8,7 @@ import { rpc } from "@/lib/rpc";
  */
 export async function fetchPageContent(key: string): Promise<string> {
   try {
-    const response = await rpc["site-config"].get(
+    const response = await rpc.site_config.get(
       {
         query: { key },
         fetch: {

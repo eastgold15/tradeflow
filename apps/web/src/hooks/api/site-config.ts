@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { rpc } from "@/lib/rpc";
 
 // 1. Extract the request parameters type from the RPC method
-type SiteConfigParams = Parameters<(typeof rpc)["site-config"]["get"]>[0];
+type SiteConfigParams = Parameters<typeof rpc.site_config.get>[0];
 
 // 2. Extract and clean the response data type
 export type SiteConfigListRes = NonNullable<
-  Treaty.Data<(typeof rpc)["site-config"]["get"]>
+  Treaty.Data<typeof rpc.site_config.get>
 >;
 export const siteconfigKeys = {
   all: ["siteconfig"] as const,
@@ -26,7 +26,7 @@ export function useSiteConfigList(query: SiteConfigParams, enabled = true) {
     // Ensure the queryKey changes when params change to trigger a refetch
     queryKey: siteconfigKeys.list(query),
     queryFn: async () => {
-      const response = await rpc["site-config"].get(query);
+      const response = await rpc.site_config.get(query);
       // Depending on your RPC client, you might need to handle errors or return .data
       return response.data;
     },
