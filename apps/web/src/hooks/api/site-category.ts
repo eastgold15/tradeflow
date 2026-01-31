@@ -30,7 +30,6 @@ export function useSiteCategoryList(options?: { enabled?: boolean }) {
     retry: 2,
     refetchOnWindowFocus: false,
     enabled: options?.enabled ?? true,
-
   });
 }
 

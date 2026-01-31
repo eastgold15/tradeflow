@@ -212,10 +212,11 @@ export const productVariantController = new Elysia({
   .get(
     "/sku/:skuId/media",
     ({ params, user, db, currentDeptId }) =>
-      productVariantMediaService.getSkuMedia(
-        params.skuId,
-        { db, user, currentDeptId }
-      ),
+      productVariantMediaService.getSkuMedia(params.skuId, {
+        db,
+        user,
+        currentDeptId,
+      }),
     {
       params: t.Object({
         skuId: t.String(),

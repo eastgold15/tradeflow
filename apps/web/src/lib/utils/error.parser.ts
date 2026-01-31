@@ -12,7 +12,9 @@ interface BackendErrorValue {
   [key: string]: any;
 }
 
-export function parseApiError(error: { status: number; value: BackendErrorValue } | null) {
+export function parseApiError(
+  error: { status: number; value: BackendErrorValue } | null
+) {
   if (!error) return "未知错误";
 
   const { value, status } = error;

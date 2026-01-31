@@ -263,11 +263,11 @@ export class UserService {
         parentId: dept.parentId,
         site: dept.site
           ? {
-            id: dept.site.id,
-            name: dept.site.name,
-            domain: dept.site.domain,
-            siteType: dept.site.siteType,
-          }
+              id: dept.site.id,
+              name: dept.site.name,
+              domain: dept.site.domain,
+              siteType: dept.site.siteType,
+            }
           : null,
       })),
     };

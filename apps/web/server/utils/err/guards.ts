@@ -35,14 +35,14 @@ export interface DrizzleError extends Error {
 export interface PostgresError {
   name: string;
   severity:
-  | "ERROR"
-  | "FATAL"
-  | "PANIC"
-  | "WARNING"
-  | "NOTICE"
-  | "DEBUG"
-  | "INFO"
-  | "LOG";
+    | "ERROR"
+    | "FATAL"
+    | "PANIC"
+    | "WARNING"
+    | "NOTICE"
+    | "DEBUG"
+    | "INFO"
+    | "LOG";
   code: string; // SQLSTATE (e.g., "23503")
   detail?: string;
   hint?: string;

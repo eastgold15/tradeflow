@@ -1,11 +1,10 @@
 // src/lib/logger.ts
 
-import { Elysia } from "elysia";
 import logixlysia from "@pori15/logixlysia";
+import { Elysia } from "elysia";
 
 import { isDatabaseError } from "~/utils/err/01guards";
 import { mapDatabaseError } from "~/utils/err/02database-error-mapper";
-
 
 export const loggerPlugin = new Elysia({ name: "loggerPlugin" })
   .use(
@@ -25,9 +24,9 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" })
         error: {
           problemJson: {
             typeBaseUrl: "https://gin-shopping.com",
-          }
-        }
+          },
+        },
       },
     })
   )
-  .as('global')
+  .as("global");

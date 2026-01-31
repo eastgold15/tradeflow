@@ -172,7 +172,7 @@ const CustomAttributesSection = ({
               </span> */}
               <ul className="ml-6 list-disc space-y-1">
                 {detailItems.map((item, idx) => (
-                  <li className="font-serif text-lg text-gray-800" key={idx}>
+                  <li className="font-serif text-gray-800 text-lg" key={idx}>
                     {item}
                   </li>
                 ))}
@@ -187,7 +187,7 @@ const CustomAttributesSection = ({
             <span className="mr-4 font-bold font-sans text-[10px] uppercase">
               {key}
             </span>
-            <span className="font-serif text-lg text-gray-800">{value}</span>
+            <span className="font-serif text-gray-800 text-lg">{value}</span>
           </p>
         );
       })}
@@ -644,8 +644,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
                 if (!selectedSku) return alert("Please select all options");
                 setShowInquiryForm(true);
               }}
-            // 也可以选择在这里禁用按钮，或者允许点击后弹出提示
-            // disabled={!selectedSku}
+              // 也可以选择在这里禁用按钮，或者允许点击后弹出提示
+              // disabled={!selectedSku}
             >
               Request Availability
             </button>
@@ -670,13 +670,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </button>
             ))}
           </div>
-          <div className="font-serif text-lg text-gray-800 leading-relaxed">
+          <div className="font-serif text-gray-800 text-lg leading-relaxed">
             {activeTab === "description" ? (
               <div style={{ whiteSpace: "pre-line" }}>
                 {siteProduct.description}
               </div>
             ) : (
-              <div className="font-serif text-lg text-gray-800 space-y-6">
+              <div className="space-y-6 font-serif text-gray-800 text-lg">
                 {/* 基础信息 */}
                 <div className="space-y-4">
                   {/* <p>
@@ -686,7 +686,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
                     {siteProduct.spuCode}
                   </p> */}
                   <p>
-                    <span className="mr-4  font-serif text-lg uppercase">
+                    <span className="mr-4 font-serif text-lg uppercase">
                       Categories
                     </span>
                     {siteProduct.categories?.map((c) => c.name).join(", ")}

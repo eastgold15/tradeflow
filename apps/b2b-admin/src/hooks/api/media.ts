@@ -153,7 +153,12 @@ export function useBatchDeleteMedia() {
     },
     // 🔥 移除 onError，让全局 QueryProvider 的 mutationCache.onError 处理
     onSettled: (data, error) => {
-      console.log("🏁 [useBatchDeleteMedia] onSettled 被调用, data:", data, "error:", error);
+      console.log(
+        "🏁 [useBatchDeleteMedia] onSettled 被调用, data:",
+        data,
+        "error:",
+        error
+      );
     },
   });
 }

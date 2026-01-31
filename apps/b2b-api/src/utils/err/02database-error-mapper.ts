@@ -24,7 +24,10 @@ export function mapDatabaseError(error: DrizzleError) {
   // ✅ 3. 根据错误码映射
   switch (code) {
     case "08006":
-      return new HttpError.ServiceUnavailable("数据库连接失败，请稍后重试", extensions);
+      return new HttpError.ServiceUnavailable(
+        "数据库连接失败，请稍后重试",
+        extensions
+      );
     case "23502":
       return new HttpError.BadRequest(
         `缺少必填字段: ${column || parseColumnFromMessage(rawMsg) || "必填字段为空"}`,
@@ -56,8 +59,6 @@ export function mapDatabaseError(error: DrizzleError) {
       );
   }
 }
-
-
 
 // 解析约束名称为可读消息
 function parseConstraint(constraint: string): string {

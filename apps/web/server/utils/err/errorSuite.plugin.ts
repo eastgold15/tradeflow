@@ -1,13 +1,11 @@
 // src/plugins/error-logger.plugin.ts
 
-
-
+import { HttpError } from "@pori15/logixlysia";
 import chalk from "chalk";
 import { Elysia } from "elysia";
 import { mapDatabaseError } from "./database-error-mapper";
 import { filterStack, getValidationSummary } from "./errorSuite.plugin.utils";
 import { isDatabaseError } from "./guards";
-import { HttpError } from "@pori15/logixlysia";
 
 export const errorLoggerPlugin = new Elysia({
   name: "error-logger-plugin",

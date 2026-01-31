@@ -2,8 +2,8 @@
 
 import {
   isServer,
-  QueryCache,
   MutationCache,
+  QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -38,15 +38,15 @@ const handleGlobalError = (error: any) => {
 
   console.log("🔍 解析后的 problem:", problem);
 
-  if (problem && typeof problem === 'object' && 'title' in problem) {
+  if (problem && typeof problem === "object" && "title" in problem) {
     const p = problem as ProblemDetails;
     errorTitle = p.title;
     errorMessage = p.detail || p.title;
 
     console.log("✅ 提取错误信息:", { errorTitle, errorMessage });
 
-    if (p['x-pg-code'] === '23503') {
-      console.warn("数据库外键约束冲突:", p['x-constraint']);
+    if (p["x-pg-code"] === "23503") {
+      console.warn("数据库外键约束冲突:", p["x-constraint"]);
     }
   } else {
     errorMessage = error instanceof Error ? error.message : String(error);

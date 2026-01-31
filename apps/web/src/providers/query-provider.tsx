@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  QueryCache,
   MutationCache, // 🚨 新增：处理 Post/Put/Delete 错误
+  QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
@@ -20,7 +20,11 @@ interface ProblemDetails {
   [key: string]: any; // 支持 x-pg-code 等扩展字段
 }
 
-export default function QueryProvider({ children }: { children: React.ReactNode }) {
+export default function QueryProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // 统一错误处理函数
   const handleGlobalError = async (error: any) => {
     let errorMessage = "发生未知错误";
@@ -30,17 +34,18 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
     // Eden Treaty 错误结构: { error: { status, title, detail, ... } }
     const edenError = error?.error;
     // 其他可能的错误结构
-    const problem = edenError || error?.response?.data || error?.response || error;
+    const problem =
+      edenError || error?.response?.data || error?.response || error;
 
-    if (problem && typeof problem === 'object' && 'title' in problem) {
+    if (problem && typeof problem === "object" && "title" in problem) {
       const p = problem as ProblemDetails;
       errorTitle = p.title;
       // 优先显示具体细节 detail，没有则显示 title
       errorMessage = p.detail || p.title;
 
       // 可以在这里针对特定的业务错误码做特殊处理
-      if (p['x-pg-code'] === '23503') {
-        console.warn("数据库外键约束冲突:", p['x-constraint']);
+      if (p["x-pg-code"] === "23503") {
+        console.warn("数据库外键约束冲突:", p["x-constraint"]);
       }
     } else {
       // 兜底逻辑
@@ -59,11 +64,11 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
   const [queryClient] = React.useState(
     () =>
       new QueryClient({
-        defaultOptions: { 
-          queries: { 
+        defaultOptions: {
+          queries: {
             refetchOnWindowFocus: false,
             retry: 1, // 失败重试次数
-          } 
+          },
         },
         // 处理 GET 请求错误
         queryCache: new QueryCache({

@@ -290,7 +290,7 @@ const Footer: React.FC = () => {
               <div className="relative inline-block">
                 <Image
                   alt="WhatsApp QR Code"
-                  className="h-16 w-16 transition-all duration-300 ease-out hover:scale-200 hover:z-50 hover:shadow-2xl rounded cursor-pointer"
+                  className="h-16 w-16 cursor-pointer rounded transition-all duration-300 ease-out hover:z-50 hover:scale-200 hover:shadow-2xl"
                   height={256}
                   src={site_erweima?.[0]?.value}
                   width={256}

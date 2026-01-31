@@ -8,7 +8,7 @@
  */
 
 import { db } from "~/db/connection";
-import { verifyEmailConnection } from "~/lib/email/email";
+import { verifyEmailConnection } from "../email/email";
 
 const checkPerformed = false;
 

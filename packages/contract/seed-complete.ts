@@ -1215,7 +1215,8 @@ async function seedCompleteDatabase() {
 
     // 5. 插入角色权限关联
     console.log("🔗 插入角色权限关联...");
-    const rolePermissionRelations: { roleId: string; permissionId: string }[] = [];
+    const rolePermissionRelations: { roleId: string; permissionId: string }[] =
+      [];
     const uniqueRelations = new Set();
 
     for (const [roleName, permissionNames] of Object.entries(

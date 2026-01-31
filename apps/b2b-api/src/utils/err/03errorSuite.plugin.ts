@@ -1,9 +1,5 @@
 // src/plugins/error-logger.plugin.ts
 
-
-import { Elysia } from "elysia";
-import { loggerPlugin } from "~/middleware/logger";
-
 // export const errorLoggerPlugin = new Elysia({
 //   name: "error-logger-plugin",
 // }).onError({ as: "global" }, ({ code, error, path, request }) => {

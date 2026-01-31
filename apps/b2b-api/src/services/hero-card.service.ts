@@ -120,11 +120,11 @@ export class HeroCardService {
         tenantId: ctx.user.context.tenantId!,
         ...(search
           ? {
-            OR: [
-              { title: { ilike: `%${search}%` } },
-              { description: { ilike: `%${search}%` } },
-            ],
-          }
+              OR: [
+                { title: { ilike: `%${search}%` } },
+                { description: { ilike: `%${search}%` } },
+              ],
+            }
           : {}),
       },
       with: {

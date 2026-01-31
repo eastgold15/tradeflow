@@ -70,7 +70,6 @@ export abstract class Storage {
       body = Buffer.from(file);
       size = body.length;
     } else {
-
       throw new HttpError.BadRequest("Unsupported file type");
     }
     return { body, size, type };

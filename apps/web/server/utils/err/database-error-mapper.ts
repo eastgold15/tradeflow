@@ -246,6 +246,3 @@ function extractOriginalPgError(err: any): any {
   if (err?.cause && typeof err.cause === "object") return err.cause;
   return err;
 }
-
-
-

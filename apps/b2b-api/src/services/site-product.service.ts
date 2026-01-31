@@ -1236,7 +1236,6 @@ export class SiteProductService {
           );
         }
 
-
         const physicalProductIds = siteProducts.map((sp) => sp.productId);
 
         // 2. [二次校验] 确保这些物理商品属于当前部门 (防止 ID 伪造删除他人商品)

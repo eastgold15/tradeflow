@@ -12,20 +12,18 @@ export interface DrizzleError extends Error {
   cause: PostgresError;
 }
 
-
-
 // 2. 定义内层的原始 PostgreSQL 错误结构
 export interface PostgresError {
   name: string;
   severity:
-  | "ERROR"
-  | "FATAL"
-  | "PANIC"
-  | "WARNING"
-  | "NOTICE"
-  | "DEBUG"
-  | "INFO"
-  | "LOG";
+    | "ERROR"
+    | "FATAL"
+    | "PANIC"
+    | "WARNING"
+    | "NOTICE"
+    | "DEBUG"
+    | "INFO"
+    | "LOG";
   code: string; // SQLSTATE (e.g., "23503")
   detail?: string;
   hint?: string;
