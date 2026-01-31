@@ -9,33 +9,30 @@ export const siteMiddleware = new Elysia({ name: "site-middleware" })
   .use(dbPlugin)
   .derive(async ({ db, request }) => {
     const hostname = request.headers.get("host") || "";
-    // 移除端口
-    const domain = hostname.split(":")[0];
+    let domain = hostname.split(":")[0].toLowerCase(); // 转小写防错
 
-    // --- 修复点 1: 处理服务端内部调用 ---
-    // 如果是服务器内部请求，可能需要通过 Header 传递原始域名，或者设置默认值
+    // 1. 处理服务端 SSR 内部调用
     if (domain === "localhost" || domain === "127.0.0.1") {
-      // 在生产环境 SSR 时，你可能需要从配置或 x-forwarded-host 中取值
-      const realHost = request.headers.get("x-forwarded-host") || process.env.DOMAIN;
-      if (realHost) return { site: await getSite(realHost.split(":")[0], db) };
+      // 优先取透传的 Host，取不到说明是 SSR 发起的，使用环境变量里的主域名
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      domain = forwardedHost ? forwardedHost.split(":")[0] : process.env.DOMAIN || "";
     }
 
+    // 2. 核心逻辑：如果是 www.dongqifootwear.com，剥离 www.
+    // 这样 www 和 不带 www 最终都会去查数据库里的 "dongqifootwear.com"
+    if (domain.startsWith("www.")) {
+      domain = domain.replace(/^www\./, "");
+    }
 
-    // 查找对应的站点
+    console.log(`[SiteMiddleware] Final matching domain: ${domain}`);
+
     const site = await getSite(domain, db);
-    console.log("site:", site);
 
     if (!site) {
       throw new HttpError.NotFound(`Site not found for domain: ${domain}`);
     }
 
-    if (!site.isActive) {
-      throw new HttpError.Forbidden(`Site is not active: ${domain}`);
-    }
-
-    return {
-      site,
-    };
+    return { site };
   })
   .as("global");
 
