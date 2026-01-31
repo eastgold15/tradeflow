@@ -11,9 +11,11 @@ export const env = createEnv({
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
+    DOMAIN: z.string().min(1, "DOMAIN 是必需的"),
   },
   client: {},
   runtimeEnv: {
+    DOMAIN: process.env.DOMAIN,
     PORT: process.env.PORT,
     DATABASE_URL: process.env.DATABASE_URL,
     AUTH_COOKIE: process.env.AUTH_COOKIE,

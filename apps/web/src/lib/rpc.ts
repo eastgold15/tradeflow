@@ -10,7 +10,7 @@ const getBaseURL = () => {
     return window.location.origin;
   }
   // 服务端环境
-  return `http://localhost:${env.PORT}`;
+  return `http://${env.DOMAIN}`;
 };
 
 // 3. 传入类型参数 <App>，但不传入 app 实例

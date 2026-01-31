@@ -11,6 +11,7 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" })
     logixlysia({
       // Phase 1: Transform - 将原始错误映射为标准错误
       transform: (error, { path }) => {
+        console.log('[error]:', error)
         return isDatabaseError(error) ? mapDatabaseError(error) : null;
       },
       config: {
