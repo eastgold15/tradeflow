@@ -6,11 +6,10 @@ export class SiteConfigService {
     query: SiteConfigContract["ListQuery"],
     ctx: ServiceContext
   ) {
-    const { search, category, key, keys } = query;
+    const { search, key, keys } = query;
     const res = await ctx.db.query.siteConfigTable.findMany({
       where: {
         siteId: ctx.site.id,
-        ...(category ? { category } : {}),
         ...(key ? { key } : {}),
         ...(keys?.length ? { key: { in: keys } } : {}),
         ...(search ? { key: { ilike: `%${search}%` } } : {}),
