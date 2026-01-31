@@ -15,6 +15,7 @@
     "@elysiajs/openapi": "^1.4.13",
     "@hookform/resolvers": "^5.2.2",
     "@mdx-js/react": "^3.1.1",
+    "@pori15/logixlysia": "catalog:",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@repo/contract": "workspace:*",
