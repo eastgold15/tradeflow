@@ -169,7 +169,7 @@ export class AdService {
         tenantId: ctx.user.context!.tenantId!,
       },
     });
-    if (!ad) throw new HttpError.NotFound("记录不存在");
+    if (!ad) throw new HttpError.NotFound(`Ad (ID: ${id})：不存在`);
     const [updated] = await ctx.db
       .update(adTable)
       .set({ isActive: !ad.isActive })
@@ -199,7 +199,7 @@ export class AdService {
     });
 
     if (!ad) {
-      throw new HttpError.NotFound("广告不存在");
+      throw new HttpError.NotFound(`Ad (ID: ${id})：不存在`);
     }
 
     return {
@@ -225,7 +225,7 @@ export class AdService {
       .where(and(...whereConditions));
 
     if (ads.length === 0) {
-      throw new HttpError.NotFound("未找到可删除的广告");
+      throw new HttpError.NotFound(`Ad (IDs: ${ids.join(", ")})：未找到可删除的记录`);
     }
 
     // 批量删除

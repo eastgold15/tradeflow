@@ -67,7 +67,7 @@ export class DepartmentService {
         },
       });
       if (!dept) {
-        throw new HttpError.NotFound("不存在");
+        throw new HttpError.NotFound(`Department (ID: ${currentDeptId})：不存在`);
       }
       const allRelatedIds = [
         currentDeptId, // 包含自己
@@ -162,7 +162,7 @@ export class DepartmentService {
         where: { id },
       });
       if (!dept) {
-        throw new HttpError.NotFound("部门不存在");
+        throw new HttpError.NotFound(`Department (ID: ${id})：不存在`);
       }
 
       // 2. 检查是否有子部门
@@ -170,7 +170,7 @@ export class DepartmentService {
         where: { parentId: id },
       });
       if (children.length > 0) {
-        throw new HttpError.BadRequest("请先删除子部门");
+        throw new HttpError.BadRequest(`Department (ID: ${id})：请先删除子部门`);
       }
 
       // 3. 删除该部门的所有用户（及用户角色关联）
@@ -228,7 +228,7 @@ export class DepartmentService {
     });
 
     if (!department) {
-      throw new HttpError.NotFound("部门不存在");
+      throw new HttpError.NotFound(`Department (ID: ${id})：不存在`);
     }
 
     console.log("部门用户数量:", department.users?.length || 0);
@@ -429,7 +429,7 @@ export class DepartmentService {
       });
 
       if (!existingDept) {
-        throw new HttpError.NotFound("部门不存在");
+        throw new HttpError.NotFound(`Department (ID: ${departmentId})：不存在`);
       }
 
       // 2. 更新部门

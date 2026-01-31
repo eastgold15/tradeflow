@@ -116,7 +116,7 @@ export class SiteCategoryService {
     });
 
     if (!category) {
-      throw new HttpError.NotFound("分类不存在或无权访问");
+      throw new HttpError.NotFound(`SiteCategory (ID: ${id})：不存在或无权访问`);
     }
 
     // 验证不能将分类移动到自己的子级下
@@ -130,13 +130,13 @@ export class SiteCategoryService {
       });
 
       if (!parent) {
-        throw new HttpError.NotFound("目标父级分类不存在或无权访问");
+        throw new HttpError.NotFound(`SiteCategory (ID: ${newParentId})：目标父级分类不存在或无权访问`);
       }
 
       // 检查是否会形成循环引用
       const isDescendant = await this.checkIsDescendant(newParentId, id, ctx);
       if (isDescendant) {
-        throw new HttpError.BadRequest("不能将分类移动到自己的子级下");
+        throw new HttpError.BadRequest(`SiteCategory (ID: ${id})：不能将分类移动到自己的子级下`);
       }
     }
 
@@ -186,7 +186,7 @@ export class SiteCategoryService {
     });
 
     if (!category) {
-      throw new HttpError.NotFound("分类不存在或无权访问");
+      throw new HttpError.NotFound(`SiteCategory (ID: ${id})：不存在或无权访问`);
     }
 
     const [updated] = await ctx.db

@@ -206,7 +206,7 @@ export class HeroCardService {
         tenantId: ctx.user.context.tenantId!,
       },
     });
-    if (!card) throw new HttpError.NotFound("记录不存在");
+    if (!card) throw new HttpError.NotFound(`HeroCard (ID: ${id})：不存在`);
     const [updated] = await ctx.db
       .update(heroCardTable)
       .set({ isActive: !card.isActive })
@@ -242,7 +242,7 @@ export class HeroCardService {
       .where(and(...whereConditions));
 
     if (cards.length === 0) {
-      throw new HttpError.NotFound("未找到可删除的首页展示卡片");
+      throw new HttpError.NotFound(`HeroCard (IDs: ${ids.join(", ")})：未找到可删除的记录`);
     }
 
     // 批量删除

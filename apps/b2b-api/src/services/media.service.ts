@@ -206,7 +206,7 @@ export class MediaService {
       .where(and(...whereConditions))
       .limit(1);
 
-    if (!file) throw new HttpError.NotFound("文件不存在或无权访问");
+    if (!file) throw new HttpError.NotFound(`Media (ID: ${id})：不存在或无权访问`);
 
     // 2. 删除物理文件
 
@@ -230,7 +230,7 @@ export class MediaService {
       .from(mediaTable)
       .where(and(...whereConditions));
 
-    if (files.length === 0) throw new HttpError.NotFound("未找到可删除的文件");
+    if (files.length === 0) throw new HttpError.NotFound(`Media (IDs: ${ids.join(", ")})：未找到可删除的记录`);
 
     // 2. 物理删除
     await Promise.all(files.map((f: any) => client.delete(f.storageKey)));

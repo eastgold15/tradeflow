@@ -77,7 +77,7 @@ export class SiteProductService {
           .limit(1);
 
         if (!existsProduct) {
-          throw new HttpError.NotFound("商品池中未找到该商品");
+          throw new HttpError.NotFound(`Product (ID: ${productId})：商品池中未找到该商品`);
         }
 
         // 收录时，默认使用原厂名称和描述
@@ -1338,7 +1338,7 @@ export class SiteProductService {
     });
 
     if (!siteProduct) {
-      throw new HttpError.NotFound("商品不存在");
+      throw new HttpError.NotFound(`SiteProduct (ID: ${id})：不存在`);
     }
 
     const physicalProductId = siteProduct.productId;

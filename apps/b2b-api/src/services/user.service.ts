@@ -33,7 +33,7 @@ export class UserService {
         },
       });
       if (!dept) {
-        throw new HttpError.NotFound("没有");
+        throw new HttpError.NotFound(`Department (ID: ${currentDeptId})：不存在`);
       }
       targetDeptIds = [currentDeptId, ...dept.childrens.map((c) => c.id)];
     } else if (dataScope === "current") {

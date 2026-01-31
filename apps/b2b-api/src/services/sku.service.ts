@@ -55,7 +55,7 @@ export class SkuService {
         )
         .limit(1);
 
-      if (!siteProduct) throw new HttpError.NotFound("请先在当前站点创建商品");
+      if (!siteProduct) throw new HttpError.NotFound(`SiteProduct (ProductID: ${productId})：请先在当前站点创建商品`);
 
       // 3. 检查 SKU 编码重复 (在当前商品下)
       const skuCodes = skus.map((s) => s.skuCode);
@@ -158,7 +158,7 @@ export class SkuService {
         .where(eq(skuTable.id, id))
         .limit(1);
 
-      if (!existingSku) throw new HttpError.NotFound("SKU 不存在");
+      if (!existingSku) throw new HttpError.NotFound(`SKU (ID: ${id})：不存在`);
 
       // 2. 检查 SiteProduct 是否存在 (为了拿到 siteProductId)
       // 注意：如果是集团，这里必须用 Upsert 逻辑或者确保 Group 已经有了 site_product
@@ -293,7 +293,7 @@ export class SkuService {
       .returning({ id: skuTable.id });
 
     if (deleted.length === 0) {
-      throw new HttpError.NotFound("SKU 不存在或无权删除");
+      throw new HttpError.NotFound(`SKU (IDs: ${ids.join(", ")})：不存在或无权删除`);
     }
 
     return {
@@ -321,7 +321,7 @@ export class SkuService {
       .returning({ id: skuTable.id });
 
     if (!deleted) {
-      throw new HttpError.NotFound("SKU 不存在或无权删除");
+      throw new HttpError.NotFound(`SKU (ID: ${id})：不存在或无权删除`);
     }
 
     return { success: true, id: deleted.id };
@@ -338,7 +338,7 @@ export class SkuService {
       .where(eq(skuTable.id, id))
       .limit(1);
 
-    if (!sku) throw new HttpError.NotFound("SKU 不存在");
+    if (!sku) throw new HttpError.NotFound(`SKU (ID: ${id})：不存在`);
 
     // 2. 获取图片信息
     const media = await ctx.db
