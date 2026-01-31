@@ -4,10 +4,8 @@
  */
 
 import type { InquiryWithItems } from "~/service/inquiry.service";
-import type {
-  EmailAttachment,
-  EmailTemplate,
-} from "../../../lib/email/email.types";
+import { EmailTemplate, EmailAttachment } from "~/utils/email/email.types";
+
 
 /**
  * 创建客户确认邮件模板
@@ -128,9 +126,9 @@ export function createSalesInquiryTemplate(
       ? `<div style="margin-top: 15px; font-size: 13px; color: #666;">
         <strong>关联/相似工厂推荐：</strong>
         ${factories
-          .slice(1)
-          .map((f) => `<span style="margin-right:10px;">• ${f.name}</span>`)
-          .join("")}
+        .slice(1)
+        .map((f) => `<span style="margin-right:10px;">• ${f.name}</span>`)
+        .join("")}
        </div>`
       : "";
 

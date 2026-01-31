@@ -1,6 +1,5 @@
 "use client";
 import type { Treaty } from "@elysiajs/eden";
-import { HttpError } from "@pori15/logixlysia";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { rpc } from "@/lib/rpc";
@@ -17,7 +16,7 @@ export function useProductDetail(id: string) {
   return useQuery({
     queryKey: ["site_product", id],
     queryFn: async () => {
-      if (!id) throw new HttpError.BadRequest("Product ID is required");
+      if (!id) throw new Error("Product ID is required");
       const { data, error } = await peoductDetail(id);
       if (error) {
         toast.error(error.value?.message || "获取商品详情失败");
