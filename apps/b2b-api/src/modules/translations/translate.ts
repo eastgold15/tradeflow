@@ -1,7 +1,7 @@
 // import { TranslationDictTModel } from "@repo/contract";
 // import { and, eq, ilike, or, sql } from "drizzle-orm";
 // import { Elysia, t } from "elysia";
-// import {  HttpError  } from "@pori15/elysia-unified-error";
+// import { HttpError } from "@pori15/logixlysia";
 // import { dbPlugin } from "@/server/db/connection";
 // import { translationDictTable } from "@/server/db/schema";
 // import { type CommonRes, commonRes, type PageData } from "@/server/utils/Res";

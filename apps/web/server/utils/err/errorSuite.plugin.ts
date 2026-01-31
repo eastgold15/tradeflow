@@ -1,14 +1,13 @@
 // src/plugins/error-logger.plugin.ts
 
-import {
-  HttpError,
-  httpProblemJsonPlugin,
-} from "@pori15/elysia-http-problem-json";
+
+
 import chalk from "chalk";
 import { Elysia } from "elysia";
 import { mapDatabaseError } from "./database-error-mapper";
 import { filterStack, getValidationSummary } from "./errorSuite.plugin.utils";
 import { isDatabaseError } from "./guards";
+import { HttpError } from "@pori15/logixlysia";
 
 export const errorLoggerPlugin = new Elysia({
   name: "error-logger-plugin",
@@ -81,7 +80,20 @@ export const errorLoggerPlugin = new Elysia({
  * 统一错误处理套件
  * 顺序：日志转换 -> 标准响应
  */
+// export const errorSuite = new Elysia({ name: "error-suite" })
+//   .use(errorLoggerPlugin) // 1. 先抓到，打印并 throw
+//   .use(httpProblemJsonPlugin()) // 2. 接收 throw 出来的错误并返回 JSON
+//   .as("global");
+
 export const errorSuite = new Elysia({ name: "error-suite" })
-  .use(errorLoggerPlugin) // 1. 先抓到，打印并 throw
-  .use(httpProblemJsonPlugin()) // 2. 接收 throw 出来的错误并返回 JSON
+  .use(
+    unifiedErrorPlugin({
+      transform: (error) =>
+        isDatabaseError(error) ? mapDatabaseError(error) : null,
+
+      onBeforeRespond: (problem, ctx) => {
+        logErrorWithConsola(problem, ctx);
+      },
+    })
+  )
   .as("global");

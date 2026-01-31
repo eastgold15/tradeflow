@@ -1,4 +1,4 @@
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { type AdContract, adTable } from "@repo/contract";
 import { and, eq, inArray } from "drizzle-orm";
 import { type ServiceContext } from "../lib/type";

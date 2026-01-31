@@ -121,7 +121,7 @@ function processData(data: unknown) {
 ### Error Handling
 ```typescript
 // Use HttpError from elysia-http-problem-json for HTTP errors
-import {  HttpError  } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 
 // Throw appropriate errors
 throw new HttpError.NotFound("Product not found");

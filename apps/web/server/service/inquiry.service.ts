@@ -10,7 +10,7 @@
  * --------------------------------------------------------
  */
 
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import {
   customerTable,
   type InquiryContract,

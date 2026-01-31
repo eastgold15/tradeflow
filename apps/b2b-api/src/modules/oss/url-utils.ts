@@ -3,7 +3,7 @@
  * 提供统一的URL解析和key提取功能
  */
 
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { envConfig } from "~/lib/env";
 
 // 顶层正则表达式常量，提升性能

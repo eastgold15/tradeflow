@@ -1,4 +1,4 @@
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { Elysia } from "elysia";
 import { dbPlugin } from "~/db/connection";
 import { auth } from "~/lib/auth";

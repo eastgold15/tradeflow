@@ -1,4 +1,4 @@
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { newsletterSubscriptionTable } from "@repo/contract";
 import { eq } from "drizzle-orm";
 import type { ServiceContext } from "~/middleware/site";

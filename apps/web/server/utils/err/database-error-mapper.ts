@@ -1,6 +1,6 @@
 // src/errors/database-error-mapper.ts
 // src/errors/database-error-mapper.ts
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 
 /**
  * 将底层数据库错误(如 Drizzle/PostgreSQL 抛出的)映射为语义化自定义错误

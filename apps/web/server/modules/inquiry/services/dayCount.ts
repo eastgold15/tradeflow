@@ -1,4 +1,4 @@
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { dailyInquiryCounterTable } from "@repo/contract";
 import { eq, sql } from "drizzle-orm";
 

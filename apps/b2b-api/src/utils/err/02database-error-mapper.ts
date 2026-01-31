@@ -1,6 +1,6 @@
 // src/errors/database-error-mapper.ts
 // src/errors/database-error-mapper.ts
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { type DrizzleError, getPostgresError } from "./01guards";
 
 /**

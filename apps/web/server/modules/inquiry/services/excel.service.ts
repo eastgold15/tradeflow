@@ -5,7 +5,7 @@
 
 import fs, { promises as fsPromises } from "node:fs";
 import path from "node:path";
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 // main.js
 import ExcelJS from "exceljs";
 import type { QuotationData } from "../excelTemplate/QuotationData";

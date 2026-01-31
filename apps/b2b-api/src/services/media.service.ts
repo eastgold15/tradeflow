@@ -1,4 +1,4 @@
-import { HttpError } from "@pori15/elysia-unified-error";
+import { HttpError } from "@pori15/logixlysia";
 import { type MediaContract, mediaTable } from "@repo/contract";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { envConfig } from "~/lib/env";
