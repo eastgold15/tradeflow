@@ -27,8 +27,7 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" })
             typeBaseUrl: "https://gin-shopping.com",
           }
         }
-
       },
-
     })
   )
+  .as('global')

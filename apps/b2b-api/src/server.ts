@@ -10,7 +10,6 @@ import { envConfig } from "./lib/env";
 import { startupCheckPlugin } from "./lib/startup/startup-check";
 import { authGuardMid } from "./middleware/auth";
 import { loggerPlugin } from "./middleware/logger";
-import { errorSuite } from "./utils/err/03errorSuite.plugin";
 
 const api = new Elysia({ name: "api", prefix: "/api" })
 
@@ -48,8 +47,7 @@ export const server = new Elysia({ name: "server" })
   )
   // 1. 日志插件 (注入 ctx.log 和自动记录 HTTP 响应)
   .use(loggerPlugin)
-  // 2. 核心错误处理插件 (拦截所有错误，进行转换和手动日志记录)
-  // .use(errorSuite)
+
   .use(localeMiddleware) // 在全局级别添加语言中间件
   .use(dbPlugin)
   .all("/api/auth/*", (ctx) => {

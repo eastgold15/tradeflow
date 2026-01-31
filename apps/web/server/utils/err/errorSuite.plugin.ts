@@ -84,16 +84,3 @@ export const errorLoggerPlugin = new Elysia({
 //   .use(errorLoggerPlugin) // 1. 先抓到，打印并 throw
 //   .use(httpProblemJsonPlugin()) // 2. 接收 throw 出来的错误并返回 JSON
 //   .as("global");
-
-export const errorSuite = new Elysia({ name: "error-suite" })
-  .use(
-    unifiedErrorPlugin({
-      transform: (error) =>
-        isDatabaseError(error) ? mapDatabaseError(error) : null,
-
-      onBeforeRespond: (problem, ctx) => {
-        logErrorWithConsola(problem, ctx);
-      },
-    })
-  )
-  .as("global");

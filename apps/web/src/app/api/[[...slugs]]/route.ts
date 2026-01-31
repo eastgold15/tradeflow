@@ -4,7 +4,6 @@ import { appRouter } from "~/controllers/app-router";
 import { dbPlugin } from "~/db/connection";
 import { loggerPlugin } from "~/middleware/logger";
 import { siteMiddleware } from "~/middleware/site";
-import { errorSuite } from "~/utils/err/errorSuite.plugin";
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("❌ 未捕获的拒绝:", reason);
@@ -48,8 +47,7 @@ const app = new Elysia({ name: "app", prefix: "/api" })
   )
   // 1. 日志插件 - 记录所有请求
   .use(loggerPlugin)
-  // 2. 错误处理插件 - 统一错误处理
-  .use(errorSuite)
+
   // 4. 站点中间件
   .use(siteMiddleware)
   // 自动挂载所有控制器（包括自定义和生成的）
