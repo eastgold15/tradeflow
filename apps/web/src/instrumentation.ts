@@ -1,6 +1,6 @@
 // instrumentation.ts
 
-import { performStartupCheck } from "~/lib/startup/startup-check";
+import { performStartupCheck } from "~/utils/startup/startup-check";
 
 export async function register() {
   console.log("--- NEXT.JS RUNTIME STARTING 打印环境变量 ---");

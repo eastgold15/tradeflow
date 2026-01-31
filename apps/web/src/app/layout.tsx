@@ -1,6 +1,6 @@
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/Navbar/Navbar";
-import QueryProvider from "@/components/providers/query-provider";
+import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
 
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
