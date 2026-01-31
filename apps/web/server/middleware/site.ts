@@ -9,27 +9,21 @@ export const siteMiddleware = new Elysia({ name: "site-middleware" })
   .use(dbPlugin)
   .derive(async ({ db, request }) => {
     const hostname = request.headers.get("host") || "";
-    let domain = hostname.split(":")[0].toLowerCase(); // 转小写防错
+    // 1. 统一转小写并去掉端口
+    let domain = hostname.split(":")[0].toLowerCase();
 
-    // 1. 处理服务端 SSR 内部调用
-    if (domain === "localhost" || domain === "127.0.0.1") {
-      // 优先取透传的 Host，取不到说明是 SSR 发起的，使用环境变量里的主域名
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      domain = forwardedHost ? forwardedHost.split(":")[0] : process.env.DOMAIN || "";
-    }
-
-    // 2. 核心逻辑：如果是 www.dongqifootwear.com，剥离 www.
-    // 这样 www 和 不带 www 最终都会去查数据库里的 "dongqifootwear.com"
+    // 2. 关键：如果是 www 开头，去掉它
+    // 这样 www.dongqifootwear.com 就会变成 dongqifootwear.com
     if (domain.startsWith("www.")) {
       domain = domain.replace(/^www\./, "");
     }
 
-    console.log(`[SiteMiddleware] Final matching domain: ${domain}`);
-
+    // 3. 查数据库。此时 domain 已经是干净的 "dongqifootwear.com"
     const site = await getSite(domain, db);
 
     if (!site) {
-      throw new HttpError.NotFound(`Site not found for domain: ${domain}`);
+      console.error(`[SiteMiddleware] Domain mismatch: ${domain}`);
+      throw new HttpError.NotFound(`Site not found`);
     }
 
     return { site };
