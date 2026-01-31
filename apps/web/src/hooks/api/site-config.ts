@@ -30,6 +30,7 @@ export function useSiteConfigList(query: SiteConfigParams, enabled = true) {
       // Depending on your RPC client, you might need to handle errors or return .data
       return response.data;
     },
-    enabled: enabled && !!query, // Optional: only run if enabled AND params exist
+    enabled: enabled && !!query,
+    staleTime: Infinity, // 第一次请求后永久缓存
   });
 }
