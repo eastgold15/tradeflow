@@ -1,7 +1,7 @@
 "use client";
 
 import type { SiteConfigContract } from "@repo/contract";
-import { getCategoryLabel, getConfigKeyLabel } from "@repo/contract";
+import { getConfigKeyLabel } from "@repo/contract";
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
   useDeleteSiteConfig,
   useSiteConfigList,
 } from "@/hooks/api/site-config";
+import { useSiteList } from "@/hooks/api/site";
 import { DeepNonNullable } from "@/types/utils";
 
 export default function SiteConfigPage() {
@@ -36,13 +37,22 @@ export default function SiteConfigPage() {
     DeepNonNullable<SiteConfigContract["Response"]> | undefined
   >();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("all");
 
   // 获取站点配置列表
   const { data: configListData, isLoading, refetch } = useSiteConfigList();
 
+  // 获取站点列表（用于显示站点名称）
+  const { data: siteListData } = useSiteList({ limit: 100, page: 0 });
+
   // 删除站点配置
   const deleteMutation = useDeleteSiteConfig();
+
+  // 创建站点 ID 到站点名称的映射
+  const siteNameMap = (siteListData || []).reduce((acc: Record<string, string>, site: any) => {
+    acc[site.id] = site.name;
+    return acc;
+  }, {} as Record<string, string>);
 
   // 处理删除
   const handleDelete = async (id: string) => {
@@ -75,30 +85,28 @@ export default function SiteConfigPage() {
         searchTerm.toLowerCase()
       );
 
-    const matchesCategory =
-      selectedCategory === "all" || config.category === selectedCategory;
+    const matchesSite =
+      selectedSiteId === "all" || config.siteId === selectedSiteId;
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesSite;
   });
 
-  // 获取所有分类
-  const categories: string[] = Array.from(
+  // 获取所有站点 ID（包括 "all" 选项）
+  const siteIds: string[] = Array.from(
     new Set<string>([
       "all",
-      ...(configListData || []).map(
-        (config: any) => config.category || "general"
-      ),
+      ...(configListData || []).map((config: any) => config.siteId),
     ])
   );
 
-  // 按分类分组
+  // 按 siteId 分组
   const groupedConfigs = filteredConfigs.reduce(
     (acc: Record<string, typeof filteredConfigs>, config: any) => {
-      const category = config.category || "general";
-      if (!acc[category]) {
-        acc[category] = [];
+      const siteId = config.siteId;
+      if (!acc[siteId]) {
+        acc[siteId] = [];
       }
-      acc[category].push(config);
+      acc[siteId].push(config);
       return acc;
     },
     {} as Record<string, typeof filteredConfigs>
@@ -146,15 +154,15 @@ export default function SiteConfigPage() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  {categories.map((category) => (
+                  {siteIds.map((siteId) => (
                     <Button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
+                      key={siteId}
+                      onClick={() => setSelectedSiteId(siteId)}
                       variant={
-                        selectedCategory === category ? "default" : "outline"
+                        selectedSiteId === siteId ? "default" : "outline"
                       }
                     >
-                      {category === "all" ? "全部" : getCategoryLabel(category)}
+                      {siteId === "all" ? "全部站点" : siteNameMap[siteId] || siteId}
                     </Button>
                   ))}
                 </div>
@@ -170,7 +178,7 @@ export default function SiteConfigPage() {
           ) : Object.keys(groupedConfigs).length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                {searchTerm || selectedCategory !== "all"
+                {searchTerm || selectedSiteId !== "all"
                   ? "未找到匹配的配置项"
                   : "暂无站点配置，点击上方按钮创建"}
               </CardContent>
@@ -178,12 +186,12 @@ export default function SiteConfigPage() {
           ) : (
             <div className="space-y-6">
               {Object.entries(groupedConfigs).map(
-                ([category, configs]) =>
+                ([siteId, configs]) =>
                   configs.length > 0 && (
-                    <Card key={category}>
+                    <Card key={siteId}>
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between">
-                          <span>{getCategoryLabel(category)}</span>
+                          <span>{siteNameMap[siteId] || siteId}</span>
                           <Badge variant="secondary">{configs.length} 项</Badge>
                         </CardTitle>
                       </CardHeader>
@@ -217,28 +225,20 @@ export default function SiteConfigPage() {
                                     配置类型: {config.key}
                                   </p>
 
-                                  <p className="mt-2 text-sm">
-                                    <span className="font-medium">
-                                      配置内容:
-                                    </span>{" "}
-                                    {config.value.length > 100
-                                      ? `${config.value.substring(0, 100)}...`
-                                      : config.value}
-                                  </p>
-
-
-                                  <p className="mt-2 text-sm">
+                                  <div className="mt-2 text-sm">
                                     <span className="font-medium">配置内容:</span>{" "}
                                     {config.jsonValue && Object.keys(config.jsonValue).length > 0 ? (
                                       <Badge variant="outline" className="ml-2 font-mono text-blue-500">
                                         <code className="text-[10px]">JSON Object</code>
                                       </Badge>
                                     ) : (
-                                      config.value.length > 100
-                                        ? `${config.value.substring(0, 100)}...`
-                                        : config.value
+                                      <span className="text-muted-foreground">
+                                        {config.value.length > 100
+                                          ? `${config.value.substring(0, 100)}...`
+                                          : config.value}
+                                      </span>
                                     )}
-                                  </p>
+                                  </div>
 
                                   {config.description && (
                                     <p className="mt-1 text-muted-foreground text-sm">

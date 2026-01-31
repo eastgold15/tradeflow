@@ -35,8 +35,6 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SiteConfigContract } from "@repo/contract";
 import {
-  SITE_CATEGORY_ENUM,
-  SITE_CATEGORY_OPTIONS,
   SITE_CONFIG_KEY_OPTIONS
 } from "@repo/contract";
 import { Code2, Loader2, Type } from "lucide-react";
@@ -79,7 +77,7 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
     resolver: zodResolver(formSchema),
     defaultValues: {
       key: "", value: "", jsonValue: {}, description: "",
-      category: SITE_CATEGORY_ENUM.FUSHI, url: "",
+      category: "general", url: "",
       translatable: true, visible: false, siteId: "", mode: "text",
     },
   });
@@ -102,6 +100,7 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
       // 提交逻辑：如果是文本模式，清空 jsonValue；反之亦然
       const submitData = {
         ...data,
+        category: "general", // 固定为 general，按 siteId 来分类
         value: data.mode === "text" ? data.value : "[JSON Object]", // 给 value 一个占位符
         jsonValue: data.mode === "json" ? data.jsonValue : null,
       };
@@ -131,7 +130,7 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
         <Form {...form}>
           <form id="site-config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex-1 overflow-y-auto px-1">
 
-            {/* 基础字段区 (SiteId, Key, Category) - 建议保持并排以节省空间 */}
+            {/* 基础字段区 (SiteId, Key) */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="siteId" render={({ field }) => (
                 <FormItem><FormLabel>所属站点</FormLabel><SiteSelect value={field.value} onChange={field.onChange} disabled={isEdit} /></FormItem>
@@ -145,37 +144,6 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
                 </FormItem>
               )} />
             </div>
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>所属公司分类 （必填）</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="请选择工厂/公司分类" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {SITE_CATEGORY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    选择配置项所属的工厂/公司分类
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
 
             {/* 内容编辑模式切换 */}
