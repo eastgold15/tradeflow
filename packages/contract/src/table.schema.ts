@@ -756,6 +756,7 @@ export const siteConfigTable = p.pgTable(
     ...Audit,
     key: p.varchar("key", { length: 100 }).notNull(), // 同一站点下唯一，所以 unique 要组合
     value: p.text("value").notNull().default(""),
+    jsonValue: p.jsonb("json_value").default({}),
     description: p.text("description").default(""),
     category: p.varchar("category", { length: 50 }).default("general"),
     url: p.varchar("url", { length: 255 }).default(""),

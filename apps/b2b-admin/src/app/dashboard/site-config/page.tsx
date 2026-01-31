@@ -28,11 +28,12 @@ import {
   useDeleteSiteConfig,
   useSiteConfigList,
 } from "@/hooks/api/site-config";
+import { DeepNonNullable } from "@/types/utils";
 
 export default function SiteConfigPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<
-    SiteConfigContract["Response"] | undefined
+    DeepNonNullable<SiteConfigContract["Response"]> | undefined
   >();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -56,7 +57,7 @@ export default function SiteConfigPage() {
   };
 
   // 处理编辑
-  const handleEdit = (config: SiteConfigContract["Response"]) => {
+  const handleEdit = (config: DeepNonNullable<SiteConfigContract["Response"]>) => {
     setEditingConfig(config);
   };
 
@@ -223,6 +224,20 @@ export default function SiteConfigPage() {
                                     {config.value.length > 100
                                       ? `${config.value.substring(0, 100)}...`
                                       : config.value}
+                                  </p>
+
+
+                                  <p className="mt-2 text-sm">
+                                    <span className="font-medium">配置内容:</span>{" "}
+                                    {config.jsonValue && Object.keys(config.jsonValue).length > 0 ? (
+                                      <Badge variant="outline" className="ml-2 font-mono text-blue-500">
+                                        <code className="text-[10px]">JSON Object</code>
+                                      </Badge>
+                                    ) : (
+                                      config.value.length > 100
+                                        ? `${config.value.substring(0, 100)}...`
+                                        : config.value
+                                    )}
                                   </p>
 
                                   {config.description && (

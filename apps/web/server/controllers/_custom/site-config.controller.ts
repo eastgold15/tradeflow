@@ -14,7 +14,6 @@ export const siteConfigController = new Elysia({ prefix: "/site-config" })
     ({ query, db, site }) => siteConfigService.list(query, { db, site }),
     {
       query: SiteConfigContract.ListQuery,
-
       detail: {
         summary: "获取SiteConfig列表",
         description: "分页查询SiteConfig数据，支持搜索和排序",

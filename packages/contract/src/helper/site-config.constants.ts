@@ -19,6 +19,7 @@ export const SITE_CONFIG_KEY_ENUM = {
   PAGE_SHIP_CONTENT: "page_ship_content",
   PAGE_SIZE_CONTENT: "page_size_content",
   PAGE_TERMS_CONTENT: "page_terms_content",
+  FOOTER_CONTENT: "footer_content",
 } as const;
 
 // ===== 对象格式 (用于 apps/web) =====
@@ -36,6 +37,7 @@ export const SITE_CONFIG_KEY_OPTIONS = [
   { value: SITE_CONFIG_KEY_ENUM.PAGE_PRIVACY_CONTENT, label: "隐私政策" },
   { value: SITE_CONFIG_KEY_ENUM.PAGE_SIZE_CONTENT, label: "尺码指南" },
   { value: SITE_CONFIG_KEY_ENUM.PAGE_TERMS_CONTENT, label: "服务条款" },
+  { value: SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT, label: "页脚内容" },
 ] as const;
 
 // ===== 类型定义 =====

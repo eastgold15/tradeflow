@@ -32,7 +32,8 @@ export const SiteConfigContract = {
   ),
 
   ListQuery: t.Object({
-    ...t.Partial(t.Object(SiteConfigInsertFields)).properties,
+    key: t.Optional(t.String()),
+    keys: t.Optional(t.Array(t.String())),
     search: t.Optional(t.String()),
   }),
   /** [Auto-Generated] Do not edit this tag to keep updates. @generated */

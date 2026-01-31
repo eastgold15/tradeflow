@@ -10,10 +10,10 @@ export class SiteService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-            tenantId: ctx.user.context.tenantId!,
-            createdBy: ctx.user.id,
-            deptId: ctx.currentDeptId,
-          }
+          tenantId: ctx.user.context.tenantId!,
+          createdBy: ctx.user.id,
+          deptId: ctx.currentDeptId,
+        }
         : {}),
     };
     const [res] = await ctx.db.insert(siteTable).values(insertData).returning();
@@ -23,14 +23,33 @@ export class SiteService {
   public async list(query: SiteContract["ListQuery"], ctx: ServiceContext) {
     const { search } = query;
 
+    const depts = await ctx.db.query.departmentTable.findFirst({
+      where: {
+        id: ctx.currentDeptId
+      },
+      with: {
+        childrens: {
+          with: {
+            site: true
+          }
+        }
+      }
+    })
+
+    const siteIds = depts?.childrens.map((item) => item.site.id) || [];
+
     const res = await ctx.db.query.siteTable.findMany({
       where: {
         tenantId: ctx.user.context.tenantId!,
         ...(search ? { name: { ilike: `%${search}%` } } : {}),
+        id: { in: [...siteIds, ctx.user.context.site.id] },
       },
     });
     return res;
+
+
   }
+
 
   /** [Auto-Generated] Do not edit this tag to keep updates. @generated */
   public async update(
