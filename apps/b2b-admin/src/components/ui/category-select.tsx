@@ -71,12 +71,11 @@ export function CategorySelect({
     return map;
   }, [categoriesData]);
 
-  // 热门分类（按数量排序）
+  // 热门分类（按数量排序，显示所有有数量的分类）
   const popularCategories = React.useMemo(() => {
     return Array.from(categoryMap.entries())
       .filter(([, count]) => count > 0)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
   }, [categoryMap]);
 
@@ -202,30 +201,32 @@ export function CategorySelect({
                   {!inputValue.trim() && hasPopular && (
                     <>
                       <CommandGroup heading="热门分类">
-                        {popularCategories.map((cat) => {
-                          const isSelected = value === cat.name;
-                          return (
-                            <CommandItem
-                              key={cat.name}
-                              onSelect={() => handleSelect(cat.name)}
-                            >
-                              <div
-                                className={cn(
-                                  "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                  isSelected
-                                    ? "bg-primary text-primary-foreground"
-                                    : "opacity-50 [&_svg]:invisible"
-                                )}
+                        <div className="max-h-60 overflow-y-auto">
+                          {popularCategories.map((cat) => {
+                            const isSelected = value === cat.name;
+                            return (
+                              <CommandItem
+                                key={cat.name}
+                                onSelect={() => handleSelect(cat.name)}
                               >
-                                <Flame className="h-3 w-3" />
-                              </div>
-                              <span className="flex-1">{cat.name}</span>
-                              <Badge className="text-xs" variant="secondary">
-                                {cat.count}
-                              </Badge>
-                            </CommandItem>
-                          );
-                        })}
+                                <div
+                                  className={cn(
+                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "opacity-50 [&_svg]:invisible"
+                                  )}
+                                >
+                                  <Flame className="h-3 w-3" />
+                                </div>
+                                <span className="flex-1">{cat.name}</span>
+                                <Badge className="text-xs" variant="secondary">
+                                  {cat.count}
+                                </Badge>
+                              </CommandItem>
+                            );
+                          })}
+                        </div>
                       </CommandGroup>
                       <CommandSeparator />
                     </>
