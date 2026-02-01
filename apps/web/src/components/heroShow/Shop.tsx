@@ -37,7 +37,7 @@ const Shop: React.FC<ShopProps> = ({ onProductSelect }) => {
   const products = data.items || [];
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-white p-2 md:p-3">
+    <div className="flex h-full w-full flex-col items-center justify-center bg-white p-4 md:p-3">
       <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-x-3 gap-y-4">
         {products.slice(0, 4).map((product) => (
           <div
@@ -60,7 +60,7 @@ const Shop: React.FC<ShopProps> = ({ onProductSelect }) => {
             </div>
 
             {/* 文字部分：使用 shrink-0 防止文字区域被压缩 */}
-            <h3 className="mt-2 shrink-0 text-center font-serif text-2xs text-black italic transition-colors group-hover:text-gray-600 md:text-2xl">
+            <h3 className="mt-1 shrink-0 text-center font-serif text-[10px] text-black italic transition-colors group-hover:text-gray-600 md:text-2xl">
               {product.displayName}
             </h3>
           </div>

@@ -39,7 +39,7 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
 }) => (
   <div className={`flex flex-col ${bgColor}`}>
     {/* 上部：根据传入的children渲染 */}
-      <div className="relative h-[60vh] min-h-0 w-full grow md:h-[calc(100vh-var(--navbar-height))]">
+      <div className="relative h-[55vh] min-h-0 w-full grow md:h-[calc(100vh-var(--navbar-height))]">
       {children}
     </div>
 
@@ -89,7 +89,7 @@ export const HeroShowComponent: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <div className="flex flex-col" key={i}>
-            <Skeleton className="h-[60vh] md:h-150" variant="rectangle" />
+            <Skeleton className="h-[55vh] md:h-150" variant="rectangle" />
               <div className="flex h-50 flex-col justify-center space-y-4 p-8 md:h-62.5">
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
