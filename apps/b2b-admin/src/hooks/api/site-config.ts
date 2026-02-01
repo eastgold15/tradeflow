@@ -99,3 +99,17 @@ export function useDeleteSiteConfig() {
     },
   });
 }
+
+// --- 6. 获取配置键列表 (GET) ---
+// TRes = typeof SiteConfigContract.KeysResponse.static
+export function useSiteConfigKeys(enabled = true) {
+  return useQuery({
+    queryKey: [...siteconfigKeys.all, "keys"],
+    queryFn: () =>
+      api.get<typeof SiteConfigContract.KeysResponse.static>(
+        "/api/v1/site-config/keys"
+      ),
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5分钟缓存
+  });
+}

@@ -41,6 +41,15 @@ export const SiteConfigContract = {
     data: t.Array(t.Object({ ...SiteConfigFields })),
     total: t.Number(),
   }),
+  // 配置键相关
+  KeysResponse: t.Object({
+    keys: t.Array(
+      t.Object({
+        key: t.String(),
+        count: t.Number(),
+      })
+    ),
+  }),
 } as const;
 
 export type SiteConfigContract = InferDTO<typeof SiteConfigContract>;

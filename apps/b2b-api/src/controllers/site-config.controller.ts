@@ -25,6 +25,21 @@ export const siteConfigController = new Elysia({ prefix: "/site-config" })
       },
     }
   )
+  .get(
+    "/keys",
+    ({ user, db, currentDeptId }) =>
+      siteConfigService.getKeys({ db, user, currentDeptId }),
+    {
+      allPermissions: ["SITE_CONFIG_VIEW"],
+      requireDept: true,
+      detail: {
+        summary: "获取所有配置键及数量",
+        description: "获取数据库中已存在的配置键列表及其使用数量",
+        tags: ["SiteConfig"],
+      },
+      response: SiteConfigContract.KeysResponse,
+    }
+  )
   .post(
     "/",
     ({ body, user, db, currentDeptId }) =>

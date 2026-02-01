@@ -1,5 +1,5 @@
 import { type SiteConfigContract, siteConfigTable } from "@repo/contract";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { type ServiceContext } from "../lib/type";
 
 export class SiteConfigService {
@@ -9,10 +9,10 @@ export class SiteConfigService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-            tenantId: ctx.user.context.tenantId!,
-            createdBy: ctx.user.id,
-            deptId: ctx.currentDeptId,
-          }
+          tenantId: ctx.user.context.tenantId!,
+          createdBy: ctx.user.id,
+          deptId: ctx.currentDeptId,
+        }
         : {}),
     };
     const [res] = await ctx.db
@@ -57,5 +57,29 @@ export class SiteConfigService {
       .where(eq(siteConfigTable.id, id))
       .returning();
     return res;
+  }
+
+  /**
+   * 获取所有配置键及使用数量
+   */
+  async getKeys(ctx: ServiceContext) {
+    const whereConditions: any[] = [];
+
+    // if (ctx.user?.context.tenantId)
+    //   whereConditions.push(eq(siteConfigTable.siteId, ctx.user.context.site.id!));
+    // 使用 SQL 聚合查询获取配置键统计
+    const keys = await ctx.db
+      .select({
+        key: siteConfigTable.key,
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(siteConfigTable)
+      .where(and(...whereConditions))
+      .groupBy(siteConfigTable.key)
+      .orderBy(sql`count(*) desc`);
+
+    return {
+      keys,
+    };
   }
 }

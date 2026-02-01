@@ -18,13 +18,7 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SiteConfigKeySelect } from "@/components/ui/site-config-key-select";
 import { SiteSelect } from "@/components/ui/site-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,9 +28,6 @@ import {
 } from "@/hooks/api/site-config";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { SiteConfigContract } from "@repo/contract";
-import {
-  SITE_CONFIG_KEY_OPTIONS
-} from "@repo/contract";
 import { Code2, Loader2, Type } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -174,10 +165,12 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
               <FormField control={form.control} name="key" render={({ field }) => (
                 <FormItem>
                   <FormLabel>配置类型</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isEdit}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{SITE_CONFIG_KEY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <SiteConfigKeySelect
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isEdit}
+                    placeholder="选择或输入配置键..."
+                  />
                   <FormMessage />
                 </FormItem>
               )} />
