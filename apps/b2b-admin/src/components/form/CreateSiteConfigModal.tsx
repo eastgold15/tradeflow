@@ -101,20 +101,46 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
     }
   }, [editingConfig, form]);
 
+  // 监听表单验证错误，帮助调试
+  const errors = form.formState.errors;
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("🔴 表单验证失败详情:", errors);
+    }
+  }, [errors]);
+
   const onSubmit = async (data: FormData) => {
     try {
-      // 提交逻辑：如果是文本模式，清空 jsonValue；反之亦然
-      const submitData = {
-        ...data,
-        category: "general", // 固定为 general，按 siteId 来分类
-        value: data.mode === "text" ? data.value : "[JSON Object]", // 给 value 一个占位符
-        jsonValue: data.mode === "json" ? data.jsonValue : null,
-      };
+      // 根据模式准备内容
+      const value = data.mode === "text" ? data.value : "[JSON Object]";
+      const jsonValue = data.mode === "json" ? data.jsonValue : null;
 
       if (isEdit && editingConfig) {
-        await updateSiteConfig.mutateAsync({ id: editingConfig.id, data: submitData });
+        // 更新时：只发送 Update 契约中定义的字段，排除 siteId、mode、jsonValue
+        const updateData = {
+          key: data.key,
+          value,
+          description: data.description,
+          category: data.category,
+          url: data.url,
+          translatable: data.translatable,
+          visible: data.visible,
+        };
+        await updateSiteConfig.mutateAsync({ id: editingConfig.id, data: updateData });
       } else {
-        await createSiteConfig.mutateAsync(submitData);
+        // 创建时：发送所有必要字段
+        const createData = {
+          siteId: data.siteId,
+          key: data.key,
+          value,
+          jsonValue,
+          description: data.description,
+          category: data.category,
+          url: data.url,
+          translatable: data.translatable,
+          visible: data.visible,
+        };
+        await createSiteConfig.mutateAsync(createData);
       }
       onSuccess?.();
       onOpenChange(false);
@@ -139,14 +165,20 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
             {/* 基础字段区 (SiteId, Key) */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="siteId" render={({ field }) => (
-                <FormItem><FormLabel>所属站点</FormLabel><SiteSelect value={field.value} onChange={field.onChange} disabled={isEdit} /></FormItem>
+                <FormItem>
+                  <FormLabel>所属站点</FormLabel>
+                  <SiteSelect value={field.value} onChange={field.onChange} disabled={isEdit} />
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="key" render={({ field }) => (
-                <FormItem><FormLabel>配置类型</FormLabel>
+                <FormItem>
+                  <FormLabel>配置类型</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isEdit}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{SITE_CONFIG_KEY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )} />
             </div>
@@ -188,15 +220,27 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
 
             {/* 其他字段 (Description, URL, Switches) ... */}
             <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem><FormLabel>备注说明</FormLabel><Input {...field} /></FormItem>
+              <FormItem>
+                <FormLabel>备注说明</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
 
             <div className="flex gap-8 py-2">
               <FormField control={form.control} name="translatable" render={({ field }) => (
-                <FormItem className="flex items-center gap-2"><FormLabel>可翻译</FormLabel><Switch checked={field.value} onCheckedChange={field.onChange} /></FormItem>
+                <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel>可翻译</FormLabel>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="visible" render={({ field }) => (
-                <FormItem className="flex items-center gap-2"><FormLabel>前端可见</FormLabel><Switch checked={field.value} onCheckedChange={field.onChange} /></FormItem>
+                <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <FormLabel>前端可见</FormLabel>
+                  <FormMessage />
+                </FormItem>
               )} />
             </div>
           </form>
