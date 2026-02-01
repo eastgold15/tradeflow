@@ -13,12 +13,16 @@
 import { HttpError } from "@pori15/logixlysia";
 import {
   customerTable,
+  departmentTable,
   type InquiryContract,
   inquiryTable,
   productTemplateTable,
+  roleTable,
   salesResponsibilityTable,
   templateKeyTable,
   templateValueTable,
+  userRoleTable,
+  userTable,
 } from "@repo/contract";
 import { and, eq } from "drizzle-orm";
 import { db } from "~/db/connection";
@@ -117,12 +121,12 @@ export class InquiryService {
           siteSkuId: siteSku!.id,
 
           productName: siteProduct.siteName!,
-          productDescription: siteProduct.siteDescription,
+          productDescription: siteProduct.siteDescription ?? "",
 
           quantity: body.quantity,
           price: siteSku.price,
           paymentMethod: body.paymentMethod,
-          customerRequirements: body.customerRemarks,
+          customerRequirements: body.customerRequirements,
           masterCategoryId: masterCategoryIds[0], // 用于后续匹配
 
           ownerId: targetRep?.userId, // 分配给业务员
@@ -440,8 +444,8 @@ export class InquiryService {
       }))
     );
 
-    // 过滤掉非活跃用户
-    const activeReps = responsibilities.filter((r) => r.user.isActive);
+    // 过滤掉非活跃用户（安全检查：user 可能为 undefined）
+    const activeReps = responsibilities.filter((r) => r.user?.isActive === true);
     console.log("[过滤后活跃业务员数量]:", activeReps.length);
 
     if (activeReps.length === 0) {
@@ -466,11 +470,6 @@ export class InquiryService {
         最后分配时间: r.lastAssignedAt,
       }))
     );
-
-    if (sorted.length === 0 || !sorted) {
-      console.error("[❌] 排序后业务员列表为空");
-      throw new HttpError.BadRequest("No active salesperson found");
-    }
 
     const selected = sorted[0];
     console.log("[✅] 选中的业务员]:", {
@@ -542,6 +541,98 @@ export class InquiryService {
   }
 
   /**
+   * 👥 获取需要抄送的管理员
+   *
+   * 查询并返回出口商管理员和工厂管理员的邮箱列表
+   *
+   * @param tenantId - 租户ID（出口商）
+   * @param factoryDeptId - 工厂部门ID
+   * @returns 管理员邮箱列表
+   */
+  private async getAdminEmails(
+    tenantId: string,
+    factoryDeptId: string
+  ): Promise<string[]> {
+    const adminEmails: string[] = [];
+
+    try {
+      // 1. 获取出口商管理员（tenant_admin）
+      const [tenantAdminRole] = await db
+        .select()
+        .from(roleTable)
+        .where(eq(roleTable.name, "tenant_admin"))
+        .limit(1);
+
+      if (tenantAdminRole) {
+        const tenantAdmins = await db
+          .select({
+            email: userTable.email,
+            name: userTable.name,
+          })
+          .from(userTable)
+          .innerJoin(
+            userRoleTable,
+            eq(userRoleTable.userId, userTable.id)
+          )
+          .where(
+            and(
+              eq(userRoleTable.roleId, tenantAdminRole.id),
+              eq(userTable.tenantId, tenantId),
+              eq(userTable.isActive, true)
+            )
+          );
+
+        for (const admin of tenantAdmins) {
+          if (admin.email && !adminEmails.includes(admin.email)) {
+            adminEmails.push(admin.email);
+            console.log(`[📋] 出口商管理员: ${admin.name} (${admin.email})`);
+          }
+        }
+      }
+
+      // 2. 获取工厂管理员（dept_manager）- 只查询当前工厂的管理员
+      const [deptManagerRole] = await db
+        .select()
+        .from(roleTable)
+        .where(eq(roleTable.name, "dept_manager"))
+        .limit(1);
+
+      if (deptManagerRole) {
+        const deptManagers = await db
+          .select({
+            email: userTable.email,
+            name: userTable.name,
+          })
+          .from(userTable)
+          .innerJoin(
+            userRoleTable,
+            eq(userRoleTable.userId, userTable.id)
+          )
+          .where(
+            and(
+              eq(userRoleTable.roleId, deptManagerRole.id),
+              eq(userTable.deptId, factoryDeptId),
+              eq(userTable.isActive, true)
+            )
+          );
+
+        for (const admin of deptManagers) {
+          if (admin.email && !adminEmails.includes(admin.email)) {
+            adminEmails.push(admin.email);
+            console.log(`[🏭] 工厂管理员: ${admin.name} (${admin.email})`);
+          }
+        }
+      }
+
+      console.log(`[✅] 找到 ${adminEmails.length} 个管理员需要抄送`);
+    } catch (error) {
+      console.error("[❌] 获取管理员列表失败:", error);
+    }
+
+    return adminEmails;
+  }
+
+  /**
    * 📧 异步完整通知逻辑 (包含 Excel 和工厂逻辑)
    *
    * TODO: 完成以下功能
@@ -578,7 +669,14 @@ export class InquiryService {
       const factories = siteWithDept?.department;
       console.log("[6] 工厂信息:", factories?.name || "使用默认工厂");
 
-      // 2. 获取 SKU 媒体信息
+      // 2.1 获取需要抄送的管理员
+      console.log("[6.1] 开始获取管理员列表");
+      const adminEmails = factories
+        ? await this.getAdminEmails(inquiry.tenantId, factories.id)
+        : [];
+      console.log("[6.2] 管理员邮箱列表:", adminEmails);
+
+      // 3. 获取 SKU 媒体信息
       console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
       const media = skuMediaId
         ? await db.query.mediaTable.findFirst({
@@ -587,16 +685,32 @@ export class InquiryService {
         : null;
       console.log(
         "[8] 媒体查询结果:",
-        media ? { id: media.id, url: media.url } : "未找到"
+        media
+          ? {
+              id: media.id,
+              url: media.url,
+              mediaType: media.mediaType,
+              mimeType: media.mimeType,
+            }
+          : "未找到"
       );
 
-      // 3. 下载产品图片
+      // 3. 下载产品图片（仅当媒体类型为 image 时）
       console.log("[9] 开始下载产品图片");
-      const photoData = media?.url ? await this.downloadImage(media.url) : null;
+      const photoData =
+        media?.mediaType === "image" && media?.url
+          ? await this.downloadImage(media.url)
+          : null;
+
+      if (media && media.mediaType !== "image") {
+        console.warn(
+            `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
+        );
+      }
       console.log("[10] 图片下载结果:", photoData ? "成功" : "失败");
 
-      // 4. 生成 Excel（暂时跳过，因为模板文件不存在）
-      console.log("[11] ⚠️ 跳过 Excel 生成（模板文件缺失）");
+      // 4. 生成 Excel 报价单
+      console.log("[11] 准备生成 Excel 报价单");
       let excelBuffer: Buffer | null = null;
 
       try {
@@ -666,6 +780,7 @@ export class InquiryService {
 
       const emailPayload = {
         to: targetRep.user.email,
+        bcc: adminEmails.length > 0 ? adminEmails : undefined,
         template: {
           ...emailTemplate,
           attachments,
@@ -673,6 +788,7 @@ export class InquiryService {
       };
       console.log("[21] 邮件载荷:", {
         to: emailPayload.to,
+        bcc: emailPayload.bcc,
         subject: emailPayload.template.subject,
         hasAttachments: attachments.length > 0,
         attachmentSize: attachments[0]?.content?.length || 0,
@@ -684,6 +800,11 @@ export class InquiryService {
       console.log(
         `[Inquiry] Email sent for ${inquiry.inquiryNum} to ${targetRep.user.email}`
       );
+      if (adminEmails.length > 0) {
+        console.log(
+          `[Inquiry] BCC to ${adminEmails.length} admin(s): ${adminEmails.join(", ")}`
+        );
+      }
     } catch (error) {
       console.error("=== ❌ 邮件发送失败 ===");
       console.error("[错误详情]:", error);
@@ -753,10 +874,10 @@ export class InquiryService {
 
       // Client (客户)
       clientCompanyName: inquiry.customerCompany || "",
-      clientFullName: inquiry.customerName!,
+      clientFullName: inquiry.customerName || "",
       clientWhatsApp: inquiry.customerWhatsapp || "",
       clientEmail: inquiry.customerEmail,
-      clientPhone: Number.parseInt(inquiry.customerPhone!, 10) || 0,
+      clientPhone: inquiry.customerPhone ? Number.parseInt(inquiry.customerPhone, 10) || 0 : 0,
       photoForRefer: photo
         ? {
             buffer: photo.buffer,

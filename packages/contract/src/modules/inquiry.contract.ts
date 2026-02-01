@@ -27,9 +27,9 @@ export const InquiryContract = {
 
       quantity: t.Number(),
       productName: t.String(),
-      productDesc: t.String(),
+      productDescription: t.String(),
       paymentMethod: t.String(),
-      customerRemarks: t.Optional(t.String()),
+      customerRequirements: t.Optional(t.String()),
     }),
   ]),
   /** [Auto-Generated] Do not edit this tag to keep updates. @generated */
