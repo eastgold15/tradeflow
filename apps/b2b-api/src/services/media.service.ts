@@ -23,6 +23,19 @@ export class MediaService {
     // 支持单个或多个文件上传
     const results = await Promise.all(
       files.map(async (file) => {
+        // 1. 检查同名文件（在当前租户范围内）
+        const existing = await ctx.db.query.mediaTable.findFirst({
+          where: {
+            tenantId: ctx.user.context.tenantId!,
+            originalName: file.name,
+          },
+          columns: { id: true },
+        });
+
+        if (existing) {
+          throw new HttpError.Conflict(`文件名 "${file.name}" 已存在，请修改文件名后重试`);
+        }
+
         // 2. 物理上传
         console.log("File object:", file);
         console.log("File type:", typeof file);
