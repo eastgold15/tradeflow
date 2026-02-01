@@ -1,8 +1,8 @@
+import { NewsletterForm } from "@/components/NewsletterForm";
+import { rpc } from "@/lib/rpc";
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import Image from "next/image";
 import Link from "next/link";
-import { NewsletterForm } from "@/components/NewsletterForm";
-import { rpc } from "@/lib/rpc";
 
 // 获取 Footer 配置数据
 async function getFooterConfig(): Promise<FooterContent | null> {
@@ -102,17 +102,41 @@ export default async function Footer() {
               {column.socials && column.socials.length > 0 && (
                 <div className="flex justify-center space-x-6 text-gray-900 md:justify-start">
                   {column.socials.map((social, socialIndex) => (
+                    // <Link
+                    //   key={socialIndex}
+                    //   aria-label={social.ariaLabel}
+                    //   href={social.href}
+                    //   className="text-gray-700 transition-colors hover:text-gray-900"
+                    //   target="_blank"
+                    //   rel="noopener noreferrer"
+                    // >
+                    //   {/* 直接使用 Icon 组件，传入数据库里的名字，比如 "mdi:github" */}
+
+                    //   11
+                    // </Link>
+
                     <Link
                       key={socialIndex}
-                      aria-label={social.ariaLabel}
-                      className={`icon-[${social.icon}] text-2xl text-gray-700 transition-colors hover:text-gray-900`}
                       href={social.href}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    />
+                      className="group flex items-center justify-center"
+                    >
+                      <span
+                        className="block w-6 h-6 bg-gray-700 transition-colors group-hover:bg-black"
+                        style={{
+                          // 直接引用 Iconify 的公开 API 地址作为遮罩
+                          maskImage: `url('https://api.iconify.design/${social.icon.replace('--', '/')}.svg')`,
+                          WebkitMaskImage: `url('https://api.iconify.design/${social.icon.replace('--', '/')}.svg')`,
+                          maskRepeat: 'no-repeat',
+                          maskSize: '100% 100%'
+                        }}
+                      />
+                    </Link>
                   ))}
                 </div>
               )}
+
+
+
             </div>
           ))}
 
