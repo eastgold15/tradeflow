@@ -1,5 +1,5 @@
 import { fetchPageContent } from "@/lib/fetch-page-content";
-import { mdxComponents } from "@/lib/mdx-components";
+import { mdxComponents } from "@/components/mdx/mdx-components";
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import { MDXRemote } from "next-mdx-remote-client/rsc";
 

@@ -1,7 +1,7 @@
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { fetchPageContent } from "@/lib/fetch-page-content";
-import { mdxComponents } from "@/lib/mdx-components";
+import { mdxComponents } from "@/components/mdx/mdx-components";
 
 export default async function ShippingPage() {
   // 从服务器获取 MDX 内容
