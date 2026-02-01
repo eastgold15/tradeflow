@@ -1,16 +1,19 @@
 // app/legal/[slug]/page.tsx
 
-import { eq, and } from "drizzle-orm";
-import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { mdxComponents } from "@/components/mdx/mdx-components";
+import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { db } from "~/db/connection";
-export const revalidate = 0; // 或者 3600 (一小时更新一次)
 
-export default async function Page({ params }: { params: { slug: string } }) {
-  // 1. 获取 URL 中的 slug，比如 "privacy-policy"
-  const { slug } = params;
 
-  // 2. 直接在服务端查库，不需要 fetch(api/...)
+export const revalidate = 0;
+
+// 1. 注意这里：params 的类型变成了 Promise
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+
+  // 2. 注意这里：必须 await 才能拿到内部的 slug
+  const { slug } = await params;
+
+  // 3. 现在的 slug 就是字符串了，后面的逻辑不需要动
   const config = await db.query.siteConfigTable.findFirst({
     where: {
       key: slug,
@@ -18,12 +21,12 @@ export default async function Page({ params }: { params: { slug: string } }) {
     }
   });
 
-  // 3. 容错处理
+  console.log('config:', config);
+
   if (!config) {
     return <div>404 - 您请求的协议不存在</div>;
   }
 
-  // 4. 将查到的 mdx 内容返回
   return (
     <main className="mx-auto max-w-4xl p-8">
       <MDXRemote source={config.value} components={mdxComponents} />

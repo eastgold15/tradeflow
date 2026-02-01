@@ -18,9 +18,6 @@ import {
 } from "@/components/ui/popover";
 import { useSiteConfigKeys } from "@/hooks/api/site-config";
 import { cn } from "@/lib/utils";
-import {
-  SITE_CONFIG_KEY_OPTIONS
-} from "@repo/contract";
 import { Flame, Plus, Search, X } from "lucide-react";
 import * as React from "react";
 
@@ -54,20 +51,8 @@ export function SiteConfigKeySelect({
         map.set(key.key, key.count);
       });
     }
-    // 添加预设配置键
-    SITE_CONFIG_KEY_OPTIONS.forEach((opt) => {
-      if (!map.has(opt.value)) {
-        map.set(opt.value, 0);
-      }
-    });
     return map;
   }, [keysData]);
-
-  // 获取配置键的标签
-  const getKeyLabel = (key: string): string => {
-    const option = SITE_CONFIG_KEY_OPTIONS.find((opt) => opt.value === key);
-    return option?.label || key;
-  };
 
   // 热门配置键（按数量排序，显示所有有数量的键）
   const popularKeys = React.useMemo(() => {
@@ -83,7 +68,14 @@ export function SiteConfigKeySelect({
   }, [keyMap]);
 
   const handleSelect = (selectedValue: string) => {
-    onChange(selectedValue);
+    // 强制转为小写，空格换成下划线，移除特殊字符
+    const safeKey = selectedValue
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_-]/g, '');
+
+    onChange(safeKey);
     setInputValue("");
     setOpen(false);
   };
@@ -97,8 +89,7 @@ export function SiteConfigKeySelect({
     setInputValue(newValue);
     if (newValue.trim()) {
       const results = allKeys.filter((key) =>
-        key.toLowerCase().includes(newValue.toLowerCase().trim()) ||
-        getKeyLabel(key).toLowerCase().includes(newValue.toLowerCase().trim())
+        key.toLowerCase().includes(newValue.toLowerCase().trim())
       );
       setSearchResults(results);
     } else {
@@ -108,13 +99,11 @@ export function SiteConfigKeySelect({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && inputValue.trim()) {
-      const trimmedValue = inputValue.trim();
-      handleSelect(trimmedValue);
+      handleSelect(inputValue.trim());
     }
   };
 
   const displayKeys = inputValue.trim() ? searchResults : allKeys;
-
   const hasPopular = popularKeys.length > 0;
 
   return (
@@ -131,7 +120,7 @@ export function SiteConfigKeySelect({
             type="button"
             variant="outline"
           >
-            <span className="truncate">{value ? getKeyLabel(value) : placeholder}</span>
+            <span className="truncate">{value || placeholder}</span>
             <div className="flex items-center gap-1">
               {value && allowClear && (
                 <button
@@ -175,28 +164,29 @@ export function SiteConfigKeySelect({
                     <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   </div>
                 </CommandEmpty>
-              ) : displayKeys.length === 0 ? (
-                <CommandEmpty>
-                  <div className="flex flex-col items-center gap-2 py-4">
-                    <p className="text-muted-foreground text-sm">
-                      没有找到匹配的配置键
-                    </p>
-                    {inputValue.trim() && (
-                      <Button
-                        className="h-7"
-                        onClick={() => handleSelect(inputValue.trim())}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        添加 "{inputValue.trim()}"
-                      </Button>
-                    )}
-                  </div>
-                </CommandEmpty>
               ) : (
                 <>
+                  {/* 1. 强制创建入口：只要有输入，且输入的内容不在当前显示列表中，就允许创建 */}
+                  {inputValue.trim() && !allKeys.includes(inputValue.trim()) && (
+                    <CommandGroup heading="新配置键">
+                      <CommandItem
+                        onSelect={() => handleSelect(inputValue.trim())}
+                        value={inputValue.trim()}
+                        className="cursor-pointer font-medium text-primary"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        创建新键: "{inputValue.trim()}"
+                      </CommandItem>
+                      <CommandSeparator />
+                    </CommandGroup>
+                  )}
+
+                  {/* 2. 只有在完全没结果时才显示 Empty */}
+                  {displayKeys.length === 0 && !inputValue.trim() && (
+                    <CommandEmpty>请选择或输入配置键</CommandEmpty>
+                  )}
+
+                  {/* 3. 常用配置 */}
                   {!inputValue.trim() && hasPopular && (
                     <>
                       <CommandGroup heading="常用配置">
@@ -218,10 +208,7 @@ export function SiteConfigKeySelect({
                                 >
                                   <Flame className="h-3 w-3" />
                                 </div>
-                                <span className="flex-1">{getKeyLabel(keyItem.key)}</span>
-                                <span className="text-muted-foreground text-xs">
-                                  {keyItem.key}
-                                </span>
+                                <span className="flex-1">{keyItem.key}</span>
                                 <Badge className="text-xs ml-2" variant="secondary">
                                   {keyItem.count}
                                 </Badge>
@@ -234,55 +221,47 @@ export function SiteConfigKeySelect({
                     </>
                   )}
 
-                  <CommandGroup>
-                    {displayKeys.map((keyName) => {
-                      const isSelected = value === keyName;
-                      const isPreset = SITE_CONFIG_KEY_OPTIONS.some(
-                        (opt) => opt.value === keyName
-                      );
-                      const popularKey = popularKeys.find(
-                        (k) => k.key === keyName
-                      );
-                      const count = keyMap.get(keyName) || 0;
+                  {/* 4. 所有配置 / 搜索结果 */}
+                  {displayKeys.length > 0 && (
+                    <CommandGroup heading={inputValue.trim() ? "搜索结果" : "所有配置"}>
+                      {displayKeys.map((keyName) => {
+                        const isSelected = value === keyName;
+                        const popularKey = popularKeys.find(
+                          (k) => k.key === keyName
+                        );
+                        const count = keyMap.get(keyName) || 0;
 
-                      return (
-                        <CommandItem
-                          key={keyName}
-                          onSelect={() => handleSelect(keyName)}
-                          value={keyName}
-                        >
-                          <div
-                            className={cn(
-                              "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                              isSelected
-                                ? "bg-primary text-primary-foreground"
-                                : "opacity-50 [&_svg]:invisible"
-                            )}
+                        return (
+                          <CommandItem
+                            key={keyName}
+                            onSelect={() => handleSelect(keyName)}
+                            value={keyName}
                           >
-                            {popularKey ? (
-                              <Flame className="h-3 w-3" />
-                            ) : (
-                              <Plus className="h-3 w-3" />
+                            <div
+                              className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible"
+                              )}
+                            >
+                              {popularKey ? (
+                                <Flame className="h-3 w-3" />
+                              ) : (
+                                <Plus className="h-3 w-3" />
+                              )}
+                            </div>
+                            <span className="flex-1">{keyName}</span>
+                            {count > 0 && (
+                              <Badge className="text-xs" variant="secondary">
+                                {count}
+                              </Badge>
                             )}
-                          </div>
-                          <span className="flex-1">{getKeyLabel(keyName)}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {keyName}
-                          </span>
-                          {isPreset && count === 0 && (
-                            <Badge className="text-xs" variant="outline">
-                              预设
-                            </Badge>
-                          )}
-                          {count > 0 && (
-                            <Badge className="text-xs" variant="secondary">
-                              {count}
-                            </Badge>
-                          )}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  )}
                 </>
               )}
             </CommandList>
