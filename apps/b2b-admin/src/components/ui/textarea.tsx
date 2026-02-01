@@ -2,7 +2,10 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, value, ...props }: React.ComponentProps<"textarea">) {
+  // 将 null 转换为 undefined，防止 React 控制组件警告
+  const safeValue = value === null ? undefined : value;
+
   return (
     <textarea
       className={cn(
@@ -10,6 +13,7 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
         className
       )}
       data-slot="textarea"
+      value={safeValue}
       {...props}
     />
   );

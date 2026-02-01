@@ -1,6 +1,6 @@
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import { rpc } from "@/lib/rpc";
-
+export const dynamic = 'force-dynamic'; // 强制每次请求都重新渲染
 /**
  * 从 site_config 获取页面 MDX 内容
  * @param key - site_config 的 key
@@ -11,11 +11,7 @@ export async function fetchPageContent(key: string): Promise<string> {
     const response = await rpc.site_config.get(
       {
         query: { key },
-        fetch: {
-          next: { revalidate: false },
-        },
       },
-
     );
 
     const content = response.data?.[0]?.value;

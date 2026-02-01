@@ -87,10 +87,16 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
     if (editingConfig) {
       const hasJson = editingConfig.jsonValue && Object.keys(editingConfig.jsonValue).length > 0;
       form.reset({
-        ...editingConfig as any,
+        key: editingConfig.key,
+        value: editingConfig.value ?? "",
+        jsonValue: editingConfig.jsonValue ?? {},
+        description: editingConfig.description ?? "",  // null -> 空字符串
+        category: editingConfig.category ?? "general",
+        url: editingConfig.url ?? "",                   // null -> 空字符串
+        translatable: editingConfig.translatable ?? true,
+        visible: editingConfig.visible ?? false,
+        siteId: editingConfig.siteId,
         mode: hasJson ? "json" : "text",
-        jsonValue: editingConfig.jsonValue || {},
-        value: editingConfig.value || "",
       });
     }
   }, [editingConfig, form]);
