@@ -45,14 +45,6 @@ export const mdxComponents: MDXComponents = {
       {children}
     </blockquote>
   ),
-
-  // 你甚至可以添加全新的自定义组件
-  CustomCard: ({ title, children }: any) => (
-    <div className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
-      <h3 className="font-semibold mb-2">{title}</h3>
-      <div>{children}</div>
-    </div>
-  ),
   // 1. 强调容器：用于“我们收集的信息”或“您的权利”
   Section: ({ title, icon: Icon, children, className }: any) => (
     <div className={`my-8 p-6 border rounded-xl bg-slate-50/50 dark:bg-slate-900/50 ${className}`}>
@@ -70,9 +62,9 @@ export const mdxComponents: MDXComponents = {
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b">
-            <th className="text-left py-2">数据类型</th>
-            <th className="text-left py-2">处理目的</th>
-            <th className="text-left py-2">保留期限</th>
+            <th className="text-left py-2">Data type</th>
+            <th className="text-left py-2">Purpose of processing</th>
+            <th className="text-left py-2">Retention period</th>
           </tr>
         </thead>
         <tbody>
