@@ -90,7 +90,10 @@ export default async function Footer() {
                 <ul className="space-y-3 text-gray-500 text-sm">
                   {column.links.map((link, linkIndex) => (
                     <li key={linkIndex}>
-                      <Link className="hover:text-black" href={link.href}>
+                      <Link
+                        className="cursor-pointer hover:text-black"
+                        href={link.href}
+                      >
                         {link.label}
                       </Link>
                     </li>
@@ -100,7 +103,7 @@ export default async function Footer() {
 
               {/* 渲染社交媒体图标 */}
               {column.socials && column.socials.length > 0 && (
-                <div className="flex justify-center space-x-6 text-gray-900 md:justify-start">
+                <div className="flex flex-wrap justify-center gap-0.5 text-gray-900 md:flex-nowrap md:justify-start md:space-x-6">
                   {column.socials.map((social, socialIndex) => (
                     // <Link
                     //   key={socialIndex}
@@ -118,7 +121,7 @@ export default async function Footer() {
                     <Link
                       key={socialIndex}
                       href={social.href}
-                      className="group flex items-center justify-center"
+                      className="group flex cursor-pointer items-center justify-center"
                     >
                       <span
                         className="block w-6 h-6 bg-gray-700 transition-colors group-hover:bg-black"

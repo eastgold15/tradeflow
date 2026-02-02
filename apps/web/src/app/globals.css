@@ -94,6 +94,11 @@
     @apply bg-background text-foreground antialiased font-sans;
   }
 
+  /* 确保所有链接显示手型光标，而不是文本光标 */
+  a {
+    @apply cursor-pointer;
+  }
+
   /* 实用类：隐藏滚动条 */
   .no-scrollbar {
     -ms-overflow-style: none;
