@@ -35,6 +35,7 @@ export interface QuotationData {
   // Client (客户)
   clientCompanyName: string;
   clientFullName: string;
+  clientUserName: string; // 🔧 新增：从邮箱前缀提取的用户名
   clientWhatsApp: string;
   clientEmail: string;
   clientPhone: number;
@@ -103,6 +104,7 @@ export const quotationDefaultData: QuotationData = {
   // === Client (客户) ===
   clientCompanyName: "***A",
   clientFullName: "**",
+  clientUserName: "", // 🔧 新增：从邮箱前缀提取的用户名
   clientWhatsApp: "111",
   clientEmail: "11111",
   clientPhone: 1233,

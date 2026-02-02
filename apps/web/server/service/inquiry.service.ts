@@ -32,6 +32,7 @@ import { generateInquiryNumber } from "~/modules/inquiry/services/dayCount";
 import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service";
 import { createSalesInquiryTemplate } from "~/modules/inquiry/services/inquiry.templates";
 import { sendEmail } from "~/utils/email/email";
+import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inquiry-resend";
 
 // 外部业务工具
 
@@ -49,6 +50,26 @@ type validateAndGetSkuData = Awaited<
 type Inquiry = typeof inquiryTable.$inferSelect;
 type SiteSku = validateAndGetSkuData["siteSku"];
 type SiteProduct = validateAndGetSkuData["siteProduct"];
+
+// 📊 出口商和工厂信息类型
+type ExporterInfo = {
+  id: string;
+  name: string;
+  address?: string | null;
+  contactPhone?: string | null;
+};
+
+type FactoryInfo = {
+  id: string;
+  name: string;
+  address?: string | null;
+  contactPhone?: string | null;
+};
+
+type ExporterAndFactory = {
+  exporter: ExporterInfo | null;
+  factories: FactoryInfo[];
+};
 
 /**
  * 询价服务类
@@ -157,17 +178,26 @@ export class InquiryService {
       "[业务员匹配结果]:",
       result.targetRep
         ? {
-            userId: result.targetRep.userId,
-            userName: result.targetRep.user?.name,
-            userEmail: result.targetRep.user?.email,
-            responsibilityId: result.targetRep.id,
-          }
+          userId: result.targetRep.userId,
+          userName: result.targetRep.user?.name,
+          userEmail: result.targetRep.user?.email,
+          responsibilityId: result.targetRep.id,
+        }
         : "未匹配到业务员"
     );
 
     if (result.targetRep) {
       console.log("[✅] 开始异步发送邮件流程");
-      this.sendFullInquiryEmail(
+      // this.sendFullInquiryEmail(
+      //   result.targetRep,
+      //   result.inquiry,
+      //   result.siteProduct,
+      //   result.siteSku,
+      //   result.skuMediaMainID!,
+      //   body
+      // ).catch(console.error);
+
+      this.sendFullInquiryEmailViaResend(
         result.targetRep,
         result.inquiry,
         result.siteProduct,
@@ -175,6 +205,7 @@ export class InquiryService {
         result.skuMediaMainID!,
         body
       ).catch(console.error);
+
     } else {
       console.log("[⚠️] 未匹配到业务员，询价单进入公海，不发送邮件");
     }
@@ -633,6 +664,127 @@ export class InquiryService {
   }
 
   /**
+   * 🏢 根据站点类型获取出口商和工厂信息
+   *
+   * 逻辑：
+   * - 集团站 (siteType = "group")：boundDeptId 就是出口商（总部）
+   * - 工厂站 (siteType = "factory")：boundDeptId 的 parent 才是出口商
+   *
+   * @param siteId - 站点ID
+   * @returns 出口商和工厂信息
+   */
+  private async getExporterAndFactoryInfo(
+    siteId: string
+  ): Promise<ExporterAndFactory> {
+    console.log("[🏢] 开始获取出口商和工厂信息，站点ID:", siteId);
+
+    // 1. 查询站点及其绑定部门
+    const site = await db.query.siteTable.findFirst({
+      where: { id: siteId },
+      with: { department: true },
+    });
+
+    if (!site?.department) {
+      console.warn("[⚠️] 未找到站点或绑定部门");
+      return { exporter: null, factories: [] };
+    }
+
+    console.log("[📍] 站点类型:", site.siteType);
+    console.log("[📍] 绑定部门:", site.department.name, "类别:", site.department.category);
+
+    let exporter: ExporterInfo | null = null;
+    let factories: FactoryInfo[] = [];
+
+    if (site.siteType === "group") {
+      // 集团站：boundDeptId 就是出口商（总部）
+      console.log("[🏢] 集团站：绑定部门即为出口商");
+      exporter = {
+        id: site.department.id,
+        name: site.department.name,
+        address: site.department.address,
+        contactPhone: site.department.contactPhone,
+      };
+
+      // 查询出口商下的所有工厂（category = "factory" 且 parentId = exporter.id）
+      const subFactories = await db.query.departmentTable.findMany({
+        where: {
+          parentId: exporter.id,
+          category: "factory",
+          isActive: true,
+        },
+      });
+
+      factories = subFactories.map((f) => ({
+        id: f.id,
+        name: f.name,
+        address: f.address,
+        contactPhone: f.contactPhone,
+      }));
+
+      console.log(`[🏭] 找到 ${factories.length} 个子工厂`);
+    } else if (site.siteType === "factory") {
+      // 工厂站：boundDeptId 的 parent 才是出口商
+      console.log("[🏢] 工厂站：需要查找父级部门作为出口商");
+
+      if (!site.department.parentId) {
+        console.warn("[⚠️] 工厂站没有父级部门");
+        return { exporter: null, factories: [] };
+      }
+
+      // 查询父级部门（出口商）
+      const exporterDept = await db.query.departmentTable.findFirst({
+        where: {
+          id: site.department.parentId!,
+        },
+      });
+
+      if (!exporterDept) {
+        console.warn("[⚠️] 未找到父级出口商部门");
+        return { exporter: null, factories: [] };
+      }
+
+      exporter = {
+        id: exporterDept.id,
+        name: exporterDept.name,
+        address: exporterDept.address,
+        contactPhone: exporterDept.contactPhone,
+      };
+
+      console.log("[🏢] 找到出口商:", exporter.name);
+
+      // 当前绑定的工厂就是站点绑定的部门
+      factories = [
+        {
+          id: site.department.id,
+          name: site.department.name,
+          address: site.department.address,
+          contactPhone: site.department.contactPhone,
+        },
+      ];
+
+      // 查询出口商下的所有工厂（包括当前工厂）
+      const allFactories = await db.query.departmentTable.findMany({
+        where: {
+          parentId: exporter.id,
+          category: "factory",
+          isActive: true,
+        },
+      });
+
+      console.log(`[🏭] 出口商下共有 ${allFactories.length} 个工厂`);
+    }
+
+    console.log("[✅] 出口商信息:", {
+      name: exporter?.name,
+      phone: exporter?.contactPhone,
+      address: exporter?.address,
+    });
+    console.log("[✅] 工厂列表:", factories.map((f) => ({ name: f.name, phone: f.contactPhone })));
+
+    return { exporter, factories };
+  }
+
+  /**
    * 📧 异步完整通知逻辑 (包含 Excel 和工厂逻辑)
    *
    * TODO: 完成以下功能
@@ -657,22 +809,32 @@ export class InquiryService {
     });
 
     try {
-      // 1. 获取工厂信息
-      console.log("[3] 开始获取工厂信息，站点ID:", inquiry.siteId);
-      const siteWithDept = await db.query.siteTable.findFirst({
-        where: { id: inquiry.siteId },
-        with: { department: true },
+      // 1. 🏢 获取出口商和工厂信息（根据站点类型动态获取）
+      console.log("[3] 开始获取出口商和工厂信息，站点ID:", inquiry.siteId);
+      const { exporter, factories } = await this.getExporterAndFactoryInfo(inquiry.siteId);
+
+      if (!exporter) {
+        console.error("[❌] 未找到出口商信息，取消发送邮件");
+        return;
+      }
+
+      // 使用第一个工厂作为主要工厂（用于邮件模板）
+      const mainFactory = factories[0] || null;
+      console.log("[4] 出口商信息:", {
+        name: exporter.name,
+        phone: exporter.contactPhone,
+        address: exporter.address,
       });
-      console.log("[4] 站点查询结果:", siteWithDept ? "找到" : "未找到");
-      console.log("[5] 部门信息:", siteWithDept?.department);
+      console.log("[5] 主工厂信息:", mainFactory ? {
+        name: mainFactory.name,
+        phone: mainFactory.contactPhone,
+        address: mainFactory.address,
+      } : "无工厂");
 
-      const factories = siteWithDept?.department;
-      console.log("[6] 工厂信息:", factories?.name || "使用默认工厂");
-
-      // 2.1 获取需要抄送的管理员
-      console.log("[6.1] 开始获取管理员列表");
-      const adminEmails = factories
-        ? await this.getAdminEmails(inquiry.tenantId, factories.id)
+      // 2. 获取需要抄送的管理员（使用主工厂ID）
+      console.log("[6] 开始获取管理员列表");
+      const adminEmails = mainFactory
+        ? await this.getAdminEmails(inquiry.tenantId, mainFactory.id)
         : [];
       console.log("[6.2] 管理员邮箱列表:", adminEmails);
 
@@ -680,18 +842,18 @@ export class InquiryService {
       console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
       const media = skuMediaId
         ? await db.query.mediaTable.findFirst({
-            where: { id: skuMediaId },
-          })
+          where: { id: skuMediaId },
+        })
         : null;
       console.log(
         "[8] 媒体查询结果:",
         media
           ? {
-              id: media.id,
-              url: media.url,
-              mediaType: media.mediaType,
-              mimeType: media.mimeType,
-            }
+            id: media.id,
+            url: media.url,
+            mediaType: media.mediaType,
+            mimeType: media.mimeType,
+          }
           : "未找到"
       );
 
@@ -704,7 +866,7 @@ export class InquiryService {
 
       if (media && media.mediaType !== "image") {
         console.warn(
-            `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
+          `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
         );
       }
       console.log("[10] 图片下载结果:", photoData ? "成功" : "失败");
@@ -718,6 +880,7 @@ export class InquiryService {
           inquiry,
           siteProduct,
           siteSku,
+          exporter,
           factories,
           photoData
         );
@@ -752,8 +915,8 @@ export class InquiryService {
       const emailTemplate = createSalesInquiryTemplate(
         inquiryWithItems,
         inquiry.inquiryNum,
-        factories?.name
-          ? [{ name: factories.name, address: factories.address ?? undefined }]
+        factories.length > 0
+          ? factories.map((f) => ({ name: f.name, address: f.address ?? undefined }))
           : [{ name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" }],
         {
           name: targetRep.user.name,
@@ -769,13 +932,13 @@ export class InquiryService {
       // 构建附件列表（只在 Excel 生成成功时添加）
       const attachments = excelBuffer
         ? [
-            {
-              filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
-              content: excelBuffer,
-              contentType:
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            },
-          ]
+          {
+            filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
+            content: excelBuffer,
+            contentType:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          },
+        ]
         : [];
 
       const emailPayload = {
@@ -820,7 +983,191 @@ export class InquiryService {
       }
     }
   }
-  // 1. 提取这个纯逻辑函数，它是你的“类型源”
+
+  /**
+   * 📧 使用 Resend 发送询价邮件
+   *
+   * 与 sendFullInquiryEmail 功能相同，但使用 Resend API 发送邮件
+   *
+   * 流程：
+   * 1. 获取工厂信息（从站点的绑定部门）
+   * 2. 获取需要抄送的管理员
+   * 3. 获取 SKU 媒体信息
+   * 4. 下载产品图片（仅当媒体类型为 image 时）
+   * 5. 生成 Excel 报价单
+   * 6. 使用 sendSalesInquiryEmailViaResend 发送邮件
+   */
+  private async sendFullInquiryEmailViaResend(
+    targetRep: NonNullable<UserWithResponsibility>,
+    inquiry: Inquiry,
+    siteProduct: SiteProduct,
+    siteSku: SiteSku,
+    skuMediaId: string,
+    body: typeof InquiryContract.Create.static
+  ) {
+    console.log("=== 🚀 [Resend] 开始发送邮件流程 ===");
+    console.log("[1] 询价单号:", inquiry.inquiryNum);
+    console.log("[2] 业务员信息:", {
+      name: targetRep.user.name,
+      email: targetRep.user.email,
+      userId: targetRep.user.id,
+    });
+
+    try {
+      // 1. 🏢 获取出口商和工厂信息（根据站点类型动态获取）
+      console.log("[3] 开始获取出口商和工厂信息，站点ID:", inquiry.siteId);
+      const { exporter, factories } = await this.getExporterAndFactoryInfo(inquiry.siteId);
+
+      if (!exporter) {
+        console.error("[❌] 未找到出口商信息，取消发送邮件");
+        return;
+      }
+
+      // 使用第一个工厂作为主要工厂（用于邮件模板）
+      const mainFactory = factories[0] || null;
+      console.log("[4] 出口商信息:", {
+        name: exporter.name,
+        phone: exporter.contactPhone,
+        address: exporter.address,
+      });
+      console.log("[5] 主工厂信息:", mainFactory ? {
+        name: mainFactory.name,
+        phone: mainFactory.contactPhone,
+        address: mainFactory.address,
+      } : "无工厂");
+
+      // 2. 获取需要抄送的管理员（使用主工厂ID）
+      console.log("[6] 开始获取管理员列表");
+      const adminEmails = mainFactory
+        ? await this.getAdminEmails(inquiry.tenantId, mainFactory.id)
+        : [];
+      console.log("[6.2] 管理员邮箱列表:", adminEmails);
+
+      // 3. 获取 SKU 媒体信息
+      console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
+      const media = skuMediaId
+        ? await db.query.mediaTable.findFirst({
+          where: { id: skuMediaId },
+        })
+        : null;
+      console.log(
+        "[8] 媒体查询结果:",
+        media
+          ? {
+            id: media.id,
+            url: media.url,
+            mediaType: media.mediaType,
+            mimeType: media.mimeType,
+          }
+          : "未找到"
+      );
+
+      // 4. 下载产品图片（仅当媒体类型为 image 时）
+      console.log("[9] 开始下载产品图片");
+      const photoData =
+        media?.mediaType === "image" && media?.url
+          ? await this.downloadImage(media.url)
+          : null;
+
+      if (media && media.mediaType !== "image") {
+        console.warn(
+          `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
+        );
+      }
+      console.log("[10] 图片下载结果:", photoData ? "成功" : "失败");
+
+      // 5. 生成 Excel 报价单
+      console.log("[11] 准备生成 Excel 报价单");
+      let excelBuffer: Buffer | null = null;
+
+      try {
+        const quotationData = this.mapToExcelData(
+          inquiry,
+          siteProduct,
+          siteSku,
+          exporter,
+          factories,
+          photoData
+        );
+        console.log("[12] Excel 数据准备完成");
+        console.log("[13] 开始生成 Excel 文件");
+        excelBuffer = await generateQuotationExcel(quotationData);
+        console.log(
+          "[14] Excel 生成完成，大小:",
+          excelBuffer?.length || 0,
+          "bytes"
+        );
+      } catch (error) {
+        console.warn(
+          "[⚠️] Excel 生成失败，将不附加 Excel 文件:",
+          error instanceof Error ? error.message : error
+        );
+        excelBuffer = null;
+      }
+
+      // 6. 验证业务员邮箱
+      console.log("[15] 验证业务员邮箱");
+      if (!targetRep.user.email) {
+        console.error("[❌] 业务员邮箱为空，取消发送");
+        return;
+      }
+      console.log("[16] 邮箱验证通过:", targetRep.user.email);
+
+      // 7. 转换询价数据格式
+      const inquiryWithItems = InquiryService.transformInquiry(inquiry);
+
+      console.log("[17] 准备使用 Resend 发送邮件");
+
+      // 8. 使用 Resend 发送邮件（将工厂列表转换为邮件模板需要的格式）
+      const factoriesForEmail = factories.map((f) => ({
+        name: f.name,
+        address: f.address ?? undefined,
+      }));
+
+      const result = await sendSalesInquiryEmailViaResend(
+        targetRep.user.email,
+        adminEmails,
+        inquiryWithItems,
+        inquiry.inquiryNum,
+        factoriesForEmail.length > 0 ? factoriesForEmail : [{ name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" }],
+        {
+          name: targetRep.user.name,
+          email: targetRep.user.email,
+        },
+        excelBuffer ?? undefined
+      );
+
+      if (result.success) {
+        console.log("=== ✅ [Resend] 邮件发送成功 ===");
+        console.log(
+          `[Inquiry] Email sent for ${inquiry.inquiryNum} to ${targetRep.user.email}`
+        );
+        if (adminEmails.length > 0) {
+          console.log(
+            `[Inquiry] BCC to ${adminEmails.length} admin(s): ${adminEmails.join(", ")}`
+          );
+        }
+      } else {
+        console.error("=== ❌ [Resend] 邮件发送失败 ===");
+        console.error("[错误详情]:", result.error);
+      }
+    } catch (error) {
+      console.error("=== ❌ [Resend] 邮件发送失败 ===");
+      console.error("[错误详情]:", error);
+      console.error(
+        "[错误堆栈]:",
+        error instanceof Error ? error.stack : "No stack trace"
+      );
+
+      // 更详细的错误信息
+      if (error instanceof Error) {
+        console.error("[错误名称]:", error.name);
+        console.error("[错误消息]:", error.message);
+      }
+    }
+  }
+
+  // 1. 提取这个纯逻辑函数，它是你的"类型源"
   static transformInquiry(inquiry: Inquiry) {
     return {
       ...inquiry,
@@ -838,52 +1185,64 @@ export class InquiryService {
 
   /**
    * 📊 内部方法：将模型数据映射为 Excel 模板所需格式
+   *
+   * @param inquiry - 询价数据
+   * @param siteProduct - 站点产品
+   * @param siteSku - 站点 SKU
+   * @param exporter - 出口商信息（从数据库动态获取）
+   * @param factories - 工厂列表（从数据库动态获取）
+   * @param photo - 产品图片
    */
   private mapToExcelData(
     inquiry: Inquiry,
     siteProduct: SiteProduct,
     siteSku: SiteSku,
-    factories: any,
+    exporter: ExporterInfo | null,
+    factories: FactoryInfo[],
     photo: any
   ) {
-    const mainFactory = factories?.name
-      ? factories
-      : { name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" };
+    // 使用第一个工厂作为主工厂，如果没有工厂则使用默认值
+    const mainFactory = factories[0] || { name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" };
+
+    // 🔧 从邮箱前缀提取客户用户名
+    const extractUsernameFromEmail = (email: string): string => {
+      if (!email) return "";
+      const match = email.match(/^([^@]+)@/);
+      return match ? match[1] : "";
+    };
 
     return {
-      // Exporter (出口商)
-      exporterName: "DONG QI FOOTWEAR INTL MFG CO., LTD",
-      exporterAddr:
-        "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan, Guangdong, China",
+      // Exporter (出口商) - 使用从数据库获取的实际数据
+      exporterName: exporter?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
+      exporterAddr: exporter?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan, Guangdong, China",
       exporterWeb: "www.dongqifootwear.com",
       exporterEmail: "sales@dongqifootwear.com",
-      exporterPhone: 0,
+      exporterPhone: exporter?.contactPhone ? Number.parseInt(exporter.contactPhone, 10) || 0 : 0,
 
-      // Factory (工厂)
+      // Factory (工厂) - 使用从数据库获取的实际数据
       factoryName: mainFactory.name,
-      factoryAddr1:
-        "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
-      factoryAddr2:
-        "Industrial Road #3, Shangrao Industrial Zone, Shangrao, Jiangxi,China",
-      factoryAddr3:
-        "Qifu Road #2, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
+      factoryAddr1: factories[0]?.address || "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
+      factoryAddr2: factories[1]?.address || "Industrial Road #3, Shangrao Industrial Zone, Shangrao, Jiangxi,China",
+      factoryAddr3: factories[2]?.address || "Qifu Road #2, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
       factoryWeb1: "www.dongqishoes.com",
       factoryWeb2: "www.dongqifootwear.com",
       factoryWeb3: "www.dongqifootwear.com",
-      factoryPhone: 1_000_000_000,
+      factoryPhone: mainFactory?.contactPhone ? Number.parseInt(mainFactory.contactPhone, 10) || 0 : 0,
 
       // Client (客户)
       clientCompanyName: inquiry.customerCompany || "",
-      clientFullName: inquiry.customerName || "",
+      clientFullName: extractUsernameFromEmail(inquiry.customerEmail), // 🔧 使用邮箱前缀作为客户全名
+      clientUserName: extractUsernameFromEmail(inquiry.customerEmail), // 🔧 从邮箱前缀提取用户名
       clientWhatsApp: inquiry.customerWhatsapp || "",
       clientEmail: inquiry.customerEmail,
       clientPhone: inquiry.customerPhone ? Number.parseInt(inquiry.customerPhone, 10) || 0 : 0,
       photoForRefer: photo
         ? {
-            buffer: photo.buffer,
-            mimeType: photo.mimeType,
-            name: `ref-${inquiry.inquiryNum}`,
-          }
+          // 🔧 确保 buffer 是 Buffer 类型（处理可能从 fetch 返回的 Uint8Array）
+          buffer: Buffer.isBuffer(photo.buffer) ? photo.buffer : Buffer.from(photo.buffer),
+          mimeType: photo.mimeType,
+          name: `ref-${inquiry.inquiryNum}`,
+        }
         : null,
 
       // Terms (报价项) - 使用第一个 SKU 信息填充第一行

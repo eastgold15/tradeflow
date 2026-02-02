@@ -6,7 +6,12 @@
 import type { InquiryWithItems } from "~/service/inquiry.service";
 import { EmailTemplate, EmailAttachment } from "~/utils/email/email.types";
 
-
+// 🔧 从邮箱前缀提取客户名称
+const extractUsernameFromEmail = (email: string): string => {
+  if (!email) return "";
+  const match = email.match(/^([^@]+)@/);
+  return match ? match[1] : "";
+};
 /**
  * 创建客户确认邮件模板
  */
@@ -25,9 +30,13 @@ export function createCustomerInquiryTemplate(
   inquiryNumber: string,
   productName: string
 ): EmailTemplate {
+
+
+  const displayName = extractUsernameFromEmail(inquiryData.email);
+
   const subject = `询价确认 - ${inquiryNumber} - DONG QI FOOTWEAR`;
 
-  const text = `尊敬的${inquiryData.customerName}，感谢您对${productName}的询价！您的询价单号：${inquiryNumber}。我们已收到您的询价，将在24小时内与您联系。`;
+  const text = `尊敬的${displayName}，感谢您对${productName}的询价！您的询价单号：${inquiryNumber}。我们已收到您的询价，将在24小时内与您联系。`;
 
   const html = `
     <!DOCTYPE html>
@@ -47,7 +56,7 @@ export function createCustomerInquiryTemplate(
         <!-- 内容 -->
         <div style="padding: 40px 30px;">
           <p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 30px;">
-            尊敬的 <strong>${inquiryData.customerName}</strong>，您好！
+            尊敬的 <strong>${displayName}</strong>，您好！
           </p>
 
           <p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 30px;">
@@ -119,7 +128,7 @@ export function createSalesInquiryTemplate(
 ): EmailTemplate {
   const mainFactory = factories[0] || { name: "未知工厂" };
   const subject = `【${mainFactory.name}】新的询价请求 - ${inquiryNo}`;
-
+  const displayName = extractUsernameFromEmail(inquiryData.customerEmail);
   // 渲染相似工厂列表（如果有的话）
   const similarFactoriesHtml =
     factories.length > 1
@@ -178,7 +187,7 @@ export function createSalesInquiryTemplate(
 
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 25px;">
       <h4 style="margin-top:0;">👤 Customer Information</h4>
-      <p style="margin: 5px 0;"><strong>Name:</strong> ${inquiryData.customerName}</p>
+      <p style="margin: 5px 0;"><strong>Name:</strong> ${inquiryData.customerName || displayName}</p>
       <p style="margin: 5px 0;"><strong>Company:</strong> ${inquiryData.customerCompany || "-"}</p>
       <p style="margin: 5px 0;"><strong>WhatsApp:</strong> ${inquiryData.customerWhatsapp || "-"}</p>
     </div>

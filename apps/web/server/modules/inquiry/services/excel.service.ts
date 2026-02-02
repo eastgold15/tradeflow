@@ -5,6 +5,7 @@
 
 import fs, { promises as fsPromises } from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 import { HttpError } from "@pori15/logixlysia";
 // main.js
 import ExcelJS from "exceljs";
@@ -80,6 +81,9 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
   // 替换正则（建议提出来复用）
   const replaceRegex = /\{\{(\w+)\}\}/g;
 
+  // 🔧 需要跳过的字段（对象类型，不应该转换为字符串）
+  const SKIP_FIELDS = ["photoForRefer"];
+
   worksheet.eachRow((row) => {
     row.eachCell((cell) => {
       // 情况 1: 纯字符串
@@ -87,8 +91,12 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
         const newValue = cell.value.replace(
           replaceRegex,
           (match, fieldName) => {
+            // 🔧 跳过对象类型的字段
+            if (SKIP_FIELDS.includes(fieldName)) {
+              return match; // 保持原样，不替换
+            }
             const dataValue = quotationData[fieldName as keyof QuotationData];
-            return dataValue !== null ? String(dataValue) : "";
+            return dataValue !== null && dataValue !== undefined ? String(dataValue) : "";
           }
         );
         cell.value = newValue;
@@ -106,8 +114,12 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
         const newText = originalText.replace(
           replaceRegex,
           (match, fieldName) => {
+            // 🔧 跳过对象类型的字段
+            if (SKIP_FIELDS.includes(fieldName)) {
+              return match; // 保持原样，不替换
+            }
             const dataValue = quotationData[fieldName as keyof QuotationData];
-            return dataValue !== null ? String(dataValue) : "";
+            return dataValue !== null && dataValue !== undefined ? String(dataValue) : "";
           }
         );
 
@@ -143,36 +155,102 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
   if (quotationData.photoForRefer) {
     const { buffer, mimeType, name } = quotationData.photoForRefer;
 
-    // 1. 将图片添加到 workbook（返回 imageId）
-    const imageId = workbook.addImage({
-      buffer: Buffer.from(buffer) as any,
-      extension: mimeType.split("/")[1] as "png" | "jpeg" | "gif",
-    });
+    console.log("[Excel] 开始处理图片:", { name, mimeType, bufferSize: buffer.length });
 
-    // 2. 找到图片应插入的位置（例如：模板中 K9 单元格写 {{PHOTO_PLACEHOLDER}}）
+    // 1. 先找到并清除图片占位符（在添加图片之前）
     let targetCellAddr = "K9"; // 默认位置
+    let photoFound = false;
     worksheet.eachRow((row) => {
       row.eachCell((cell) => {
         if (cell.value === "{{PHOTO_PLACEHOLDER}}") {
           targetCellAddr = cell.address; // 如 "D5"
-          // 可选：清空占位符
-          cell.value = "";
+          cell.value = ""; // 清空占位符
+          photoFound = true;
         }
       });
     });
 
-    // 3. 插入图片（覆盖目标单元格区域）
+    console.log("[Excel] 图片占位符已清除，位置:", targetCellAddr, "找到占位符:", photoFound);
+
+    // 2. 获取目标单元格的位置
+    const targetCell = worksheet.getCell(targetCellAddr);
+    const col = typeof targetCell.col === 'number' ? targetCell.col : parseInt(targetCell.col as string, 10);
+    const row = typeof targetCell.row === 'number' ? targetCell.row : parseInt(targetCell.row as string, 10);
+
+    // 3. 计算 K 到 L 列的总像素宽度（作为旋转后图片的目标高度）
+    const kColWidth = worksheet.getColumn(11).width || 10; // K列
+    const lColWidth = worksheet.getColumn(12).width || 10; // L列
+    const targetImageHeightPx = (kColWidth + lColWidth) * 7.5; // K9:L9的总宽度（像素）
+
+    console.log("[Excel] 目标图片高度（K+L列宽）:", {
+      kColWidth,
+      lColWidth,
+      targetImageHeightPx,
+    });
+
+    // 4. 调整行高，确保单元格能放下这个高度
+    // 行高单位是点（point），1 inch = 72 points，约等于 像素 * 0.75
+    worksheet.getRow(row).height = targetImageHeightPx * 0.75;
+
+    // 5. 处理图片旋转并获取自适应宽度
+    let imageBuffer = Buffer.from(buffer);
+    let finalWidth = 200; // 默认占位
+    let finalHeight = targetImageHeightPx;
+
+    try {
+      // 获取原始图片元数据
+      const metadata = await sharp(buffer).metadata();
+      console.log("[Excel] 原始图片尺寸:", { width: metadata.width, height: metadata.height });
+
+      if (metadata.width && metadata.height) {
+        // 旋转后宽高互换
+        const rotatedWidth = metadata.height;
+        const rotatedHeight = metadata.width;
+
+        // 计算自适应宽度：保持旋转后的比例
+        // 公式：(目标高度 / 旋转后原始高度) * 旋转后原始宽度
+        const ratio = targetImageHeightPx / rotatedHeight;
+        finalWidth = rotatedWidth * ratio;
+        finalHeight = targetImageHeightPx;
+
+        console.log("[Excel] 图片旋转并调整尺寸:", {
+          rotatedWidth,
+          rotatedHeight,
+          ratio,
+          finalWidth,
+          finalHeight,
+        });
+
+        // 旋转图片
+        const rotatedBuffer = await sharp(buffer).rotate(90).toBuffer();
+        imageBuffer = Buffer.from(rotatedBuffer);
+      }
+    } catch (error) {
+      console.error("[Excel] 图片处理失败，使用原始图片:", error);
+    }
+
+    // 6. 将图片添加到 workbook
+    const imageId = workbook.addImage({
+      buffer: imageBuffer as any,
+      extension: mimeType.split("/")[1] as "png" | "jpeg" | "gif",
+    });
+
+    console.log("[Excel] 图片已添加到 workbook，imageId:", imageId);
+
+    // 7. 插入图片
     worksheet.addImage(imageId, {
       tl: {
-        col: 11,
-        row: 9,
+        col: col - 1, // 列索引从 0 开始，所以要 -1
+        row: row - 1,  // 行索引从 0 开始，所以要 -1
       },
       ext: {
-        width: Number(worksheet.getCell(targetCellAddr).col),
-        height: Number(worksheet.getCell(targetCellAddr).row),
+        width: finalWidth,            // 宽度根据比例自适应
+        height: finalHeight,          // 高度等于 K9 到 L9 的宽度
       },
       editAs: "oneCell", // 图片随单元格移动/缩放
     });
+
+    console.log("[Excel] 图片插入完成，位置:", targetCellAddr, "尺寸:", { width: finalWidth, height: finalHeight });
   }
 
   // 4. 生成并返回 Buffer（注意：这必须在 all rows 处理完之后！）
