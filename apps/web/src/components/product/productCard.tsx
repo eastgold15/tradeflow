@@ -85,7 +85,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         {product.displayName && (
           <p className="mb-2 font-serif text-gray-500 text-sm italic">
-            {product.displayName}
+            {product.isFeatured ? "Featured" : ""}
           </p>
         )}
 

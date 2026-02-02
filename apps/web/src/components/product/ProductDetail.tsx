@@ -210,7 +210,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
     "description"
   );
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[1]);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
 
   // --- 询盘状态 ---
   const [showInquiryForm, setShowInquiryForm] = useState(false);
@@ -493,18 +493,18 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               {siteProduct.name}
             </h1>
             <p className="mb-6 font-serif text-gray-500 text-xl italic">
-              {siteProduct.spuCode}
+              {/* {siteProduct.spuCode} */}
             </p>
 
             <div className="mb-8 font-light text-lg">
-              Ref Price:{" "}
+              USD/PAIR:{" "}
               <span className="font-medium text-black">
                 {displayPrice > 0
                   ? `USD ${displayPrice.toFixed(2)}`
                   : "Contact for price"}
-                {!selectedSku && skus.length > 1 && (
+                {/* {!selectedSku && skus.length > 1 && (
                   <span className="ml-1 text-gray-400 text-sm">起</span>
-                )}
+                )} */}
               </span>
             </div>
 
@@ -628,6 +628,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   value={paymentMethod}
                 >
+                  <option value="" disabled className="text-gray-400">
+                    Choose one payment term and the plan qty
+                  </option>
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -638,14 +641,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </div>
             </div>
 
+            <div className="text-center font-italic  text-sm">* push here to send inquiry for better offer</div>
             <button
               className="w-full bg-black py-4 font-bold text-[11px] text-white uppercase tracking-[0.2em] transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
               onClick={() => {
                 if (!selectedSku) return alert("Please select all options");
                 setShowInquiryForm(true);
               }}
-              // 也可以选择在这里禁用按钮，或者允许点击后弹出提示
-              // disabled={!selectedSku}
+            // 也可以选择在这里禁用按钮，或者允许点击后弹出提示
+            // disabled={!selectedSku}
             >
               Request Availability
             </button>
