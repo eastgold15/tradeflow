@@ -50,7 +50,7 @@ export function Upload({
   accept = "image/*,video/*,.pdf,.doc,.docx",
   multiple = true,
   maxSize = 10 * 1024 * 1024, // 10MB
-  maxFiles = 10,
+  maxFiles = 20,
   onUpload,
   onSuccess,
   onError,
@@ -162,9 +162,9 @@ export function Upload({
         const fileToUpload =
           uploadFile.name !== uploadFile.originalName
             ? new File([uploadFile.file], uploadFile.name, {
-                type: uploadFile.file.type,
-                lastModified: uploadFile.file.lastModified,
-              } as FilePropertyBag)
+              type: uploadFile.file.type,
+              lastModified: uploadFile.file.lastModified,
+            } as FilePropertyBag)
             : uploadFile.file;
 
         return { fileToUpload, uploadFile };

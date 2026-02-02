@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
@@ -24,7 +24,7 @@ export default function CategoryClient() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
+  
   // 查询分类详情
   const {
     data: categoryData,

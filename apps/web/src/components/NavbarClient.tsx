@@ -1,15 +1,13 @@
 "use client";
 
-import { X, Menu } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { DesktopMenu } from "./Navbar/DesktopMenu";
-import { MobileMenu } from "./Navbar/MobileMenu";
-import { SearchDropdown } from "./Navbar/SearchDropdown";
 import { SiteCategoryListRes } from "@/hooks/api/site-category";
-import Link from "next/link";
-import { UnifiedMenu } from "./Navbar/UnifiedMenu";
-import { twMerge } from "tailwind-merge";
 import { useNavbarStore } from "@/lib/store/navbar-store";
+import { Menu, X } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { twMerge } from "tailwind-merge";
+import { SearchDropdown } from "./Navbar/SearchDropdown";
+import { UnifiedMenu } from "./Navbar/UnifiedMenu";
 
 interface NavbarClientProps {
   siteName: string;

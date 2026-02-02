@@ -28,7 +28,7 @@ interface MediaSelectProps {
 export function MediaSelect({
   value = [],
   onChange,
-  maxCount = 5,
+  maxCount = 10,
   max,
   className,
   placeholder = "选择图片",
@@ -144,7 +144,7 @@ export function MediaSelect({
 
           {/* 添加媒体按钮 */}
           {(!multiple && value.length === 0) ||
-          (multiple && value.length < effectiveMaxCount) ? (
+            (multiple && value.length < effectiveMaxCount) ? (
             <Button
               className="w-full"
               onClick={() => setDialogOpen(true)}
