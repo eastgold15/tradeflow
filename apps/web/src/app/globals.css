@@ -9,8 +9,6 @@
 /* 2. 变量定义层：存放物理常数与颜色原始值 */
 :root {
   /* 布局常数 */
-  --navbar-height: 7rem;
-  --navbar-height-sm: 2rem;
   --radius: 0.625rem;
 
   /* 语义化颜色原始值 (Light) */

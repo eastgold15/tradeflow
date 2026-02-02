@@ -368,7 +368,10 @@ export class TemplateService {
 
     // 3. 处理前端提交的数据
     for (const [index, opt] of incomingOptions.entries()) {
-      if (opt.id && dbValueMap.has(opt.id)) {
+      // 增加正则校验，确保 opt.id 看起来像一个真正的 UUID
+      const isRealUUID = opt.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opt.id);
+
+      if (isRealUUID && dbValueMap.has(opt.id)) {
         // 情况 A: 正常的更新（带 ID 且数据库存在）
         toUpdate.push({ id: opt.id, value: opt.value, sortOrder: index });
       } else {

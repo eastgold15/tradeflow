@@ -9,6 +9,7 @@ import { SiteCategoryListRes } from "@/hooks/api/site-category";
 import Link from "next/link";
 import { UnifiedMenu } from "./Navbar/UnifiedMenu";
 import { twMerge } from "tailwind-merge";
+import { useNavbarStore } from "@/lib/store/navbar-store";
 
 interface NavbarClientProps {
   siteName: string;
@@ -19,11 +20,11 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-
-
   // 1. 创建 Ref 来绑定 nav 元素
   const navRef = useRef<HTMLElement>(null);
-  const [navHeight, setNavHeight] = useState(0);
+  // 从 store 读取和设置高度
+  const navbarHeight = useNavbarStore((state) => state.navbarHeight);
+  const setNavbarHeight = useNavbarStore((state) => state.setNavbarHeight);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -31,7 +32,8 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
     // 2. 测量实际高度的函数
     const updateHeight = () => {
       if (navRef.current) {
-        setNavHeight(navRef.current.offsetHeight);
+        const height = navRef.current.offsetHeight;
+        setNavbarHeight(height);
       }
     };
 
@@ -39,12 +41,11 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
     updateHeight(); // 初始测量
     window.addEventListener("resize", updateHeight); // 窗口缩放时重测
 
-
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", updateHeight);
     };
-  }, [isScrolled]);
+  }, [setNavbarHeight]);
 
 
   return (
@@ -53,7 +54,7 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
       className={`sticky top-0 left-0 z-50 w-full border-b border-gray-200 bg-white transition-all duration-300 ${isScrolled ? "py-2 shadow-sm" : "py-4"
         }`}
     >
-      <div className="max-w-full px-4 md:px-8 lg:px-12">
+      <div className="max-w-full px-4 md:px-8">
         <div className="flex items-center justify-between">
 
           {/* 1. 左侧按钮区域 */}
@@ -95,8 +96,8 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{
-          top: `${navHeight}px`, // 动态 top 值
-          height: `calc(100vh - ${navHeight}px)` // 确保高度刚好填满剩余屏幕
+          top: `${navbarHeight}px`,
+          height: `calc(100vh - ${navbarHeight}px)`
         }}
       >
         <div className="h-full overflow-y-auto p-6">
@@ -107,9 +108,6 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
           />
         </div>
       </div>
-
-
-
     </nav>
   );
 };

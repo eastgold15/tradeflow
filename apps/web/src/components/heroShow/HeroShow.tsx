@@ -9,6 +9,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import Shop from "./Shop";
+import { useNavbarStore } from "@/lib/store/navbar-store";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface ContentBlockProps {
   bgColor: string;
@@ -22,6 +24,8 @@ interface ContentBlockProps {
   description?: string;
   buttonUrl?: string;
   buttonTextContent?: string;
+  navbarHeightStyle?: React.CSSProperties;
+  isDesktop: boolean; // 传入状态
 }
 
 const ContentBlock: React.FC<ContentBlockProps> = ({
@@ -36,33 +40,46 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
   description,
   buttonUrl,
   buttonTextContent,
+  navbarHeightStyle,
+  isDesktop,
 }) => (
-  <div className={`flex flex-col ${bgColor}`}>
-    {/* 上部：根据传入的children渲染 */}
-      <div className="relative h-[55vh] min-h-0 w-full grow md:h-[calc(100vh-var(--navbar-height))]">
+  <div
+    className={cn("grid grid-cols-1 w-full", bgColor)}
+    style={{
+      // 核心：大屏固定高度，小屏 auto 让图片比例撑开
+      gridTemplateRows: isDesktop
+        ? 'calc(100vh - var(--navbar-height)) auto'
+        : 'auto auto',
+      ...navbarHeightStyle
+    }}
+  >
+    {/* 1. 图片行 */}
+    <div className={cn(
+      "relative w-full overflow-hidden",
+      // 小屏下不给固定高度，靠 ImageComponent 撑开
+      isDesktop ? "h-full" : "h-auto"
+    )}>
       {children}
     </div>
 
-    {/* 下部：文字内容 - 固定高度 */}
+    {/* 2. 文字行 */}
     {title || description || buttonUrl ? (
-      <div className="flex min-h-42.5 flex-col justify-center p-8">
+      <div className="flex min-h-40 flex-col justify-center p-8 md:p-12">
         {title && (
-          <h3
-            className={`mb-4 font-serif text-2xl italic md:text-3xl ${titleColor}`}
-          >
+          <h3 className={`mb-4 font-serif text-2xl italic md:text-4xl ${titleColor}`}>
             {title}
           </h3>
         )}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           {description && (
-            <p className={`text-sm tracking-wide ${subtitleColor}`}>
+            <p className={`max-w-xl text-sm md:text-base tracking-wide leading-relaxed ${subtitleColor}`}>
               {description}
             </p>
           )}
           {buttonUrl && (
             <Link href={buttonUrl}>
               <button
-                className={`shrink-0 px-8 py-3 font-bold text-[10px] uppercase tracking-[0.2em] transition-colors ${buttonBg} ${buttonText} ${buttonHover}`}
+                className={`shrink-0 px-10 py-4 font-bold text-[11px] uppercase tracking-[0.2em] transition-all hover:scale-105 ${buttonBg} ${buttonText} ${buttonHover}`}
                 type="button"
               >
                 {buttonTextContent || "EXPLORE"}
@@ -81,15 +98,22 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
  */
 export const HeroShowComponent: React.FC = () => {
   const { data: heroCards, isLoading, error } = useCurrentHeroCardsList();
+  const isDesktop = useMediaQuery("(min-width: 768px)"); // 在这里调用
 
-  // 1. 修改：骨架屏数量增加到 7 个
+  // 从 store 获取 navbar 高度
+  const navbarHeight = useNavbarStore((state) => state.navbarHeight);
+  const navbarHeightStyle = navbarHeight > 0
+    ? { '--navbar-height': `${navbarHeight}px` } as React.CSSProperties
+    : {};
+
+
   if (isLoading) {
     return (
-      <section className="min-h-screen w-full">
+      <section className="min-h-screen w-full" style={navbarHeightStyle}>
         <div className="grid grid-cols-1 md:grid-cols-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <div className="flex flex-col" key={i}>
-            <Skeleton className="h-[55vh] md:h-150" variant="rectangle" />
+              <Skeleton className="h-[55vh] md:h-[calc(100vh-var(--navbar-height))]" variant="rectangle" />
               <div className="flex h-50 flex-col justify-center space-y-4 p-8 md:h-62.5">
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
@@ -127,7 +151,11 @@ export const HeroShowComponent: React.FC = () => {
   ];
 
   return (
-    <section className={cn("w-full")}>
+    <section
+      className="w-full scroll-smooth"
+      style={navbarHeightStyle}
+    >
+      {/* 这里的 grid 负责左右分列 */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
         {/* 显示所有后端返回的 hero-card */}
         {[{ type: "shop" }, ...heroCards].map((item, index) => {
@@ -146,6 +174,8 @@ export const HeroShowComponent: React.FC = () => {
                 {...config}
                 description="Explore the latest series"
                 title="NEW ARRIVALS"
+                navbarHeightStyle={navbarHeightStyle}
+                isDesktop={isDesktop}
               >
                 <Shop />
               </ContentBlock>
@@ -161,11 +191,20 @@ export const HeroShowComponent: React.FC = () => {
               buttonUrl={card.buttonUrl}
               description={card.description}
               title={card.title}
+              navbarHeightStyle={navbarHeightStyle}
+              isDesktop={isDesktop}
             >
               <ImageComponent
                 alt={card.title}
-                className="absolute inset-0 h-full w-full transform bg-white object-cover transition-transform duration-700 group-hover:scale-105"
+                // 核心：大屏才 fill，小屏不填满（依靠比例撑开高度）
+                fill={isDesktop}
+                // 小屏下不设死高度比例，让图片自然显示
+                aspectRatio={!isDesktop ? "aspect-auto" : "h-full"}
+                containerClassName="w-full h-full"
+                className="object-cover w-full h-full"
                 imageId={card.mediaId}
+                priority={index < 2}
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
             </ContentBlock>
           );
