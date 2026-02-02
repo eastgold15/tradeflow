@@ -51,7 +51,7 @@ const Ad: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <section
       className={cn(
-        "relative w-full overflow-hidden  transition-all",
+        "group relative w-full overflow-hidden  transition-all",
         "md:h-[calc(100vh-var(--navbar-height))]", // 桌面端固定高度
         className
       )}
@@ -92,6 +92,85 @@ const Ad: React.FC<{ className?: string }> = ({ className }) => {
             </div>
           );
         })}
+
+        {/* 左右导航按钮 */}
+        {ads.length > 1 && (
+          <>
+            {/* 上一张按钮 */}
+            <button
+              type="button"
+              aria-label="上一张广告"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex((prev) => (prev - 1 + ads.length) % ads.length);
+              }}
+              className={cn(
+                "absolute left-4 top-1/2 z-20 flex -translate-y-1/2",
+                "flex h-12 w-12 items-center justify-center",
+                "rounded-full bg-black/20 text-white backdrop-blur-sm",
+                "transition-all duration-300",
+                "hover:bg-black/40 hover:scale-110",
+                "focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2",
+                "active:scale-95",
+                // 响应式显示逻辑：移动端默认隐藏，桌面端始终可见，group-hover时显示
+                "opacity-0 md:opacity-100 group-hover:opacity-100"
+              )}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+
+            {/* 下一张按钮 */}
+            <button
+              type="button"
+              aria-label="下一张广告"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex((prev) => (prev + 1) % ads.length);
+              }}
+              className={cn(
+                "absolute right-4 top-1/2 z-20 flex -translate-y-1/2",
+                "flex h-12 w-12 items-center justify-center",
+                "rounded-full bg-black/20 text-white backdrop-blur-sm",
+                "transition-all duration-300",
+                "hover:bg-black/40 hover:scale-110",
+                "focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2",
+                "active:scale-95",
+                // 响应式显示逻辑：移动端默认隐藏，桌面端始终可见，group-hover时显示
+                "opacity-0 md:opacity-100 group-hover:opacity-100"
+              )}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="h-6 w-6"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
+              </svg>
+            </button>
+          </>
+        )}
 
         {/* 指示器 (Dots) */}
         {ads.length > 1 && (
