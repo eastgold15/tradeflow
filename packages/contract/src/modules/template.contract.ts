@@ -28,6 +28,7 @@ export const TemplateContract = {
         })
       )
     ),
+    sortOrder: TemplateInsertFields.sortOrder,
     name: TemplateInsertFields.name,
     masterCategoryId: TemplateInsertFields.masterCategoryId,
   }),
@@ -51,6 +52,7 @@ export const TemplateContract = {
         )
       ),
       name: TemplateInsertFields.name,
+      sortOrder: TemplateInsertFields.sortOrder,
       masterCategoryId: TemplateInsertFields.masterCategoryId,
     })
   ),

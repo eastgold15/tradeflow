@@ -18,13 +18,14 @@ export class TemplateService {
       const [templateRes] = await tx
         .insert(templateTable)
         .values({
+          sortOrder: body.sortOrder,
           masterCategoryId,
           name,
         })
         .returning();
 
       if (!templateRes) {
-        throw new HttpError.BadRequest("创建属性模板失败");
+        throw new HttpError.BadRequest(`创建属性模板失败${name}`);
       }
 
       const templateId = templateRes.id;
@@ -34,6 +35,13 @@ export class TemplateService {
         for (const field of fields) {
           const { inputType, isRequired, options, value, key, isSkuSpec } =
             field;
+
+          // 🔴 逻辑校验：只有选择类型的属性才能作为 SKU 规格
+          if (isSkuSpec && inputType !== "select" && inputType !== "multiselect") {
+            throw new HttpError.BadRequest(
+              `属性 [${key}] 校验失败：只有选择框类型（select/multiselect）才能设置为 SKU 规格`
+            );
+          }
 
           // 2.1 插入属性定义 (templateKeyTable)
           const [newAttribute] = await tx
@@ -87,93 +95,51 @@ export class TemplateService {
 
   public async list(query: TemplateContract["ListQuery"], ctx: ServiceContext) {
     const { search } = query;
-    const rows = await ctx.db
-      .select()
-      .from(templateTable)
-      .leftJoin(
-        templateKeyTable,
-        eq(templateTable.id, templateKeyTable.templateId)
-      )
-      .where(search ? like(templateTable.name, `%${search}%`) : undefined);
-
-    const templateMap = new Map();
-
-    for (const row of rows) {
-      const t = row.template;
-      const key = row.template_key;
-
-      if (!templateMap.has(t.id)) {
-        templateMap.set(t.id, {
-          id: t.id,
-          name: t.name,
-          masterCategoryId: t.masterCategoryId,
-          fields: [],
-        });
-      }
-
-      if (key) {
-        templateMap.get(t.id).fields.push({
-          id: key.id,
-          key: key.key, // 前端使用 key
-          inputType: key.inputType, // 前端使用 inputType
-          isRequired: key.isRequired, // 前端使用 isRequired
-          isSkuSpec: key.isSkuSpec,
-          // 这里我们统一定义一个 value 字段
-          value: "",
-          options: [],
-        });
-      }
-    }
-
-    const allFieldIds = Array.from(templateMap.values()).flatMap((t) =>
-      t.fields.map((f: any) => f.id)
-    );
-
-    if (allFieldIds.length > 0) {
-      const allValues = await ctx.db
-        .select()
-        .from(templateValueTable)
-        .where(inArray(templateValueTable.templateKeyId, allFieldIds))
-        .orderBy(asc(templateValueTable.sortOrder));
-
-      // 🔥 修复：存储对象数组，包含 id 和 value，确保 UUID 正确流转
-      const valuesByAttributeId = new Map<
-        string,
-        { id: string; value: string }[]
-      >();
-      for (const val of allValues) {
-        if (!valuesByAttributeId.has(val.templateKeyId)) {
-          valuesByAttributeId.set(val.templateKeyId, []);
-        }
-        valuesByAttributeId.get(val.templateKeyId)!.push({
-          id: val.id, // 真正的数据库 UUID
-          value: val.value,
-        });
-      }
-
-      for (const template of templateMap.values()) {
-        for (const field of template.fields) {
-          const rawOptions = valuesByAttributeId.get(field.id) || [];
-
-          // --- 核心逻辑：根据类型决定 value 的格式 ---
-          if (
-            field.inputType === "select" ||
-            field.inputType === "multiselect"
-          ) {
-            // 对于选择框，value 用于前端预览（逗号分隔）
-            field.value = rawOptions.map((o) => o.value).join(", ");
-            // 🔥 返回完整的对象数组，包含 UUID
-            field.options = rawOptions;
-          } else {
-            // 对于 text 或 number，value 就是那唯一的一个提示/默认值字符串
-            field.value = rawOptions[0]?.value || "";
-            field.options = [];
+    const templates = await ctx.db.query.templateTable.findMany({
+      where: {
+        ...(search ? { name: { like: `%${search}%` } } : {}),
+      },
+      with: {
+        templateKeys: {
+          with: {
+            values: {
+              orderBy: {
+                sortOrder: "asc"
+              }
+            }
           }
         }
       }
-    }
+    })
+    // 将数据库结构映射为 UI 需要的结构
+    return templates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      masterCategoryId: t.masterCategoryId,
+      sortOrder: t.sortOrder,
+      fields: t.templateKeys.map((k) => {
+        const rawOptions = k.values.map((v) => ({
+          id: v.id,
+          value: v.value,
+        }));
 
-    return Array.from(templateMap.values());
+        // 处理逻辑：根据 inputType 格式化输出
+        const isSelect = k.inputType === "select" || k.inputType === "multiselect";
+
+        return {
+          id: k.id,
+          key: k.key,
+          inputType: k.inputType,
+          isRequired: k.isRequired,
+          isSkuSpec: k.isSkuSpec,
+          // 如果是选择框，value 显示为逗号分隔的预览，否则取第一个值
+          value: isSelect
+            ? rawOptions.map((o) => o.value).join(", ")
+            : (rawOptions[0]?.value || ""),
+          options: isSelect ? rawOptions : [],
+        };
+      }),
+    }));
   }
 
   public async update(
@@ -241,6 +207,12 @@ export class TemplateService {
             isSkuSpec,
           } = field;
 
+          // 🔴 逻辑校验：只有选择类型的属性才能作为 SKU 规格
+          if (isSkuSpec && inputType !== "select" && inputType !== "multiselect") {
+            throw new HttpError.BadRequest(
+              `属性 [${key}] 校验失败：只有选择框类型（select/multiselect）才能设置为 SKU 规格`
+            );
+          }
           let keyId: string;
 
           if (fieldId) {
@@ -360,82 +332,93 @@ export class TemplateService {
   }
 
   /**
-   * 增量更新模板值：更新已有、删除多余、插入新增
-   * 这是实现工业级属性管理的核心方法
-   *
-   * 🔥 兜底逻辑：即使前端没传 ID，但 value 字符串完全一致，也会自动匹配到现有的 UUID
-   */
+     * 增量更新模板值：更新已有、删除多余、插入新增
+     * 采用“三桶”策略：Delete 桶, Update 桶, Insert 桶
+     * 🔥 兜底逻辑：即使前端没传 ID，但 value 字符串完全一致，也会自动匹配到现有的 UUID
+     */
   private async upsertTemplateValues(
     keyId: string,
     field: any,
     tx: Transaction
   ) {
-    const incomingOptions = field.options || []; // 格式: [{id: '...', value: 'Red'}]
+    const incomingOptions = field.options || []; // 格式: [{id: 'uuid', value: '红色'}]
 
-    // 1. 获取数据库现有的 values
+    // 1. 获取数据库现有的数据
     const dbValues = await tx
       .select()
       .from(templateValueTable)
       .where(eq(templateValueTable.templateKeyId, keyId));
-    const dbValueIds = dbValues.map((v) => v.id);
 
-    // 🔥 创建 value -> id 的映射，用于兜底匹配
-    const dbValueMap = new Map<string, string>();
-    for (const v of dbValues) {
-      dbValueMap.set(v.value, v.id);
-    }
+    // 建立映射表，方便快速查找
+    const dbValueMap = new Map(dbValues.map(v => [v.id, v]));
+    const dbContentToIdMap = new Map(dbValues.map(v => [v.value, v.id]));
 
-    // 2. 找出需要删除的 (数据库有，但前端提交的对象里没带这个 ID)
-    const submittedIds = incomingOptions.map((o: any) => o.id).filter(Boolean);
-    const idsToDelete = dbValueIds.filter((id) => !submittedIds.includes(id));
+    // 2. 准备三个操作集合
+    const toDeleteIds: string[] = [];
+    const toUpdate: { id: string, value: string, sortOrder: number }[] = [];
+    const toInsert: any[] = [];
 
-    if (idsToDelete.length > 0) {
-      // 只有被显式删除的 ID，才会触发图片清理
-      await tx
-        .delete(productVariantMediaTable)
-        .where(inArray(productVariantMediaTable.attributeValueId, idsToDelete));
-      await tx
-        .delete(templateValueTable)
-        .where(inArray(templateValueTable.id, idsToDelete));
-    }
+    // 计算哪些 ID 应该被删除（数据库有，但提交的 options 里没出现的 ID）
+    const submittedIds = new Set(incomingOptions.map((o: any) => o.id).filter(Boolean));
+    dbValues.forEach(v => {
+      if (!submittedIds.has(v.id)) {
+        toDeleteIds.push(v.id);
+      }
+    });
 
-    // 3. 循环处理提交的选项
+    // 3. 处理前端提交的数据
     for (const [index, opt] of incomingOptions.entries()) {
-      if (opt.id) {
-        // 如果有 ID，执行更新文本内容 (ID 不变，图片自动保留)
-        await tx
-          .update(templateValueTable)
-          .set({
-            value: opt.value,
-            sortOrder: index,
-          })
-          .where(eq(templateValueTable.id, opt.id));
+      if (opt.id && dbValueMap.has(opt.id)) {
+        // 情况 A: 正常的更新（带 ID 且数据库存在）
+        toUpdate.push({ id: opt.id, value: opt.value, sortOrder: index });
       } else {
-        // 🔥 兜底逻辑：没有 ID 时，尝试通过 value 匹配现有记录
-        const existingId = dbValueMap.get(opt.value);
-        if (existingId) {
-          // 找到匹配的记录，更新它（保持 UUID 不变）
-          await tx
-            .update(templateValueTable)
-            .set({
-              value: opt.value,
-              sortOrder: index,
-            })
-            .where(eq(templateValueTable.id, existingId));
-          // 从待删除列表中移除（因为已经被使用了）
-          const idx = idsToDelete.indexOf(existingId);
-          if (idx > -1) {
-            idsToDelete.splice(idx, 1);
-          }
+        // 情况 B: 兜底逻辑 —— 没有 ID，但 value 字符串完全一致
+        const matchedId = dbContentToIdMap.get(opt.value);
+
+        if (matchedId && toDeleteIds.includes(matchedId)) {
+          // 命中兜底：这个值原本在删除名单里，现在复用它，从删除名单移除
+          const idx = toDeleteIds.indexOf(matchedId);
+          toDeleteIds.splice(idx, 1);
+          toUpdate.push({ id: matchedId, value: opt.value, sortOrder: index });
         } else {
-          // 真的是新选项，插入新记录
-          await tx.insert(templateValueTable).values({
+          // 情况 C: 真正的全新数据
+          toInsert.push({
             templateKeyId: keyId,
             value: opt.value,
             sortOrder: index,
           });
         }
       }
+    }
+
+    // --- 4. 统一执行数据库操作 ---
+
+    // A. 执行删除（注意：必须先删关联表，再删主表）
+    if (toDeleteIds.length > 0) {
+      // 级联清理：删除这些规格值关联的图片/媒体记录
+      await tx
+        .delete(productVariantMediaTable)
+        .where(inArray(productVariantMediaTable.attributeValueId, toDeleteIds));
+
+      await tx
+        .delete(templateValueTable)
+        .where(inArray(templateValueTable.id, toDeleteIds));
+    }
+
+    // B. 执行批量插入
+    if (toInsert.length > 0) {
+      await tx.insert(templateValueTable).values(toInsert);
+    }
+
+    // C. 执行更新（循环更新，因为每个 ID 对应的 value 不同）
+    for (const item of toUpdate) {
+      await tx
+        .update(templateValueTable)
+        .set({
+          value: item.value,
+          sortOrder: item.sortOrder,
+        })
+        .where(eq(templateValueTable.id, item.id));
     }
   }
 }

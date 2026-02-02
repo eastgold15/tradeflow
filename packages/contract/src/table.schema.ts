@@ -456,6 +456,7 @@ export const templateTable = p.pgTable("template", {
     .uuid("master_category_id")
     .notNull()
     .references(() => masterCategoryTable.id),
+  sortOrder: p.integer("sort_order").default(0),
 });
 
 export const templateKeyTable = p.pgTable("template_key", {
