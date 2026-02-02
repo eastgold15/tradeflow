@@ -6,11 +6,10 @@ import {
   type HeroCardListRes,
   useCurrentHeroCardsList,
 } from "@/hooks/api/hero-cards-hook";
-import { cn } from "@/lib/utils";
+import { cn, useIsDesktop } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import Shop from "./Shop";
 import { useNavbarStore } from "@/lib/store/navbar-store";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface ContentBlockProps {
   bgColor: string;
@@ -98,7 +97,7 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
  */
 export const HeroShowComponent: React.FC = () => {
   const { data: heroCards, isLoading, error } = useCurrentHeroCardsList();
-  const isDesktop = useMediaQuery("(min-width: 768px)"); // 在这里调用
+  const isDesktop = useIsDesktop();
 
   // 从 store 获取 navbar 高度
   const navbarHeight = useNavbarStore((state) => state.navbarHeight);
