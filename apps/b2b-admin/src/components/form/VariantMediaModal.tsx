@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Palette } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ interface VariantMediaModalProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   productId: string;
+  skus?: Array<{ id: string; specJson: Record<string, string> | null }>;
 }
 
 export function VariantMediaModal({
@@ -52,6 +53,7 @@ export function VariantMediaModal({
   onOpenChange,
   onSuccess,
   productId,
+  skus,
 }: VariantMediaModalProps) {
   const { data, isLoading, refetch } = useProductVariantMedia(
     open ? productId : undefined
@@ -65,16 +67,34 @@ export function VariantMediaModal({
     },
   });
 
+  // 从 SKU 列表中提取实际存在的变体（颜色属性值）
+  const existingVariants = useMemo(() => {
+    if (!data?.variantMedia) return [];
+
+    return data.variantMedia.filter((vm) => {
+      // 如果没有传 skus，显示所有变体
+      if (!skus || skus.length === 0) return true;
+
+      // 检查是否有任何 SKU 的 specJson 中包含这个颜色值
+      return skus.some((sku) => {
+        if (!sku.specJson) return false;
+        // specJson 格式如: { "Color": "红色", "Size": "M" }
+        // 检查值是否匹配当前变体的 attributeValue
+        return Object.values(sku.specJson).includes(vm.attributeValue);
+      });
+    });
+  }, [data?.variantMedia, skus]);
+
   useEffect(() => {
     if (data) {
       form.reset({
-        variantMedia: data.variantMedia.map((vm) => ({
+        variantMedia: existingVariants.map((vm) => ({
           attributeValueId: vm.attributeValueId,
           mediaIds: vm.images.map((img) => img.id),
         })),
       });
     }
-  }, [data, form]);
+  }, [data, existingVariants]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -113,10 +133,10 @@ export function VariantMediaModal({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
           </div>
-        ) : data && data.variantMedia.length > 0 ? (
+        ) : existingVariants.length > 0 ? (
           <Form {...form}>
             <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-              {data.variantMedia.map((vm, index) => (
+              {existingVariants.map((vm, index) => (
                 <div
                   className="rounded-lg border p-4"
                   key={vm.attributeValueId}
@@ -151,63 +171,63 @@ export function VariantMediaModal({
                     {/* 图片预览 */}
                     {form.watch(`variantMedia.${index}.mediaIds`)?.length >
                       0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {form
-                          .watch(`variantMedia.${index}.mediaIds`)
-                          ?.map((mediaId, imgIndex) => {
-                            const media = vm.images.find(
-                              (img) => img.id === mediaId
-                            );
-                            return media ? (
-                              <div
-                                className="relative h-20 w-20 overflow-hidden rounded-md border"
-                                key={mediaId}
-                              >
-                                {/* 根据文件后缀判断是视频还是图片 */}
-                                {isVideoFile(media.url) ? (
-                                  <video
-                                    className="h-full w-full object-cover"
-                                    muted
-                                    onMouseEnter={(e) => {
-                                      const video = e.currentTarget;
-                                      video
-                                        .play()
-                                        .catch((err) =>
-                                          console.error("视频播放错误:", err)
-                                        );
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const video = e.currentTarget;
-                                      video.pause();
-                                      video.currentTime = 0;
-                                    }}
-                                    playsInline
-                                    src={media.url}
-                                  />
-                                ) : (
-                                  <img
-                                    alt={vm.attributeValue}
-                                    className="h-full w-full object-cover"
-                                    src={media.url}
-                                  />
-                                )}
-                                {/* 媒体类型标签 */}
-                                {isVideoFile(media.url) && (
-                                  <span className="absolute top-0 left-0 rounded-br bg-blue-600 px-1 text-[10px] text-white">
-                                    视频
-                                  </span>
-                                )}
-                                {/* 🔥 第一张图标记为主图 */}
-                                {imgIndex === 0 && (
-                                  <span className="absolute top-0 right-0 rounded-bl bg-indigo-600 px-1 text-[10px] text-white">
-                                    主图
-                                  </span>
-                                )}
-                              </div>
-                            ) : null;
-                          })}
-                      </div>
-                    )}
+                        <div className="flex flex-wrap gap-2">
+                          {form
+                            .watch(`variantMedia.${index}.mediaIds`)
+                            ?.map((mediaId, imgIndex) => {
+                              const media = vm.images.find(
+                                (img) => img.id === mediaId
+                              );
+                              return media ? (
+                                <div
+                                  className="relative h-20 w-20 overflow-hidden rounded-md border"
+                                  key={mediaId}
+                                >
+                                  {/* 根据文件后缀判断是视频还是图片 */}
+                                  {isVideoFile(media.url) ? (
+                                    <video
+                                      className="h-full w-full object-cover"
+                                      muted
+                                      onMouseEnter={(e) => {
+                                        const video = e.currentTarget;
+                                        video
+                                          .play()
+                                          .catch((err) =>
+                                            console.error("视频播放错误:", err)
+                                          );
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        const video = e.currentTarget;
+                                        video.pause();
+                                        video.currentTime = 0;
+                                      }}
+                                      playsInline
+                                      src={media.url}
+                                    />
+                                  ) : (
+                                    <img
+                                      alt={vm.attributeValue}
+                                      className="h-full w-full object-cover"
+                                      src={media.url}
+                                    />
+                                  )}
+                                  {/* 媒体类型标签 */}
+                                  {isVideoFile(media.url) && (
+                                    <span className="absolute top-0 left-0 rounded-br bg-blue-600 px-1 text-[10px] text-white">
+                                      视频
+                                    </span>
+                                  )}
+                                  {/* 🔥 第一张图标记为主图 */}
+                                  {imgIndex === 0 && (
+                                    <span className="absolute top-0 right-0 rounded-bl bg-indigo-600 px-1 text-[10px] text-white">
+                                      主图
+                                    </span>
+                                  )}
+                                </div>
+                              ) : null;
+                            })}
+                        </div>
+                      )}
                   </div>
                 </div>
               ))}

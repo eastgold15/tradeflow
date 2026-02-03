@@ -44,9 +44,10 @@ export default function ProductsPage() {
   }>({ open: false });
   const [skuCreateId, setSkuCreateId] = useState<string | null>(null);
   const [skuEditData, setSkuEditData] = useState<SkuListRes | null>(null);
-  const [variantMediaProductId, setVariantMediaProductId] = useState<
-    string | null
-  >(null);
+  const [variantMediaData, setVariantMediaData] = useState<{
+    productId: string;
+    skus: SkuListRes[];
+  } | null>(null);
 
   // --- 3. 逻辑处理 ---
   const filteredProducts =
@@ -154,7 +155,9 @@ export default function ProductsPage() {
             onDeleteSku={handleDeleteSku}
             onEdit={(p) => setProductModal({ open: true, data: p })}
             onEditSku={(sku) => setSkuEditData(sku)}
-            onManageVariantMedia={setVariantMediaProductId}
+            onManageVariantMedia={(productId, skus) =>
+              setVariantMediaData({ productId, skus })
+            }
             onSelect={handleSelect}
             onSelectSku={handleSelectSku}
             onToggleAllSkus={handleToggleAllSkus}
@@ -193,10 +196,11 @@ export default function ProductsPage() {
           sku={skuEditData || undefined}
         />
         <VariantMediaModal
-          onOpenChange={() => setVariantMediaProductId(null)}
+          onOpenChange={() => setVariantMediaData(null)}
           onSuccess={refetch}
-          open={!!variantMediaProductId}
-          productId={variantMediaProductId || ""}
+          open={!!variantMediaData}
+          productId={variantMediaData?.productId || ""}
+          skus={variantMediaData?.skus}
         />
       </div>
     </>

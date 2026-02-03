@@ -58,7 +58,7 @@ interface ProductListProps {
   onCreateSku: (id: string) => void;
   onEditSku: (sku: SkuListRes) => void;
   onDeleteSku: (id: string, code: string) => void;
-  onManageVariantMedia?: (productId: string) => void;
+  onManageVariantMedia?: (productId: string, skus: SkuListRes[]) => void;
   // SKU 批量选择和删除
   selectedSkuIds: Set<string>;
   onSelectSku: (id: string, checked: boolean) => void;
@@ -80,7 +80,7 @@ interface SortableProductItemProps {
   onCreateSku: (id: string) => void;
   onEditSku: (sku: SkuListRes) => void;
   onDeleteSku: (id: string, code: string) => void;
-  onManageVariantMedia?: (productId: string) => void;
+  onManageVariantMedia?: (productId: string, skus: SkuListRes[]) => void;
   selectedSkuIds: Set<string>;
   onSelectSku: (id: string, checked: boolean) => void;
   onToggleAllSkus: (ids: string[], checked: boolean) => void;
@@ -279,7 +279,7 @@ const SortableProductItem = memo(function SortableProductItem({
             onEdit={onEditSku}
             onManageVariantMedia={
               onManageVariantMedia
-                ? () => onManageVariantMedia(product.id)
+                ? () => onManageVariantMedia(product.id, product.skus)
                 : undefined
             }
             onSelectSku={onSelectSku}
@@ -362,7 +362,7 @@ export function ProductList({
         const startIndex = Math.min(oldIndex, newIndex);
         const endIndex = Math.max(oldIndex, newIndex);
 
-        for (let i = startIndex; i <= endIndex; i++) {
+        for (let i = startIndex;i <= endIndex;i++) {
           affectedItems.push({
             siteProductId: newProducts[i].siteProductId,
             sortOrder: i,
@@ -632,7 +632,7 @@ export function ProductList({
                     onEdit={onEditSku}
                     onManageVariantMedia={
                       onManageVariantMedia
-                        ? () => onManageVariantMedia(product.id)
+                        ? () => onManageVariantMedia(product.id, product.skus)
                         : undefined
                     }
                     onSelectSku={onSelectSku}
