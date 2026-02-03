@@ -86,7 +86,7 @@ export function VariantMediaModal({
   }, [data?.variantMedia, skus]);
 
   useEffect(() => {
-    if (data) {
+    if (existingVariants.length > 0) {
       form.reset({
         variantMedia: existingVariants.map((vm) => ({
           attributeValueId: vm.attributeValueId,
@@ -94,7 +94,7 @@ export function VariantMediaModal({
         })),
       });
     }
-  }, [data, existingVariants]);
+  }, [existingVariants]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -142,7 +142,7 @@ export function VariantMediaModal({
                   key={vm.attributeValueId}
                 >
                   <h3 className="mb-4 font-semibold">
-                    {data.colorAttributeKey}: {vm.attributeValue}
+                    {data?.colorAttributeKey || "颜色"}: {vm.attributeValue}
                   </h3>
 
                   <div className="space-y-4">
