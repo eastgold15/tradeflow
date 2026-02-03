@@ -273,6 +273,7 @@ export class SiteProductService {
   //   };
   // }
 
+
   async getDetail(id: string, ctx: ServiceContext) {
     const result = await ctx.db.query.siteProductTable.findFirst({
       where: {
@@ -288,11 +289,10 @@ export class SiteProductService {
       with: {
         product: {
           with: {
-            // 🔥 新增：查询变体媒体
             variantMedia: {
               with: {
                 media: true,
-                attributeValue: true, // 获取属性值信息
+                attributeValue: true,
               },
             },
           },
@@ -310,7 +310,7 @@ export class SiteProductService {
 
     if (!result) throw new HttpError.NotFound("商品不存在");
 
-    // 🔥 识别颜色属性
+    // 1. 识别颜色属性
     const identifyColorAttribute = async () => {
       const [productTemplate] = await ctx.db
         .select()
@@ -335,7 +335,7 @@ export class SiteProductService {
 
     const colorAttr = await identifyColorAttribute();
 
-    // 🔥 构建颜色值到 attributeValueId 的映射
+    // 2. 构建颜色值映射
     const colorValueToIdMap = new Map<string, string>();
     if (colorAttr) {
       const values = await ctx.db
@@ -348,44 +348,50 @@ export class SiteProductService {
       });
     }
 
-    // --- 媒体处理逻辑：不包含商品级图片，只包含变体和 SKU 图片 ---
-    const processMedia = (mediaArr: any[], offset = 0, isVideoLast = true) => {
-      return mediaArr.map((m) => {
-        let weight = (m.sortOrder ?? 0) + offset;
-        if (isVideoLast && m.mediaType?.startsWith("video")) {
-          weight += 10_000; // 视频权重极大，确保置底
-        }
-        return {
-          id: m.id,
-          url: m.url,
-          mediaType: m.mediaType,
+    // --- 3. 聚合全量 Gallery (去重并处理权重) ---
+    const galleryMap = new Map<string, any>();
+
+    // 放入变体媒体 (权重基数 1000)
+    result.product.variantMedia?.forEach((vm) => {
+      if (vm.media && !galleryMap.has(vm.media.id)) {
+        let weight = (vm.sortOrder ?? 0) + 1000;
+        if (vm.media.mediaType?.startsWith("video")) weight += 10000;
+        galleryMap.set(vm.media.id, {
+          id: vm.media.id,
+          url: vm.media.url,
+          mediaType: vm.media.mediaType,
           sortOrder: weight,
-        };
+        });
+      }
+    });
+
+    // 放入 SKU 专属媒体 (权重基数 2000)
+    result.siteSkus.forEach((ss) => {
+      ss.sku.media?.forEach((m) => {
+        if (!galleryMap.has(m.id)) {
+          let weight = (m.sortOrder ?? 0) + 2000;
+          if (m.mediaType?.startsWith("video")) weight += 10000;
+          galleryMap.set(m.id, {
+            id: m.id,
+            url: m.url,
+            mediaType: m.mediaType,
+            sortOrder: weight,
+          });
+        }
       });
-    };
+    });
 
-    // 🔥 聚合媒体：变体媒体 (权重 1000) + SKU 媒体 (权重 2000)
-    const variantMedia =
-      result.product.variantMedia?.flatMap((vm) =>
-        processMedia([vm.media], 1000)
-      ) || [];
-
-    const skuMedia = result.siteSkus.flatMap((ss) =>
-      processMedia(ss.sku.media, 2000)
-    );
-
-    const gallery = [...variantMedia, ...skuMedia].sort(
+    const gallery = Array.from(galleryMap.values()).sort(
       (a, b) => a.sortOrder - b.sortOrder
     );
 
-    // --- 响应值封装 ---
+    // --- 4. 封装响应值与 SKU 媒体排序逻辑 ---
     return {
-      // 1. 身份信息
-      id: result.id, // 前端直接用 id
+      id: result.id,
       productId: result.productId,
       spuCode: result.product?.spuCode,
 
-      // 2. 显示内容 (已处理覆盖逻辑)
+      // 2. 显示内容 
       name: result.siteName || result.product?.name,
       description: result.siteDescription || result.product?.description,
       seoTitle: result.seoTitle,
@@ -397,59 +403,60 @@ export class SiteProductService {
 
       // 4. customAttributes
       customAttributes: result.product?.customAttributes || {},
+      colorAttributeKey: colorAttr?.key,
+      categories: result.siteCategories.map((sc) => ({
+        id: sc.id,
+        name: sc.name,
+      })),
 
       // 5. 规格列表 (包含变体媒体继承逻辑)
       skus: result.siteSkus.map((ss) => {
         const pSku = ss.sku;
         const specs = pSku.specJson as Record<string, string>;
 
-        // 🔥 三级继承逻辑计算 mediaIds
-        // 1. SKU 专属媒体 (最高优先级)
-        const ownMediaIds = pSku.media.map((m) => m.id);
-
-        // 2. 变体级媒体 (按颜色继承)
-        let inheritedMediaIds: string[] = [];
+        // A. 获取该颜色对应的变体媒体，并严格按 sortOrder 排序
+        let colorVariantMediaIds: string[] = [];
         if (colorAttr && colorValueToIdMap.size > 0) {
-          const colorValue = specs[colorAttr.key] || specs.颜色;
+          const colorValue = specs[colorAttr.key] || specs.颜色 || specs.Color;
           if (colorValue) {
             const attributeValueId = colorValueToIdMap.get(colorValue);
-            if (attributeValueId) {
-              inheritedMediaIds =
-                result.product.variantMedia
-                  ?.filter((vm) => vm.attributeValueId === attributeValueId)
-                  .map((vm) => vm.mediaId) || [];
-            }
+            colorVariantMediaIds = result.product.variantMedia
+              ?.filter((vm) => vm.attributeValueId === attributeValueId)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+              .map((vm) => vm.mediaId) || [];
           }
         }
 
-        // 合并：变体级继承 + SKU专属 (SKU专属优先级更高，放在后面)
-        const mediaIds = Array.from(
-          new Set([...inheritedMediaIds, ...ownMediaIds])
+        // B. SKU 专属媒体 ID
+        const ownMediaIds = pSku.media.map((m) => m.id);
+
+        // C. 核心排序逻辑实现：
+        // 1. 变体图中 sortOrder 为 0 的图 (主图) 放在最前
+        // 2. 然后放入 SKU 专属图
+        // 3. 最后放入剩余的变体图
+        const mainImageId = colorVariantMediaIds[0];
+        const remainingVariantIds = colorVariantMediaIds.slice(1);
+
+        const finalMediaIds = Array.from(
+          new Set([
+            ...(mainImageId ? [mainImageId] : []),
+            ...ownMediaIds,
+            ...remainingVariantIds,
+          ])
         );
 
         return {
-          id: ss.id, // siteSkuId
+          id: ss.id,
           skuCode: pSku.skuCode,
           price: ss.price || pSku.price,
           stock: pSku.stock,
           specJson: specs,
           isActive: ss.isActive,
-          // 🔥 前端根据此过滤 gallery
-          mediaIds,
+          mediaIds: finalMediaIds, // 前端只需按此数组顺序渲染即可
         };
       }),
-
-      // 5. 媒体库 (只包含变体和 SKU 图片)
       gallery,
-
-      // 6. 分类
-      categories: result.siteCategories.map((sc) => ({
-        id: sc.id,
-        name: sc.name,
-      })),
-
-      // 7. 颜色属性名 (前端用于识别颜色选择器)
-      colorAttributeKey: colorAttr?.key,
     };
   }
+
 }
