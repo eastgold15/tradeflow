@@ -94,6 +94,8 @@ export function CreateSKUModal({
   const [generatorData, setGeneratorData] = useState<Record<string, string[]>>(
     {}
   );
+  // 在 CreateSKUModal 内部添加一个状态
+  const [activeTab, setActiveTab] = useState("list");
 
   // 批量设置状态
   const [batchPrice, setBatchPrice] = useState<number | null>(null);
@@ -168,25 +170,16 @@ export function CreateSKUModal({
   // 批量设置所有字段
   const handleApplyBatchSettings = () => {
     fields.forEach((_, index) => {
-      if (batchPrice !== null) {
-        form.setValue(`skus.${index}.price`, batchPrice);
-      }
-      if (batchStock !== null) {
-        form.setValue(`skus.${index}.stock`, batchStock);
-      }
-      if (batchWeight !== null) {
-        form.setValue(`skus.${index}.weight`, batchWeight);
-      }
-      if (batchVolume !== null) {
-        form.setValue(`skus.${index}.volume`, batchVolume);
-      }
-      if (batchMarketPrice !== null) {
-        form.setValue(`skus.${index}.marketPrice`, batchMarketPrice);
-      }
-      if (batchCostPrice !== null) {
-        form.setValue(`skus.${index}.costPrice`, batchCostPrice);
-      }
+      if (batchPrice !== null) form.setValue(`skus.${index}.price`, batchPrice);
+      if (batchStock !== null) form.setValue(`skus.${index}.stock`, batchStock);
+      if (batchWeight !== null) form.setValue(`skus.${index}.weight`, batchWeight);
+      if (batchVolume !== null) form.setValue(`skus.${index}.volume`, batchVolume);
+      if (batchMarketPrice !== null) form.setValue(`skus.${index}.marketPrice`, batchMarketPrice);
+      if (batchCostPrice !== null) form.setValue(`skus.${index}.costPrice`, batchCostPrice);
     });
+
+    // --- 新增：应用后切换回列表页 ---
+    setActiveTab("list");
   };
 
   const onSubmit = async (data: FormData) => {
@@ -295,8 +288,8 @@ export function CreateSKUModal({
 
             {/* === 2. 规格生成器区域 === */}
             {selectedProductId &&
-            currentProduct?.specs &&
-            currentProduct.specs.length > 0 ? (
+              currentProduct?.specs &&
+              currentProduct.specs.length > 0 ? (
               <div className="rounded-lg border bg-slate-50 p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="font-semibold text-sm">规格生成器</h3>
@@ -365,7 +358,11 @@ export function CreateSKUModal({
                 </div>
 
                 {/* Tabs：列表视图 | 批量设置 */}
-                <Tabs className="w-full" defaultValue="list">
+                <Tabs
+                  className="w-full"
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="list">列表视图</TabsTrigger>
                     <TabsTrigger value="batch">批量设置</TabsTrigger>
@@ -381,7 +378,7 @@ export function CreateSKUModal({
                             {currentProduct?.specs?.map((spec) => (
                               <TableHead key={spec.key}>{spec.label}</TableHead>
                             ))}
-                            <TableHead className="w-[100px]">
+                            <TableHead className="w-25">
                               销售价 *
                             </TableHead>
                             <TableHead className="w-[100px]">市场价</TableHead>
@@ -495,7 +492,7 @@ export function CreateSKUModal({
                                       onChange={(e) =>
                                         field.onChange(
                                           Number.parseInt(e.target.value, 10) ||
-                                            0
+                                          0
                                         )
                                       }
                                       type="number"
