@@ -163,12 +163,8 @@ export function createSalesInquiryTemplate(
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif; color: #333;">
   <div style="max-width: 800px; margin: 20px auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
     
-    <div style="border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px;">
-      <p style="margin: 0;"><strong>TO:</strong> ${salser.name}</p>
-      <p style="margin: 5px 0;"><strong>FROM:</strong> Inquiry System</p>
-      <p style="margin: 5px 0;"><strong>MAIN FACTORY:</strong> ${mainFactory.name}</p>
-      ${similarFactoriesHtml} 
-    </div>
+    <div>Dear Sir</div>
+    <div style="font-size: 14px; line-height: 1.8;">We visited your website and expect you to send the best offer via my below email for the below listed item as per the attached terms. Thanks.</div>
 
     <h3 style="color: #2c3e50; border-left: 4px solid #4ca1af; padding-left: 10px;">📋 Quotation Request Detail</h3>
     
@@ -186,10 +182,12 @@ export function createSalesInquiryTemplate(
     </table>
 
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 25px;">
-      <h4 style="margin-top:0;">👤 Customer Information</h4>
-      <p style="margin: 5px 0;"><strong>Name:</strong> ${inquiryData.customerName || displayName}</p>
-      <p style="margin: 5px 0;"><strong>Company:</strong> ${inquiryData.customerCompany || "-"}</p>
-      <p style="margin: 5px 0;"><strong>WhatsApp:</strong> ${inquiryData.customerWhatsapp || "-"}</p>
+      <h4 style="margin-top: 0;">👤</h4>
+      ${inquiryData.customerName || displayName ? `<p style="margin: 5px 0;"><strong>Name:</strong> ${inquiryData.customerName || displayName}</p>` : ''}
+      ${inquiryData.customerCompany ? `<p style="margin: 5px 0;"><strong>Company:</strong> ${inquiryData.customerCompany}</p>` : ''}
+      ${inquiryData.customerPhone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${inquiryData.customerPhone}</p>` : ''}
+      ${inquiryData.customerEmail ? `<p style="margin: 5px 0;"><strong>Email:</strong> ${inquiryData.customerEmail}</p>` : ''}
+      ${inquiryData.customerWhatsapp ? `<p style="margin: 5px 0;"><strong>WhatsApp:</strong> ${inquiryData.customerWhatsapp}</p>` : ''}
     </div>
 
     <p style="font-size: 12px; color: #999; margin-top: 30px; text-align: center;">

@@ -119,13 +119,18 @@ class ResendEmailService {
 
       console.log("[Resend] 准备发送邮件:", {
         to: toArray,
+        cc: cc ? (Array.isArray(cc) ? cc : [cc]) : undefined,
+        bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
         subject: template.subject,
         hasHtml: !!template.html,
         hasAttachments: (template.attachments?.length || 0) > 0,
       });
 
       // 发送邮件
-      const { data, error } = await this.resend.emails.send(emailParams);
+      const { data, error } = await this.resend.emails.send({
+        ...emailParams,
+        replyTo: request.replyTo,
+      });
 
       if (error) {
         console.error("[Resend] 邮件发送失败:", error);

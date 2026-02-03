@@ -39,6 +39,8 @@ export interface EmailRequest {
   cc?: string | string[];
   /** 密送（可选） */
   bcc?: string | string[];
+  /** 回复地址（可选） */
+  replyTo?: string;
   /** 邮件模板 */
   template: EmailTemplate;
 }

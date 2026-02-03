@@ -13,7 +13,6 @@
 import { HttpError } from "@pori15/logixlysia";
 import {
   customerTable,
-  departmentTable,
   type InquiryContract,
   inquiryTable,
   productTemplateTable,
@@ -22,7 +21,7 @@ import {
   templateKeyTable,
   templateValueTable,
   userRoleTable,
-  userTable,
+  userTable
 } from "@repo/contract";
 import { and, eq } from "drizzle-orm";
 import { db } from "~/db/connection";
@@ -30,12 +29,10 @@ import { db } from "~/db/connection";
 import type { ServiceContext } from "~/middleware/site";
 import { generateInquiryNumber } from "~/modules/inquiry/services/dayCount";
 import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service";
-import { createSalesInquiryTemplate } from "~/modules/inquiry/services/inquiry.templates";
-import { sendEmail } from "~/utils/email/email";
+
 import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inquiry-resend";
 
 // 外部业务工具
-
 // 类型定义
 type TransactionFn = Parameters<(typeof db)["transaction"]>[0];
 type TxType = Parameters<TransactionFn>[0];
@@ -576,9 +573,13 @@ export class InquiryService {
    *
    * 查询并返回出口商管理员和工厂管理员的邮箱列表
    *
+   * 角色名称：
+   * - 出口商管理员：角色名 "出口商管理员"
+   * - 工厂管理员：角色名 "工厂管理员"（已注释，需要时启用）
+   *
    * @param tenantId - 租户ID（出口商）
-   * @param factoryDeptId - 工厂部门ID
-   * @returns 管理员邮箱列表
+   * @param factoryDeptId - 工厂部门ID（将来启用工厂管理员时需要）
+   * @returns 管理员邮箱列表（出口商和工厂）
    */
   private async getAdminEmails(
     tenantId: string,
@@ -587,11 +588,11 @@ export class InquiryService {
     const adminEmails: string[] = [];
 
     try {
-      // 1. 获取出口商管理员（tenant_admin）
+      // 1. 获取出口商管理员（角色名：出口商管理员）
       const [tenantAdminRole] = await db
         .select()
         .from(roleTable)
-        .where(eq(roleTable.name, "tenant_admin"))
+        .where(eq(roleTable.name, "出口商管理员"))
         .limit(1);
 
       if (tenantAdminRole) {
@@ -621,43 +622,43 @@ export class InquiryService {
         }
       }
 
-      // 2. 获取工厂管理员（dept_manager）- 只查询当前工厂的管理员
-      const [deptManagerRole] = await db
-        .select()
-        .from(roleTable)
-        .where(eq(roleTable.name, "dept_manager"))
-        .limit(1);
+      console.log(`[✅] 找到 ${adminEmails.length} 个出口商管理员需要抄送`);
+      // 2. 获取工厂管理员（角色名：工厂管理员）- 只查询当前工厂的管理员
+      // 将来需要启用时，取消下面代码的注释
+      // const [deptManagerRole] = await db
+      //   .select()
+      //   .from(roleTable)
+      //   .where(eq(roleTable.name, "工厂管理员"))
+      //   .limit(1);
 
-      if (deptManagerRole) {
-        const deptManagers = await db
-          .select({
-            email: userTable.email,
-            name: userTable.name,
-          })
-          .from(userTable)
-          .innerJoin(
-            userRoleTable,
-            eq(userRoleTable.userId, userTable.id)
-          )
-          .where(
-            and(
-              eq(userRoleTable.roleId, deptManagerRole.id),
-              eq(userTable.deptId, factoryDeptId),
-              eq(userTable.isActive, true)
-            )
-          );
+      // if (deptManagerRole) {
+      //   const deptManagers = await db
+      //     .select({
+      //       email: userTable.email,
+      //       name: userTable.name,
+      //     })
+      //     .from(userTable)
+      //     .innerJoin(
+      //       userRoleTable,
+      //       eq(userRoleTable.userId, userTable.id)
+      //     )
+      //     .where(
+      //       and(
+      //         eq(userRoleTable.roleId, deptManagerRole.id),
+      //         eq(userTable.deptId, factoryDeptId),
+      //         eq(userTable.isActive, true)
+      //       )
+      //     );
 
-        for (const admin of deptManagers) {
-          if (admin.email && !adminEmails.includes(admin.email)) {
-            adminEmails.push(admin.email);
-            console.log(`[🏭] 工厂管理员: ${admin.name} (${admin.email})`);
-          }
-        }
-      }
-
-      console.log(`[✅] 找到 ${adminEmails.length} 个管理员需要抄送`);
+      //   for (const admin of deptManagers) {
+      //     if (admin.email && !adminEmails.includes(admin.email)) {
+      //       adminEmails.push(admin.email);
+      //       console.log(`[🏭] 工厂管理员: ${admin.name} (${admin.email})`);
+      //     }
+      //   }
+      // }
     } catch (error) {
-      console.error("[❌] 获取管理员列表失败:", error);
+      console.error("[❌] 获取出口商管理员列表失败:", error);
     }
 
     return adminEmails;
@@ -785,213 +786,15 @@ export class InquiryService {
   }
 
   /**
-   * 📧 异步完整通知逻辑 (包含 Excel 和工厂逻辑)
-   *
-   * TODO: 完成以下功能
-   * - 获取工厂信息（从站点的绑定部门）
-   * - 生成 Excel（需要实现 generateQuotationExcel）
-   * - 发送邮件（需要实现 createSalesInquiryTemplate）
-   */
-  private async sendFullInquiryEmail(
-    targetRep: NonNullable<UserWithResponsibility>,
-    inquiry: Inquiry,
-    siteProduct: SiteProduct,
-    siteSku: SiteSku,
-    skuMediaId: string,
-    body: typeof InquiryContract.Create.static
-  ) {
-    console.log("=== 🚀 开始发送邮件流程 ===");
-    console.log("[1] 询价单号:", inquiry.inquiryNum);
-    console.log("[2] 业务员信息:", {
-      name: targetRep.user.name,
-      email: targetRep.user.email,
-      userId: targetRep.user.id,
-    });
-
-    try {
-      // 1. 🏢 获取出口商和工厂信息（根据站点类型动态获取）
-      console.log("[3] 开始获取出口商和工厂信息，站点ID:", inquiry.siteId);
-      const { exporter, factories } = await this.getExporterAndFactoryInfo(inquiry.siteId);
-
-      if (!exporter) {
-        console.error("[❌] 未找到出口商信息，取消发送邮件");
-        return;
-      }
-
-      // 使用第一个工厂作为主要工厂（用于邮件模板）
-      const mainFactory = factories[0] || null;
-      console.log("[4] 出口商信息:", {
-        name: exporter.name,
-        phone: exporter.contactPhone,
-        address: exporter.address,
-      });
-      console.log("[5] 主工厂信息:", mainFactory ? {
-        name: mainFactory.name,
-        phone: mainFactory.contactPhone,
-        address: mainFactory.address,
-      } : "无工厂");
-
-      // 2. 获取需要抄送的管理员（使用主工厂ID）
-      console.log("[6] 开始获取管理员列表");
-      const adminEmails = mainFactory
-        ? await this.getAdminEmails(inquiry.tenantId, mainFactory.id)
-        : [];
-      console.log("[6.2] 管理员邮箱列表:", adminEmails);
-
-      // 3. 获取 SKU 媒体信息
-      console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
-      const media = skuMediaId
-        ? await db.query.mediaTable.findFirst({
-          where: { id: skuMediaId },
-        })
-        : null;
-      console.log(
-        "[8] 媒体查询结果:",
-        media
-          ? {
-            id: media.id,
-            url: media.url,
-            mediaType: media.mediaType,
-            mimeType: media.mimeType,
-          }
-          : "未找到"
-      );
-
-      // 3. 下载产品图片（仅当媒体类型为 image 时）
-      console.log("[9] 开始下载产品图片");
-      const photoData =
-        media?.mediaType === "image" && media?.url
-          ? await this.downloadImage(media.url)
-          : null;
-
-      if (media && media.mediaType !== "image") {
-        console.warn(
-          `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
-        );
-      }
-      console.log("[10] 图片下载结果:", photoData ? "成功" : "失败");
-
-      // 4. 生成 Excel 报价单
-      console.log("[11] 准备生成 Excel 报价单");
-      let excelBuffer: Buffer | null = null;
-
-      try {
-        const quotationData = this.mapToExcelData(
-          inquiry,
-          siteProduct,
-          siteSku,
-          exporter,
-          factories,
-          photoData
-        );
-        console.log("[12] Excel 数据准备完成");
-        console.log("[13] 开始生成 Excel 文件");
-        excelBuffer = await generateQuotationExcel(quotationData);
-        console.log(
-          "[14] Excel 生成完成，大小:",
-          excelBuffer?.length || 0,
-          "bytes"
-        );
-      } catch (error) {
-        console.warn(
-          "[⚠️] Excel 生成失败，将不附加 Excel 文件:",
-          error instanceof Error ? error.message : error
-        );
-        excelBuffer = null;
-      }
-
-      // 5. 构建邮件模板
-      console.log("[15] 验证业务员邮箱");
-      if (!targetRep.user.email) {
-        console.error("[❌] 业务员邮箱为空，取消发送");
-        return;
-      }
-      console.log("[16] 邮箱验证通过:", targetRep.user.email);
-
-      // 2. 内部直接调用，逻辑还是只有一份
-      const inquiryWithItems = InquiryService.transformInquiry(inquiry);
-
-      console.log("[17] 开始生成邮件模板");
-      const emailTemplate = createSalesInquiryTemplate(
-        inquiryWithItems,
-        inquiry.inquiryNum,
-        factories.length > 0
-          ? factories.map((f) => ({ name: f.name, address: f.address ?? undefined }))
-          : [{ name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" }],
-        {
-          name: targetRep.user.name,
-          email: targetRep.user.email,
-        }
-      );
-      console.log("[18] 邮件模板生成完成");
-      console.log("[19] 邮件主题:", emailTemplate.subject);
-
-      // 6. 发送邮件
-      console.log("[20] 开始发送邮件...");
-
-      // 构建附件列表（只在 Excel 生成成功时添加）
-      const attachments = excelBuffer
-        ? [
-          {
-            filename: `Quotation-${inquiry.inquiryNum}.xlsx`,
-            content: excelBuffer,
-            contentType:
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          },
-        ]
-        : [];
-
-      const emailPayload = {
-        to: targetRep.user.email,
-        bcc: adminEmails.length > 0 ? adminEmails : undefined,
-        template: {
-          ...emailTemplate,
-          attachments,
-        },
-      };
-      console.log("[21] 邮件载荷:", {
-        to: emailPayload.to,
-        bcc: emailPayload.bcc,
-        subject: emailPayload.template.subject,
-        hasAttachments: attachments.length > 0,
-        attachmentSize: attachments[0]?.content?.length || 0,
-      });
-
-      await sendEmail(emailPayload);
-
-      console.log("=== ✅ 邮件发送成功 ===");
-      console.log(
-        `[Inquiry] Email sent for ${inquiry.inquiryNum} to ${targetRep.user.email}`
-      );
-      if (adminEmails.length > 0) {
-        console.log(
-          `[Inquiry] BCC to ${adminEmails.length} admin(s): ${adminEmails.join(", ")}`
-        );
-      }
-    } catch (error) {
-      console.error("=== ❌ 邮件发送失败 ===");
-      console.error("[错误详情]:", error);
-      console.error(
-        "[错误堆栈]:",
-        error instanceof Error ? error.stack : "No stack trace"
-      );
-
-      // 更详细的错误信息
-      if (error instanceof Error) {
-        console.error("[错误名称]:", error.name);
-        console.error("[错误消息]:", error.message);
-      }
-    }
-  }
-
-  /**
    * 📧 使用 Resend 发送询价邮件
    *
-   * 与 sendFullInquiryEmail 功能相同，但使用 Resend API 发送邮件
+   * 邮件发送规则：
+   * - 收件人：分配的业务员（工厂业务员 或 出口商业务员，二选一）
+   * - 抄送：出口商管理员（tenant_admin 角色的用户）
    *
    * 流程：
-   * 1. 获取工厂信息（从站点的绑定部门）
-   * 2. 获取需要抄送的管理员
+   * 1. 获取出口商和工厂信息（从站点的绑定部门）
+   * 2. 获取需要抄送的出口商管理员
    * 3. 获取 SKU 媒体信息
    * 4. 下载产品图片（仅当媒体类型为 image 时）
    * 5. 生成 Excel 报价单
@@ -1036,12 +839,16 @@ export class InquiryService {
         address: mainFactory.address,
       } : "无工厂");
 
-      // 2. 获取需要抄送的管理员（使用主工厂ID）
+
+      // 2. 获取需要抄送的管理员（目前仅出口商管理员）
       console.log("[6] 开始获取管理员列表");
       const adminEmails = mainFactory
         ? await this.getAdminEmails(inquiry.tenantId, mainFactory.id)
         : [];
+
       console.log("[6.2] 管理员邮箱列表:", adminEmails);
+
+
 
       // 3. 获取 SKU 媒体信息
       console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);

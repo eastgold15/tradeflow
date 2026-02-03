@@ -18,15 +18,16 @@ import { Textarea } from "../ui/textarea";
 
 export const inquirySchema = z
   .object({
+    name: z.string().min(1, "Name is required"),
     company: z.string().min(1, "Company name is required"),
-    phone: z.string().optional(),
-    email: z.email("Invalid email address").optional().or(z.literal("")),
+    phone: z.string(),
+    email: z.email().optional().or(z.literal("")),
     whatsapp: z.string().optional(),
     remarks: z.string().optional(),
   })
   .refine((data) => data.phone || data.email || data.whatsapp, {
     message: "Please provide at least one contact method",
-    path: ["email"], // 错误信息显示在 email 下方，或者你可以显示在顶层
+    path: ['phone'], // 错误信息显示在 email 下方，或者你可以显示在顶层
   });
 
 export type InquiryFormValues = z.infer<typeof inquirySchema>;
@@ -41,6 +42,7 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
   const form = useForm<InquiryFormValues>({
     resolver: zodResolver(inquirySchema),
     defaultValues: {
+      name: "",
       company: "",
       phone: "",
       email: "",
@@ -56,6 +58,25 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+
+        {/* Company Field */}
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              {/* 不再需要手动写红色 * 号，FormMessage 会自动处理错误展示 */}
+              <FormControl>
+                <Input
+                  placeholder="Name *"
+                  {...field}
+                  className="border-gray-200 transition-all focus:border-black"
+                />
+              </FormControl>
+              <FormMessage className="text-[10px] text-red-500" />
+            </FormItem>
+          )}
+        />
         {/* Company Field */}
         <FormField
           control={form.control}
@@ -70,14 +91,14 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
                   className="border-gray-200 transition-all focus:border-black"
                 />
               </FormControl>
-              <FormMessage className="text-[10px]" />
+              <FormMessage className="text-[10px] text-red-500" />
             </FormItem>
           )}
         />
 
         {/* Contact Group */}
         <div className="space-y-4 border-gray-100 border-t pt-4">
-          <p className="font-bold text-[10px] text-gray-400 uppercase tracking-wider">
+          <p className="font-bold text-[10px] text-gray-400  tracking-wider">
             Contact (Provide at least one)
           </p>
 
@@ -89,7 +110,7 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
                 <FormControl>
                   <Input placeholder="Phone" type="tel" {...field} />
                 </FormControl>
-                <FormMessage className="text-[10px]" />
+                <FormMessage className="text-[10px] text-red-500" />
               </FormItem>
             )}
           />
@@ -102,7 +123,7 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
                 <FormControl>
                   <Input placeholder="Email" type="email" {...field} />
                 </FormControl>
-                <FormMessage className="text-[10px]" />
+                <FormMessage className="text-[10px] text-red-500" />
               </FormItem>
             )}
           />
@@ -113,18 +134,13 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <Input placeholder="WhatsApp" type="tel" {...field} />
+                  <Input placeholder="WhatsApp " type="tel" {...field} />
                 </FormControl>
-                <FormMessage className="text-[10px]" />
+                <FormMessage className="text-[10px] text-red-500" />
               </FormItem>
             )}
           />
-          {/* 全局错误显示 (例如都没填) */}
-          {form.formState.errors.root && (
-            <p className="text-[10px] text-red-500">
-              {form.formState.errors.root.message}
-            </p>
-          )}
+
         </div>
 
         {/* Remarks */}
