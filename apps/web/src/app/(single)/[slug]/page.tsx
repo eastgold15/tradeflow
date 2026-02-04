@@ -5,6 +5,7 @@ import { mdxComponents, MDXWrapper } from "@/components/mdx/mdx-components";
 import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { db } from "~/db/connection";
 import { notFound } from "next/navigation";
+import remarkGfm from "remark-gfm";
 
 export const revalidate = 0;
 
@@ -26,7 +27,15 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   return (
     <main className="mx-auto max-w-4xl p-8">
       <MDXWrapper>
-        <MDXRemote source={config.value} components={mdxComponents} />
+        <MDXRemote
+          source={config.value}
+          components={mdxComponents}
+          options={{
+            mdxOptions: {
+              remarkPlugins: [remarkGfm],
+            },
+          }}
+        />
       </MDXWrapper>
     </main>
   );
