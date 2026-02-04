@@ -19,10 +19,11 @@ async function getSiteName() {
 
 // 假设你的分类导航也可以通过 RPC 获取
 async function getSiteCategories() {
-  const { data, error } = await rpc.site_category.get();
+  const { data, error } = await rpc.site_category.tree.get();
   if (error) {
     return [];
   }
+  console.log('siteCategories:', data)
   return data || [];
 }
 

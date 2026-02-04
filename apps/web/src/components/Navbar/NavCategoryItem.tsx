@@ -44,8 +44,18 @@ export const NavCategoryItem = ({ category, onClose, depth = 0 }: NavItemProps) 
         "group relative",
         depth === 0 ? "md:h-full" : "w-full"
       )}
-      onMouseEnter={() => window.innerWidth > 768 && setIsOpen(true)}
-      onMouseLeave={() => window.innerWidth > 768 && setIsOpen(false)}
+      onMouseEnter={() => {
+        // 🔥 只有桌面端才启用悬停展开
+        if (window.innerWidth > 768) {
+          setIsOpen(true);
+        }
+      }}
+      onMouseLeave={() => {
+        // 🔥 只有桌面端才启用悬停关闭
+        if (window.innerWidth > 768) {
+          setIsOpen(false);
+        }
+      }}
     >
       {/* 链接/标题区域 */}
       <div className={linkBaseClass} onClick={toggle}>
@@ -70,13 +80,14 @@ export const NavCategoryItem = ({ category, onClose, depth = 0 }: NavItemProps) 
         )}
       </div>
 
-      {/* 子菜单容器 */}
-      {hasChildren && (
+      {/* 🔥 子菜单容器 - 桌面端使用 group-hover 控制，移动端使用 isOpen 控制 */}
+      {hasChildren && isOpen && (
         <div className={twMerge(
           // 桌面端下拉浮层
-          "md:invisible md:absolute md:top-full md:left-0 md:z-50 md:min-w-[200px] md:bg-white md:shadow-lg md:group-hover:visible md:animate-in md:fade-in md:zoom-in-95",
+          "md:absolute md:z-50 md:min-w-50 md:bg-white md:shadow-lg md:block",
+          // 🔥 根据深度调整位置：一级在下方，二级及以上在右侧
+          depth === 0 ? "md:top-full md:left-0" : "md:top-0 md:left-full",
           // 移动端折叠面板
-          isOpen ? "block" : "hidden md:block",
           "bg-gray-50/50 md:bg-white"
         )}>
           {category.children!.map((child) => (

@@ -15,21 +15,45 @@ import type { ServiceContext } from "~/middleware/site";
  */
 export class SiteCategoryService {
   /**
-   * 获取站点分类树
+   * 获取站点分类树（支持无限层级）
    */
   async tree(ctx: ServiceContext) {
-    const res = await ctx.db.query.siteCategoryTable.findMany({
+    // 获取所有分类（扁平列表），按 sortOrder 排序
+    const allCategories = await ctx.db.query.siteCategoryTable.findMany({
       where: {
         siteId: ctx.site.id,
-      },
-      with: {
-        children: true,
       },
       orderBy: {
         sortOrder: "asc",
       },
     });
-    return res;
+
+    // 在内存中构建树形结构
+    const categoryMap = new Map();
+    const rootCategories = [];
+
+    // 先将所有分类存入 map
+    for (const category of allCategories) {
+      categoryMap.set(category.id, {
+        ...category,
+        children: [],
+      });
+    }
+
+    // 构建父子关系
+    for (const category of allCategories) {
+      const node = categoryMap.get(category.id);
+      if (category.parentId) {
+        const parent = categoryMap.get(category.parentId);
+        if (parent) {
+          parent.children.push(node);
+        }
+      } else {
+        rootCategories.push(node);
+      }
+    }
+
+    return rootCategories;
   }
 
   async getProductsByCategoryId(
@@ -153,6 +177,11 @@ export class SiteCategoryService {
         )
       )
       .groupBy(siteProductTable.id, productTable.id)
+      // 🔥 添加排序：按商品的排序字段排序
+      .orderBy(
+        siteProductTable.sortOrder,
+        productTable.createdAt
+      )
       .limit(limit)
       .offset((page - 1) * limit);
     return flatProducts;

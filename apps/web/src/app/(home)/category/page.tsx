@@ -3,6 +3,8 @@ import CategoryClient from "@/components/CategoryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CategoryPage() {
+
+
   return (
     <Suspense
       fallback={

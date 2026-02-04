@@ -11,7 +11,7 @@ export const sitecategoriesController = new Elysia({
   .use(dbPlugin)
   .use(siteMiddleware)
   .get(
-    "/",
+    "/tree",
     ({ locale, db, site }) => {
       console.log("获取分类树形列表，当前语言:", locale, "站点ID:", site.id);
       // 调用 service 层的方法
