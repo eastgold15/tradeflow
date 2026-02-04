@@ -578,23 +578,7 @@ export function CreateSKUModal({
                     <div className="rounded-lg border bg-slate-50 p-4">
                       <h4 className="mb-4 font-medium text-sm">批量设置属性</h4>
                       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                        {/* 销售价 */}
-                        <div className="space-y-2">
-                          <label className="text-muted-foreground text-xs">
-                            统一销售价
-                          </label>
-                          <Input
-                            min={0}
-                            onChange={(e) =>
-                              setBatchPrice(
-                                Number.parseFloat(e.target.value) || null
-                              )
-                            }
-                            placeholder="留空则不设置"
-                            step={0.01}
-                            type="number"
-                          />
-                        </div>
+
 
                         {/* 市场价 */}
                         <div className="space-y-2">
@@ -605,6 +589,23 @@ export function CreateSKUModal({
                             min={0}
                             onChange={(e) =>
                               setBatchMarketPrice(
+                                Number.parseFloat(e.target.value) || null
+                              )
+                            }
+                            placeholder="留空则不设置"
+                            step={0.01}
+                            type="number"
+                          />
+                        </div>
+                        {/* 销售价 */}
+                        <div className="space-y-2">
+                          <label className="text-muted-foreground text-xs">
+                            统一销售价
+                          </label>
+                          <Input
+                            min={0}
+                            onChange={(e) =>
+                              setBatchPrice(
                                 Number.parseFloat(e.target.value) || null
                               )
                             }

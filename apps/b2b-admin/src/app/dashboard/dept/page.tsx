@@ -20,7 +20,6 @@ import {
   useDepartmentDetail,
   useDepartmentList,
 } from "@/hooks/api/department";
-import { useAuthStore } from "@/stores/auth-store";
 
 export default function UsersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,11 +39,7 @@ export default function UsersPage() {
     refetch: refetchDepartments,
   } = useDepartmentList();
 
-  const currentDeptId = useAuthStore(
-    (state) => state.user?.context.department.id
-  );
-  const departments =
-    departmentsResponse?.filter((item) => item.id !== currentDeptId) || [];
+  const departments = departmentsResponse || [];
 
   // 2. 只有当 ID 存在且 Modal 打开时才请求详情
   const { data: detailResponse, isLoading: isDetailLoading } =

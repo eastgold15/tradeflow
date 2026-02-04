@@ -134,8 +134,10 @@ export function CreateTemplateModal({
             key: f.key || "",
             inputType: f.inputType || "text",
             value: f.value || "",
-            // 🔥 直接使用后端传来的 options 对象数组（已包含 UUID）
-            options: f.options || [],
+            // 🔥 直接使用后端传来的 options 对象数组（已包含 UUID），并按拼音排序
+            options: (f.options || []).sort((a, b) =>
+              a.value.localeCompare(b.value, "zh-CN")
+            ),
             isRequired: f.isRequired ?? false,
             isSkuSpec: f.isSkuSpec ?? false,
           })) || [],
