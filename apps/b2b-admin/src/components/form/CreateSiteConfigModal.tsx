@@ -107,10 +107,11 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
       const jsonValue = data.mode === "json" ? data.jsonValue : null;
 
       if (isEdit && editingConfig) {
-        // 更新时：只发送 Update 契约中定义的字段，排除 siteId、mode、jsonValue
+        // 更新时：根据模式发送对应的字段
         const updateData = {
           key: data.key,
           value,
+          jsonValue: data.mode === "json" ? data.jsonValue : undefined,
           description: data.description,
           category: data.category,
           url: data.url,
@@ -168,9 +169,11 @@ export function CreateSiteConfigModal({ open, onOpenChange, onSuccess, editingCo
                   <SiteConfigKeySelect
                     value={field.value}
                     onChange={field.onChange}
-                    disabled={isEdit}
                     placeholder="选择或输入配置键..."
                   />
+                  <FormDescription>
+                    {isEdit ? "⚠️ 修改配置键会改变数据库中的唯一标识" : "从预设选择或输入自定义配置键"}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />
