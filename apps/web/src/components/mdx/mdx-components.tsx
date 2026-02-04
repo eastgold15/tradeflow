@@ -45,6 +45,13 @@ export const mdxComponents: MDXComponents = {
       {children}
     </blockquote>
   ),
+
+  // 自定义 h2 样式：左对齐，比常规字体稍大
+  h2: ({ children, ...props }: any) => (
+    <h2 {...props} className="text-left text-xl font-bold my-6">
+      {children}
+    </h2>
+  ),
   // 1. 强调容器：用于“我们收集的信息”或“您的权利”
   Section: ({ title, icon: Icon, children, className }: any) => (
     <div className={`my-8 p-6 border rounded-xl bg-slate-50/50 dark:bg-slate-900/50 ${className}`}>
