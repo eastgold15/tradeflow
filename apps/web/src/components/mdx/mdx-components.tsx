@@ -24,48 +24,49 @@ function Alert({
 }
 
 /**
+ * MDX 容器组件 - 自动应用 prose 样式
+ * 使用 Tailwind Typography 插件的基础样式，支持深色模式
+ *
+ * 使用方法：
+ * <MDXWrapper>
+ *   <MDXRemote source={content} components={mdxComponents} />
+ * </MDXWrapper>
+ */
+export function MDXWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
+      {children}
+    </div>
+  );
+}
+
+/**
  * 共享 MDX 组件定义
  * 用于 next-mdx-remote-client 的 RSC 模式
+ *
+ * 使用 MDXWrapper 容器自动应用 Tailwind Typography 插件的 prose 样式
+ * 这里只定义自定义组件，基础的 HTML 元素样式由 prose 类处理
  */
 export const mdxComponents: MDXComponents = {
   Alert,
-  // 将所有的 h1 标签改为居中并添加边框样式
-  h1: ({ children, ...props }: any) => (
-    <h1
-      {...props}
-      className="text-center text-4xl font-bold my-8 pb-4 border-b border-slate-200 dark:border-slate-800"
-    >
-      {children}
-    </h1>
-  ),
 
-  // 自定义引用块样式
-  blockquote: ({ children }: any) => (
-    <blockquote className="border-l-4 border-primary pl-4 italic bg-muted/50 py-2">
-      {children}
-    </blockquote>
-  ),
 
-  // 自定义 h2 样式：左对齐，比常规字体稍大
-  h2: ({ children, ...props }: any) => (
-    <h2 {...props} className="text-left text-xl font-bold my-6">
-      {children}
-    </h2>
-  ),
-  // 1. 强调容器：用于“我们收集的信息”或“您的权利”
+
+  // 1. 强调容器：用于"我们收集的信息"或"您的权利"
   Section: ({ title, icon: Icon, children, className }: any) => (
     <div className={`my-8 p-6 border rounded-xl bg-slate-50/50 dark:bg-slate-900/50 ${className}`}>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 not-prose">
         {Icon && <Icon className="w-5 h-5 text-primary" />}
-        <h2 className="text-xl font-bold m-0!">{title}</h2>
+        <h2 className="text-xl font-bold m-0">{title}</h2>
       </div>
-      <div className="prose-sm">{children}</div>
+      <div>{children}</div>
     </div>
   ),
 
+
   // 2. 数据表格：清晰列出收集项、目的、保存期限
   DataTable: ({ data }: { data: { item: string; purpose: string; limit: string }[] }) => (
-    <div className="overflow-x-auto my-4">
+    <div className="my-4 overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b">
@@ -94,7 +95,7 @@ export const mdxComponents: MDXComponents = {
       warning: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800",
     };
     return (
-      <div className={`p-4 border-l-4 rounded r-md my-4 ${styles[type as keyof typeof styles]}`}>
+      <div className={`max-w-none p-4 border-l-4 rounded-r-md my-4 ${styles[type as keyof typeof styles]}`}>
         {children}
       </div>
     );

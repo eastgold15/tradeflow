@@ -20,6 +20,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@repo/contract": "workspace:*",
     "@t3-oss/env-nextjs": "^0.13.10",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "catalog:",
     "@types/nodemailer": "^7.0.4",
     "chalk": "^5.6.2",
