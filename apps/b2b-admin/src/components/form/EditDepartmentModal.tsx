@@ -162,13 +162,13 @@ export function EditDepartmentModal({
         admin:
           data.adminName && data.adminEmail
             ? {
-                id: initialData?.admin?.id,
-                name: data.adminName,
-                email: data.adminEmail,
-                ...(data.adminPassword && { password: data.adminPassword }),
-                phone: data.adminPhone,
-                position: data.adminPosition,
-              }
+              id: initialData?.admin?.id,
+              name: data.adminName,
+              email: data.adminEmail,
+              ...(data.adminPassword && { password: data.adminPassword }),
+              phone: data.adminPhone,
+              position: data.adminPosition,
+            }
             : undefined,
       };
 
