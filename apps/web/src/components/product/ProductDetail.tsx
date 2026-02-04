@@ -379,10 +379,27 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
             <div className="mb-8 space-y-6">
               <div>
                 <span className="mb-2 block font-bold text-[10px] text-gray-500 uppercase tracking-widest">Quantity</span>
-                <div className="flex w-32 items-center border border-gray-200">
-                  <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50" onClick={() => setQuantity(q => Math.max(1, q - 1))}><Minus className="h-3 w-3" /></button>
-                  <div className="flex-1 text-center font-medium text-sm">{quantity}</div>
-                  <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50" onClick={() => setQuantity(q => q + 1)}><Plus className="h-3 w-3" /></button>
+                <div className="flex items-center gap-2 border border-gray-200 px-2 py-1">
+                  <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50 transition-colors" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
+                    <Minus className="h-4 w-4 text-gray-600" />
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val >= 1) {
+                        setQuantity(val);
+                      } else if (e.target.value === "") {
+                        setQuantity(1);
+                      }
+                    }}
+                    className="flex-1 min-w-20 border-x border-gray-200 px-3 py-2 text-center font-medium text-sm focus:border-black focus:border-2 focus:ring-2 focus:ring-black/5 "
+                  />
+                  <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50 transition-colors" onClick={() => setQuantity(q => q + 1)}>
+                    <Plus className="h-4 w-4 text-gray-600" />
+                  </button>
                 </div>
               </div>
 

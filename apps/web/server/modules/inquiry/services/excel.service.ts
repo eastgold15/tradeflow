@@ -152,104 +152,74 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
   //
 
   // === 第二步：处理图片 ===
+  // 优化方案：以宽度为准，等比缩放，自动平摊行高
   if (quotationData.photoForRefer) {
-    const { buffer, mimeType, name } = quotationData.photoForRefer;
+    const { buffer, mimeType } = quotationData.photoForRefer;
 
-    console.log("[Excel] 开始处理图片:", { name, mimeType, bufferSize: buffer.length });
+    console.log("[Excel] 开始处理图片:", { mimeType, bufferSize: buffer.length });
 
-    // 图片位置：K6 到 L22（17行）
-    const startRow = 6; // K6
-    const endRow = 22;  // L22
-    const totalRows = endRow - startRow + 1; // 17 行
+    // 1. 获取图片原始尺寸 (不手动旋转，但使用 .rotate() 自动纠正 EXIF 转向错误)
+    const img = sharp(buffer).rotate();
+    const metadata = await img.metadata();
+    const originalWidth = metadata.width ?? 500;
+    const originalHeight = metadata.height ?? 500;
 
-    const targetCellAddr = "K6";
+    console.log("[Excel] 原始图片尺寸:", { width: originalWidth, height: originalHeight });
 
-    // 获取目标单元格的位置
-    const targetCell = worksheet.getCell(targetCellAddr);
-    const col = typeof targetCell.col === 'number' ? targetCell.col : parseInt(targetCell.col as string, 10);
-    const row = typeof targetCell.row === 'number' ? targetCell.row : parseInt(targetCell.row as string, 10);
+    // 2. 计算 K+L 列的总像素宽度
+    // ExcelJS 列宽 1 单位约等于 7.5 像素 (具体受字体影响，这里取通用值)
+    const kColWidth = worksheet.getColumn(11).width || 12;
+    const lColWidth = worksheet.getColumn(12).width || 12;
+    const targetWidthPx = (kColWidth + lColWidth) * 7.5;
 
-    // 计算 K 到 L 列的总像素宽度（作为旋转后图片的目标高度）
-    const kColWidth = worksheet.getColumn(11).width || 10; // K列
-    const lColWidth = worksheet.getColumn(12).width || 10; // L列
-    const targetImageHeightPx = (kColWidth + lColWidth) * 7.5; // K+L列的总宽度（像素）
+    // 3. 根据【宽度基准】计算等比例高度
+    const scaleRatio = targetWidthPx / originalWidth;
+    const targetHeightPx = originalHeight * scaleRatio;
 
-    // 缩小 1/4
-    const scaledImageHeightPx = targetImageHeightPx / 4;
+    // 4. 处理行高：将 targetHeightPx 平摊到 6-22 行 (17行)
+    // 转换 px 为磅 (pt): 1px = 0.75pt
+    const targetHeightPt = targetHeightPx * 0.75;
+    const startRow = 6;
+    const endRow = 22;
+    const totalRows = endRow - startRow + 1;
+    const avgRowHeight = targetHeightPt / totalRows;
 
-    console.log("[Excel] 目标图片高度（K+L列宽）:", {
-      kColWidth,
-      lColWidth,
-      targetImageHeightPx,
-      scaledImageHeightPx,
-    });
-
-    // 调整从 K6 到 K22 的所有行高
+    // 动态调整行高，防止图片溢出
     for (let r = startRow;r <= endRow;r++) {
-      worksheet.getRow(r).height = scaledImageHeightPx * 0.75 / totalRows;
+      // 如果计算出的行高太小（比如小于 15pt），建议设个最小值保证表格可看
+      worksheet.getRow(r).height = Math.max(avgRowHeight, 15);
     }
 
-    // 处理图片旋转并调整尺寸
-    let imageBuffer = Buffer.from(buffer);
-    let finalWidth = 200;
-    let finalHeight = scaledImageHeightPx;
+    console.log("[Excel] 目标尺寸:", { targetWidthPx, targetHeightPx, avgRowHeight });
 
-    try {
-      // 获取原始图片元数据
-      const metadata = await sharp(buffer).metadata();
-      console.log("[Excel] 原始图片尺寸:", { width: metadata.width, height: metadata.height });
+    // 5. 调整图片并生成 Buffer
+    const processedBuffer = await img
+      .resize({
+        width: Math.round(targetWidthPx),
+        height: Math.round(targetHeightPx),
+        fit: 'contain',
+      })
+      .toBuffer();
 
-      if (metadata.width && metadata.height) {
-        // 旋转后宽高互换
-        const rotatedWidth = metadata.height;
-        const rotatedHeight = metadata.width;
-
-        // 计算自适应宽度：保持旋转后的比例，缩小 1/3
-        const ratio = scaledImageHeightPx / rotatedHeight;
-        finalWidth = rotatedWidth * ratio;
-        finalHeight = scaledImageHeightPx;
-
-        console.log("[Excel] 图片旋转并调整尺寸（缩小1/3）:", {
-          rotatedWidth,
-          rotatedHeight,
-          ratio,
-          finalWidth,
-          finalHeight,
-        });
-
-        // 旋转图片并缩放
-        const rotatedBuffer = await sharp(buffer)
-          .rotate(90)
-          .resize(Math.round(finalWidth), Math.round(finalHeight))
-          .toBuffer();
-        imageBuffer = Buffer.from(rotatedBuffer);
-      }
-    } catch (error) {
-      console.error("[Excel] 图片处理失败，使用原始图片:", error);
-    }
-
-    // 将图片添加到 workbook
+    // 6. 添加到 Workbook
     const imageId = workbook.addImage({
-      buffer: imageBuffer as any,
-      extension: mimeType.split("/")[1] as "png" | "jpeg" | "gif",
+      buffer: processedBuffer as any,
+      extension: (mimeType.split("/")[1] as any) || "jpeg",
     });
 
     console.log("[Excel] 图片已添加到 workbook，imageId:", imageId);
 
-    // 插入图片到 K6 位置，跨越到 L22
+    // 7. 插入图片
     worksheet.addImage(imageId, {
-      tl: {
-        col: col - 1, // K列（索引从0开始）
-        row: row - 1,  // 第6行
-      },
+      tl: { col: 10, row: startRow - 1 }, // K6 单元格 (索引从0开始)
       ext: {
-        width: finalWidth,     // L列
-        height: finalHeight,  // 第22行
+        width: targetWidthPx,
+        height: targetHeightPx
       },
-      editAs: "oneCell",
+      editAs: "oneCell", // 图片位置随单元格移动但不随之拉伸
     });
 
-    console.log("[Excel] 图片插入完成，位置: K6-L22, 尺寸:", { width: finalWidth, height: finalHeight });
+    console.log(`[Excel] 图片处理完成: 宽度基准=${targetWidthPx}px, 计算高度=${targetHeightPx.toFixed(2)}px`);
   }
 
   // 4. 生成并返回 Buffer（注意：这必须在 all rows 处理完之后！）

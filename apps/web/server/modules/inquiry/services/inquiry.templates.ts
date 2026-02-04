@@ -150,7 +150,7 @@ export function createSalesInquiryTemplate(
 
   const items = inquiryData
     .items!.map(
-      (item) => `
+      (item: { productName: any; productDescription: any; skuQuantity: any; skuPrice: any; customerRequirements: any; }) => `
     <tr>
       <td style="padding: 12px; border: 1px solid #ddd; background-color: #f8f9fa; font-weight: bold;">${item.productName}</td>
       <td style="padding: 12px; border: 1px solid #ddd;">${item.productDescription || "N/A"}</td>
@@ -171,10 +171,10 @@ export function createSalesInquiryTemplate(
   <div style="max-width: 850px; margin: 20px auto; background-color: white; padding: 35px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
     
     <div style="margin-bottom: 25px;">
-      <h2 style="color: #2c3e50; margin-top: 0;">New Sales Inquiry Received</h2>
+      <h2 style="color: #2c3e50; margin-top: 0;">New Inquiry Received</h2>
       <p style="font-size: 15px; color: #555; line-height: 1.6;">
-        Dear Sales Team,<br>
-        A new quotation request has been submitted through the portal. Please review the requirements below and provide your best offer to the customer accordingly.
+        Dear Sir<br>
+          A new inquiry has been submitted through the website portal. Please review the below requirements w/attachment and send your best offer to the below email address accordingly.
       </p>
     </div>
 
@@ -198,7 +198,7 @@ export function createSalesInquiryTemplate(
     ${similarFactoriesHtml}
 
     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin-top: 30px; border: 1px solid #eee;">
-      <h4 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">👤 Customer Profile</h4>
+      <h4 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">👤 </h4>
       <table style="width: 100%; font-size: 14px; color: #444; line-height: 2;">
         ${inquiryData.customerName || displayName ? `<tr><td style="width: 120px; font-weight: bold;">Contact Name:</td><td>${inquiryData.customerName || displayName}</td></tr>` : ''}
         ${inquiryData.customerCompany ? `<tr><td style="font-weight: bold;">Company:</td><td>${inquiryData.customerCompany}</td></tr>` : ''}

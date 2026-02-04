@@ -592,9 +592,9 @@ export class InquiryService {
 
       // Product / Terms
       photoForRefer: photo,
-      termsCode1: siteSku?.id || "-",
+      termsCode1: siteSku?.sku.skuCode || "-",
       termsDesc1: inquiry.productDescription || siteProduct.siteName || "",
-      termsUnits1: "pcs",
+      termsUnits1: "PAIR",
       termsUsd1: String(inquiry.price || 0),
       termsRemark1: inquiry.customerRequirements || "",
       termsTTL: inquiry.quantity,
