@@ -7,6 +7,12 @@
  *    - 匹配逻辑：通过 salesResponsibilityTable 轮询分配业务员
  *    - 支持多租户、站点隔离
  *    - 使用 siteProduct 和 siteSku 替代直接查询 product 和 sku
+ * 🚀 核心优化：
+ *    - 并行异步处理 (Promise.all) 显著减少等待时间
+ *    - 逻辑拆分：SKU 媒体继承逻辑独立为 resolveEffectiveMediaId
+ *    - 确定性排序：增加 userId 作为次要排序键防止随机分配
+ *    - 类型安全：extractUsernameFromEmail 提升为静态工具方法
+ *    - 批量获取工厂邮箱：resolveFactoryEmails 并行查询
  * --------------------------------------------------------
  */
 
@@ -20,13 +26,15 @@ import {
   salesResponsibilityTable,
   templateKeyTable,
   templateValueTable,
+  tenantTable,
   userRoleTable,
   userTable
 } from "@repo/contract";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "~/db/connection";
 
 import type { ServiceContext } from "~/middleware/site";
+import { QuotationData } from "~/modules/inquiry/excelTemplate/QuotationData";
 import { generateInquiryNumber } from "~/modules/inquiry/services/dayCount";
 import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service";
 
@@ -36,17 +44,6 @@ import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inqui
 // 类型定义
 type TransactionFn = Parameters<(typeof db)["transaction"]>[0];
 type TxType = Parameters<TransactionFn>[0];
-
-type UserWithResponsibility = Awaited<
-  ReturnType<typeof InquiryService.prototype.findBestSalesperson>
->;
-type validateAndGetSkuData = Awaited<
-  ReturnType<typeof InquiryService.prototype.validateAndGetSkuData>
->;
-
-type Inquiry = typeof inquiryTable.$inferSelect;
-type SiteSku = validateAndGetSkuData["siteSku"];
-type SiteProduct = validateAndGetSkuData["siteProduct"];
 
 // 📊 出口商和工厂信息类型
 type ExporterInfo = {
@@ -61,6 +58,7 @@ type FactoryInfo = {
   name: string;
   address?: string | null;
   contactPhone?: string | null;
+  email?: string | null; // 🔥 新增：工厂管理员邮箱
 };
 
 type ExporterAndFactory = {
@@ -68,62 +66,44 @@ type ExporterAndFactory = {
   factories: FactoryInfo[];
 };
 
+// 📊 默认工厂信息常量
+const DEFAULT_FACTORY_INFO = {
+  name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
+  address: "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi, China",
+  email: "sales@dongqishoes.com",
+  web: "www.dongqishoes.com",
+};
+
 /**
  * 询价服务类
  */
 export class InquiryService {
+
   /**
-   * 🚀 询价提交：事务处理 + 分单逻辑
-   *
-   * 流程：
-   * 1. 验证并获取站点商品和SKU数据
-   * 2. 获取商品的主分类ID列表
-   * 3. 开启事务
-   * 4. 客户管理 (Upsert)
-   * 5. 生成业务单号
-   * 6. 匹配业务员（通过 salesResponsibilityTable 轮询）
-   * 7. 创建询价记录
-   * 8. 更新业务员最后分配时间
-   * 9. 事务外异步发送邮件
+   * 🚀 询价提交：事务处理 + 分单逻辑 + 异步通知
    */
-  async submit(
-    body: typeof InquiryContract.Create.static,
-    ctx: ServiceContext
-  ) {
+  async submit(body: typeof InquiryContract.Create.static, ctx: ServiceContext) {
     const { site } = ctx;
 
-    const siteId = site.id;
-    const tenantId = site.tenantId;
-    // 1. 验证并获取站点商品和SKU信息
-    const { siteProduct, siteSku, skuMediaMainID } =
-      await this.validateAndGetSkuData(body, ctx);
-
-    if (!siteSku) {
-      throw new HttpError.BadRequest("SKU not found");
-    }
+    // 1. 验证并获取商品/SKU数据 (逻辑解耦)
+    const skuData = await this.validateAndResolveSku(body, ctx);
+    const { siteProduct, siteSku, effectiveMediaId } = skuData;
 
     // 2. 获取商品的主分类（用于匹配业务员）
-    const masterCategoryIds = await this.getProductMasterCategories(
-      siteProduct.productId,
-      ctx
-    );
+    const masterCategoryIds = await this.getProductMasterCategories(siteProduct.productId);
 
     // 3. 开启事务处理核心业务逻辑
     const result = await db.transaction(async (tx) => {
-      // 4. 客户管理 (Upsert)
-      await this.upsertCustomer(body, ctx, tx);
+      // 3.1 客户管理 (Upsert)
+      await this.upsertCustomer(body, ctx.site.tenantId, tx);
 
-      // 5. 生成业务单号
+      // 3.2 生成业务单号
       const inquiryNum = await generateInquiryNumber();
 
-      // 6. 匹配业务员（轮询逻辑）
-      const targetRep = await this.findBestSalesperson(
-        masterCategoryIds,
-        ctx,
-        tx
-      );
+      // 3.3 匹配最佳业务员 (增加稳定性排序)
+      const targetRep = await this.findBestSalesperson(masterCategoryIds, ctx, tx);
 
-      // 7. 创建询价主表
+      // 3.4 创建询价主表
       const [newInquiry] = await tx
         .insert(inquiryTable)
         .values({
@@ -136,76 +116,44 @@ export class InquiryService {
           status: "pending",
 
           siteProductId: siteProduct.id,
-          siteSkuId: siteSku!.id,
+          siteSkuId: siteSku?.id ?? null, // 支持无 SKU 的情况
 
           productName: siteProduct.siteName!,
           productDescription: siteProduct.siteDescription ?? "",
 
           quantity: body.quantity,
-          price: siteSku.price,
+          price: siteSku?.price ?? null,
           paymentMethod: body.paymentMethod,
           customerRequirements: body.customerRequirements,
-          masterCategoryId: masterCategoryIds[0], // 用于后续匹配
+          masterCategoryId: masterCategoryIds[0],
 
-          ownerId: targetRep?.userId, // 分配给业务员
+          ownerId: targetRep?.userId,
           isPublic: !!targetRep,
-          siteId,
-          tenantId,
+          siteId: site.id,
+          tenantId: site.tenantId,
           createdBy: targetRep?.userId,
         })
         .returning();
 
-      // 8. 更新业务员最后分配时间（防止连续分配）
+      // 3.5 更新业务员最后分配时间
       if (targetRep) {
         await this.updateSalesRepLastAssigned(targetRep.id, tx);
       }
 
-      return {
-        targetRep,
-        inquiry: newInquiry,
-        siteProduct,
-        siteSku,
-        skuMediaMainID,
-      };
+      return { targetRep, inquiry: newInquiry };
     });
 
-    // 9. 事务外：异步执行耗时任务（邮件、Excel）
-    console.log("=== 📧 检查是否需要发送邮件 ===");
-    console.log(
-      "[业务员匹配结果]:",
-      result.targetRep
-        ? {
-          userId: result.targetRep.userId,
-          userName: result.targetRep.user?.name,
-          userEmail: result.targetRep.user?.email,
-          responsibilityId: result.targetRep.id,
-        }
-        : "未匹配到业务员"
-    );
-
-    if (result.targetRep) {
-      console.log("[✅] 开始异步发送邮件流程");
-      // this.sendFullInquiryEmail(
-      //   result.targetRep,
-      //   result.inquiry,
-      //   result.siteProduct,
-      //   result.siteSku,
-      //   result.skuMediaMainID!,
-      //   body
-      // ).catch(console.error);
-
-      this.sendFullInquiryEmailViaResend(
-        result.targetRep,
-        result.inquiry,
-        result.siteProduct,
-        result.siteSku,
-        result.skuMediaMainID!,
-        body
-      ).catch(console.error);
-
-    } else {
-      console.log("[⚠️] 未匹配到业务员，询价单进入公海，不发送邮件");
-    }
+    // 4. 事务外：异步执行耗时任务 (Parallel Execution Optimization)
+    // 即使邮件发送失败，也不应回滚订单
+    this.handleAsyncNotifications(
+      result.targetRep,
+      result.inquiry,
+      siteProduct,
+      siteSku,
+      effectiveMediaId
+    ).catch((err) => {
+      console.error(`[❌ Critical] Async notification failed for ${result.inquiry.inquiryNum}:`, err);
+    });
 
     return {
       success: true,
@@ -214,337 +162,478 @@ export class InquiryService {
     };
   }
 
+
+  // ===========================================================================
+  // 🧩 核心逻辑拆分 (Logic Separation)
+  // ===========================================================================
+
   /**
-   * 🔍 验证并获取SKU数据
-   *
-   * 验证逻辑：
-   * - 验证 productId 是否在当前站点有对应的 siteProduct
-   * - 验证 skuId 是否存在且属于该 siteProduct
-   * - 获取 SKU 的主图媒体（支持三级继承：SKU专属 > 变体级 > 商品级）
+   * 🔍 验证商品并解析 SKU 及其最佳媒体 ID
    */
-  async validateAndGetSkuData(
+  public async validateAndResolveSku(
     body: typeof InquiryContract.Create.static,
     ctx: ServiceContext
   ) {
-    const { site } = ctx;
-    const siteId = site.id;
-
-    // 获取站点商品（必须属于当前站点）
+    // 1. 获取 SiteProduct
     const siteProduct = await db.query.siteProductTable.findFirst({
-      where: {
-        id: body.siteProductId,
-        siteId, // ✅ 添加站点隔离，防止跨站点访问
-      },
+      where: { id: body.siteProductId, siteId: ctx.site.id },
       with: {
         product: {
           with: {
-            // 🔥 新增：查询商品级媒体
             media: true,
-            // 🔥 新增：查询变体媒体
-            variantMedia: {
-              with: {
-                media: true,
-                attributeValue: true,
-              },
-            },
+            variantMedia: { with: { media: true, attributeValue: true } },
           },
         },
       },
     });
 
-    if (!siteProduct) {
-      throw new HttpError.BadRequest("Product not found in this site");
-    }
+    if (!siteProduct) throw new HttpError.BadRequest("Product not found in this site");
 
-    // 如果没有提供 siteSkuId，返回空值（支持没有 SKU 的商品）
-    if (!body.siteSkuId) {
-      return { siteProduct, siteSku: null, skuMediaMainID: undefined };
-    }
-
-    // 获取站点SKU（必须属于当前站点的商品）
-    const siteSku = await db.query.siteSkuTable.findFirst({
-      where: {
-        id: body.siteSkuId,
-        siteProductId: body.siteProductId, // ✅ 验证 SKU 属于该站点的商品
-      },
-      with: {
-        sku: {
-          with: {
-            media: true,
-          },
-        },
-      },
-    });
-
-    if (!siteSku) {
-      throw new HttpError.BadRequest("SKU not found");
-    }
-
-    // 🔥 识别颜色属性（复用 SiteProductService 的逻辑）
-    const identifyColorAttribute = async () => {
-      const [productTemplate] = await db
-        .select()
-        .from(productTemplateTable)
-        .where(eq(productTemplateTable.productId, siteProduct.productId));
-
-      if (!productTemplate) return null;
-
-      const keys = await db
-        .select()
-        .from(templateKeyTable)
-        .where(
-          and(
-            eq(templateKeyTable.templateId, productTemplate.templateId),
-            eq(templateKeyTable.isSkuSpec, true)
-          )
-        );
-
-      const colorKey = keys.find((k) => /color|颜色|colour/i.test(k.key));
-      return colorKey ? { key: colorKey.key, keyId: colorKey.id } : null;
-    };
-
-    const colorAttr = await identifyColorAttribute();
-
-    // 🔥 构建颜色值到 attributeValueId 的映射
-    const colorValueToIdMap = new Map<string, string>();
-    if (colorAttr) {
-      const values = await db
-        .select()
-        .from(templateValueTable)
-        .where(eq(templateValueTable.templateKeyId, colorAttr.keyId));
-
-      values.forEach((v) => {
-        colorValueToIdMap.set(v.value, v.id);
+    // 2. 获取 SiteSku (如果存在)
+    let siteSku = null;
+    if (body.siteSkuId) {
+      siteSku = await db.query.siteSkuTable.findFirst({
+        where: { id: body.siteSkuId, siteProductId: body.siteProductId },
+        with: { sku: { with: { media: true } } },
       });
+      if (!siteSku) throw new HttpError.BadRequest("SKU not found");
     }
 
-    // 🔥 三级继承逻辑：获取 SKU 的所有有效媒体 ID
-    const specs = siteSku.sku.specJson as Record<string, string>;
-    const ownMediaIds = siteSku.sku.media.map((m) => m.id);
+    // 3. 解析继承逻辑后的有效媒体 ID
+    const effectiveMediaId = await this.resolveEffectiveMediaId(
+      siteProduct,
+      siteSku,
+      body.skuMediaId
+    );
 
+    return { siteProduct, siteSku, effectiveMediaId };
+  }
+
+  /**
+   * 🎨 解析媒体 ID (三级继承逻辑：SKU > 变体 > 商品)
+   */
+  private async resolveEffectiveMediaId(
+    siteProduct: any,
+    siteSku: any,
+    preferredMediaId?: string
+  ): Promise<string> {
+    const productMediaIds = siteProduct.product.media.map((m: any) => m.id);
+    const ownMediaIds = siteSku?.sku.media.map((m: any) => m.id) || [];
     let inheritedMediaIds: string[] = [];
-    if (colorAttr && colorValueToIdMap.size > 0) {
-      const colorValue = specs[colorAttr.key] || specs.颜色;
-      if (colorValue) {
-        const attributeValueId = colorValueToIdMap.get(colorValue);
-        if (attributeValueId) {
-          inheritedMediaIds =
-            siteProduct.product.variantMedia
-              ?.filter((vm) => vm.attributeValueId === attributeValueId)
-              .map((vm) => vm.mediaId) || [];
+
+    // 尝试识别颜色属性并获取变体媒体
+    if (siteSku) {
+      const colorInfo = await this.identifyColorAttribute(siteProduct.productId);
+      if (colorInfo) {
+        const specs = siteSku.sku.specJson as Record<string, string>;
+        const colorValue = specs[colorInfo.key] || specs.颜色;
+        if (colorValue) {
+          const attrValId = await this.getAttributeValueId(colorInfo.keyId, colorValue);
+          if (attrValId) {
+            inheritedMediaIds = siteProduct.product.variantMedia
+              .filter((vm: any) => vm.attributeValueId === attrValId)
+              .map((vm: any) => vm.mediaId);
+          }
         }
       }
     }
 
-    const productMediaIds = siteProduct.product.media.map((m) => m.id);
+    // 构建所有有效 ID 集合
+    const validIds = new Set([...ownMediaIds, ...inheritedMediaIds, ...productMediaIds]);
 
-    // 合并所有有效的媒体 ID（优先级：SKU专属 > 变体级 > 商品级）
-    const allValidMediaIds = Array.from(
-      new Set([...ownMediaIds, ...inheritedMediaIds, ...productMediaIds])
-    );
-
-    // 获取SKU媒体（主图）- 使用三级继承逻辑
-    let skuMediaMainID = body.skuMediaId;
-
-    // 如果前端传的 mediaId 无效，使用第一个有效媒体 ID
-    if (!(skuMediaMainID && allValidMediaIds.includes(skuMediaMainID))) {
-      // 优先使用 SKU 专属媒体的第一张图
-      if (ownMediaIds.length > 0) {
-        skuMediaMainID = ownMediaIds[0];
-      }
-      // 其次使用变体级媒体的第一张图
-      else if (inheritedMediaIds.length > 0) {
-        skuMediaMainID = inheritedMediaIds[0];
-      }
-      // 最后使用商品级媒体的第一张图
-      else if (productMediaIds.length > 0) {
-        skuMediaMainID = productMediaIds[0];
-      } else {
-        throw new HttpError.BadRequest("SKU has no media");
-      }
+    // 优先级策略
+    if (preferredMediaId && validIds.has(preferredMediaId)) {
+      return preferredMediaId;
     }
-
-    // 🔥 新的验证逻辑：使用 allValidMediaIds 而非只检查 SKU 专属媒体
-    if (!allValidMediaIds.includes(skuMediaMainID)) {
-      throw new HttpError.BadRequest("SKU media not found");
-    }
-
-    return { siteProduct, siteSku, skuMediaMainID };
+    return ownMediaIds[0] || inheritedMediaIds[0] || productMediaIds[0];
   }
 
-  /**
-   * 🔍 获取商品的主分类ID列表
-   *
-   * 通过 productMasterCategoryTable 查询商品关联的所有主分类
-   */
-  private async getProductMasterCategories(
-    productId: string,
-    ctx: ServiceContext
-  ): Promise<string[]> {
-    console.log("=== 🔍 开始查询商品主分类 ===");
-    console.log("[商品ID]:", productId);
-
-    // 查询商品的主分类
-    const productCategories =
-      await db.query.productMasterCategoryTable.findMany({
-        where: {
-          productId,
-        },
-      });
-
-    console.log("[查询结果数量]:", productCategories.length);
-    console.log(
-      "[查询结果详情]:",
-      productCategories.map((pc) => ({
-        productId: pc.productId,
-        masterCategoryId: pc.masterCategoryId,
-      }))
-    );
-
-    if (!productCategories.length) {
-      console.error("[❌] 商品没有分配主分类！");
-      throw new HttpError.BadRequest("Product has no category assigned");
-    }
-
-    const categoryIds = productCategories.map((pc) => pc.masterCategoryId);
-    console.log("[✅] 找到主分类ID列表]:", categoryIds);
-    return categoryIds;
-  }
 
   /**
-   * 🔍 匹配算法：分类优先 + 轮询（Round Robin）
+   * 📧 处理异步通知 (并行优化)
    *
-   * 逻辑：
-   * 1. 通过 salesResponsibilityTable 找到负责这些分类的所有业务员
-   * 2. 过滤出 isAutoAssign = true 的
-   * 3. 关联 user 表，过滤 isActive = true 的
-   * 4. 按照 lastAssignedAt 升序排序，取最早被分配的那个（最闲）
-   *
-   * @param masterCategoryIds - 商品的主分类ID列表
-   * @param ctx - 服务上下文
-   * @param tx - 数据库事务对象
-   * @returns 业务员责任关系对象，包含 user 信息
+   * 邮件抄送规则：
+   * - 收件人：分配的业务员
+   * - BCC (密送)：出口商管理员（永远）+ 当前工厂管理员（如果工厂已合作）
    */
-  async findBestSalesperson(
-    masterCategoryIds: string[],
-    ctx: ServiceContext,
-    tx: TxType
+  private async handleAsyncNotifications(
+    targetRep: any,
+    inquiry: any,
+    siteProduct: any,
+    siteSku: any,
+    mediaId?: string
   ) {
-    const { site } = ctx;
-    const tenantId = site.tenantId;
+    if (!targetRep?.user?.email) {
+      console.log("[⚠️] No sales rep assigned or missing email, skipping notification.");
+      return;
+    }
 
-    console.log("=== 👥 开始匹配业务员 ===");
-    console.log("[租户ID]:", tenantId);
-    console.log("[主分类ID列表]:", masterCategoryIds);
+    console.log("=== 🚀 [Async] Starting Notification Flow ===");
 
-    // 查询这些分类下的所有业务员责任关系
+    // 🔥 并行获取所有必要数据 (Parallel Fetching)
+    const [exporterAndFactories, mediaInfo] = await Promise.all([
+      this.getExporterAndFactoryInfo(inquiry.siteId),
+      mediaId ? db.query.mediaTable.findFirst({ where: { id: mediaId } }) : null,
+    ]);
+
+    const { exporter, factories } = exporterAndFactories;
+    const mainFactory = factories[0];
+
+    // 获取工厂的合作状态
+    const siteDept = await db.query.departmentTable.findFirst({
+      where: { id: mainFactory.id },
+      columns: { id: true, isCooperating: true },
+    });
+    const isCooperating = siteDept?.isCooperating ?? false;
+
+    console.log('工厂合作状态:', isCooperating ? '✅ 已合作' : '❌ 未合作');
+
+    // 🔥 二次并行：依赖于上面结果的数据
+    const [adminEmails, photoData, factoryAdminEmails] = await Promise.all([
+      this.getAdminEmails(inquiry.tenantId, mainFactory.id), // 出口商管理员
+      this.downloadImage(mediaInfo?.url),
+      this.resolveFactoryEmails(factories), // 工厂管理员邮箱
+    ]);
+
+    // 📧 构建 BCC 列表：出口商管理员永远抄送，工厂管理员看合作状态
+    const bccEmails = [...adminEmails];
+    if (isCooperating && factoryAdminEmails.length > 0) {
+      // 工厂已合作，添加工厂管理员到抄送
+      factoryAdminEmails.forEach(email => {
+        if (email && !bccEmails.includes(email)) {
+          bccEmails.push(email);
+        }
+      });
+      console.log('✅ 工厂已合作，抄送工厂管理员:', factoryAdminEmails);
+    } else {
+      console.log('⚠️ 工厂未合作，不抄送工厂管理员');
+    }
+
+    // 1. 定义一个临时类型（或者直接在断言里写）
+    type FactoryWithEmail = typeof factories[0] & { email: string };
+
+    // 2. 断言 factories 为包含 email 的数组，然后遍历
+    (factories as FactoryWithEmail[]).forEach((f, index) => {
+      f.email = factoryAdminEmails[index] || DEFAULT_FACTORY_INFO.email;
+    });
+
+    // 生成 Excel
+    const excelBuffer = await this.generateExcelSafe(
+      inquiry,
+      siteProduct,
+      siteSku,
+      exporter,
+      factories,
+      photoData,
+    );
+
+    // 转换数据格式
+    const inquiryWithItems = InquiryService.transformInquiry(inquiry);
+
+    // 发送邮件
+    await sendSalesInquiryEmailViaResend(
+      targetRep.user.email,
+      bccEmails, // 合并后的 BCC 列表
+      inquiryWithItems,
+      inquiry.inquiryNum,
+      factories.map(f => ({ name: f.name, address: f.address || '' })),
+      { name: targetRep.user.name, email: targetRep.user.email },
+      excelBuffer
+    );
+
+    console.log("=== ✅ [Async] Notification Flow Complete ===");
+  }
+
+  // ===========================================================================
+  // 🛠️ 辅助逻辑 (Helpers)
+  // ===========================================================================
+
+  /**
+   * 🔍 匹配最佳业务员 (工厂合作优先逻辑)
+   *
+   * 优先级规则：
+   * 1. 如果工厂已合作 (isCooperating=true) → 优先分配给工厂的业务员
+   * 2. 如果工厂未合作 (isCooperating=false) → 分配给出口商的业务员
+   */
+  async findBestSalesperson(categoryIds: string[], ctx: ServiceContext, tx: TxType) {
+    const { boundDeptId, tenantId, id: siteId } = ctx.site;
+
+    console.log('=== 🔍 [findBestSalesperson] 开始匹配业务员 ===');
+    console.log('站点ID:', siteId);
+    console.log('boundDeptId:', boundDeptId);
+    console.log('tenantId:', tenantId);
+    console.log('categoryIds:', categoryIds);
+
+    // 获取站点的合作状态（需要查询 department 表）
+    const siteDept = await tx.query.departmentTable.findFirst({
+      where: { id: boundDeptId },
+      columns: { id: true, name: true, isCooperating: true, parentId: true, category: true },
+    });
+
+    if (!siteDept) {
+      console.log('❌ 未找到站点部门信息');
+      return null;
+    }
+
+    console.log('站点部门:', siteDept.name);
+    console.log('工厂合作状态:', siteDept.isCooperating ? '✅ 已合作' : '❌ 未合作');
+
+    // 查询所有责任记录
     const responsibilities = await tx.query.salesResponsibilityTable.findMany({
       where: {
         masterCategoryId: {
-          in: masterCategoryIds,
+          in: categoryIds
         },
         tenantId,
         isAutoAssign: true,
       },
-      with: {
-        user: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-            isActive: true,
-          },
-        },
-      },
+      with: { user: true },
     });
 
-    console.log("[查询到的责任关系数量]:", responsibilities.length);
-    console.log(
-      "[责任关系详情]:",
-      responsibilities.map((r) => ({
-        responsibilityId: r.id,
-        masterCategoryId: r.masterCategoryId,
-        userId: r.userId,
-        isAutoAssign: r.isAutoAssign,
-        userName: r.user?.name,
-        userEmail: r.user?.email,
-        userIsActive: r.user?.isActive,
-      }))
-    );
+    console.log('查询到的责任记录数:', responsibilities.length);
 
-    // 过滤掉非活跃用户（安全检查：user 可能为 undefined）
-    const activeReps = responsibilities.filter((r) => r.user?.isActive === true);
-    console.log("[过滤后活跃业务员数量]:", activeReps.length);
+    // 根据合作状态确定目标部门 ID
+    let targetDeptId: string | null = null;
+    let assignmentReason = '';
 
-    if (activeReps.length === 0) {
-      console.log("[⚠️] 没有找到活跃的业务员，询价单进入公海");
-      return null; // 没有找到业务员，进公海
+    if (siteDept.isCooperating) {
+      // 已合作：优先分配给当前工厂的业务员
+      targetDeptId = boundDeptId;
+      assignmentReason = '工厂已合作，分配给工厂业务员';
+    } else {
+      // 未合作：分配给出口商的业务员
+      if (siteDept.category === 'group') {
+        // 当前站点本身就是出口商
+        targetDeptId = boundDeptId;
+        assignmentReason = '当前站点是出口商';
+      } else if (siteDept.parentId) {
+        // 工厂站点，使用父部门（出口商）ID
+        targetDeptId = siteDept.parentId;
+        assignmentReason = '工厂未合作，分配给出口商业务员';
+      } else {
+        // 没有父部门，使用当前部门
+        targetDeptId = boundDeptId;
+        assignmentReason = '无父部门，使用当前部门';
+      }
     }
 
-    // 按 lastAssignedAt 升序排序（最闲的排前面）
-    // 如果 lastAssignedAt 为 null，视为最早（从未分配过）
-    const sorted = activeReps.sort((a, b) => {
-      const timeA = a.lastAssignedAt ? a.lastAssignedAt.getTime() : 0;
-      const timeB = b.lastAssignedAt ? b.lastAssignedAt.getTime() : 0;
-      return timeA - timeB;
+    console.log('分配策略:', assignmentReason);
+    console.log('目标部门ID:', targetDeptId);
+
+    // 过滤：部门匹配 + 活跃状态
+    const candidates = responsibilities.filter((r) => {
+      const isDeptMatch = targetDeptId ? r.user?.deptId === targetDeptId : true;
+      const isMatch = isDeptMatch && r.user?.isActive;
+      if (isMatch) {
+        console.log(`  ✅ ${r.user?.name} (${r.user?.email}) - 匹配成功`);
+      }
+      return isMatch;
     });
 
-    console.log(
-      "[排序后候选业务员]:",
-      sorted.map((r, idx) => ({
-        排名: idx + 1,
-        姓名: r.user?.name,
-        邮箱: r.user?.email,
-        最后分配时间: r.lastAssignedAt,
-      }))
-    );
+    console.log('过滤后的候选人数:', candidates.length);
 
-    const selected = sorted[0];
-    console.log("[✅] 选中的业务员]:", {
-      name: selected.user?.name,
-      email: selected.user?.email,
-      responsibilityId: selected.id,
+    if (candidates.length === 0) {
+      console.log('❌ 没有找到匹配的业务员');
+      return null;
+    }
+
+    // 排序：优先最久未分配 (lastAssignedAt asc)，其次按 ID 排序 (保证稳定性)
+    candidates.sort((a, b) => {
+      const timeA = a.lastAssignedAt?.getTime() || 0;
+      const timeB = b.lastAssignedAt?.getTime() || 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.userId.localeCompare(b.userId); // Deterministic tie-breaker
     });
 
-    return selected; // 返回最闲的业务员
+    const selected = candidates[0];
+    console.log('✅ 选中业务员:', selected.user?.name, `(${selected.user?.email})`);
+
+    return selected;
   }
 
   /**
-   * 📧 更新业务员最后分配时间
-   *
-   * 更新 salesResponsibilityTable 中的 lastAssignedAt 字段
-   * 防止连续将询价单分配给同一个业务员
+   * 📊 安全生成 Excel (带错误捕获)
    */
-  private async updateSalesRepLastAssigned(
-    responsibilityId: string,
-    tx: TxType
+  private async generateExcelSafe(
+    inquiry: any,
+    siteProduct: any,
+    siteSku: any,
+    exporter: any,
+    factories: any[],
+    photoBuffer: { buffer: Buffer<ArrayBufferLike>; mimeType: string; } | null,
   ) {
+    try {
+      const data = this.mapToExcelData(
+        inquiry,
+        siteProduct,
+        siteSku,
+        exporter,
+        factories,
+        photoBuffer ? { buffer: photoBuffer.buffer, mimeType: photoBuffer.mimeType, name: "ref-img" } : null
+      );
+
+      // 添加缺失的银行信息和客户地址字段（使用默认值）
+      const fullData: QuotationData = {
+        ...data,
+        bankBeneficiary: "DONG QI FOOTWEAR (JIANGXI) CO., LTD", // 银行受益人
+        bankAccountNo: 1234567890123456, // 银行账号
+        bankName: "Bank of China", // 银行名称
+        bankAddr: "No.1 Fuxingmen Nei Street, Beijing, China", // 银行地址
+        clientAddr: inquiry.customerAddress || "N/A", // 客户地址（可选）
+      };
+
+      return await generateQuotationExcel(fullData);
+    } catch (e) {
+      console.error("[⚠️] Excel generation failed (Email will be sent without attachment):", e);
+      return undefined;
+    }
+  }
+
+  /**
+   * 🗺️ 数据映射：模型 -> Excel 结构
+   */
+  private mapToExcelData(
+    inquiry: Inquiry,
+    siteProduct: SiteProduct,
+    siteSku: SiteSku,
+    exporter: any,
+    factories: any[],
+    tenant: any,
+    photo: any
+  ) {
+    const mainFactory = factories[0] || DEFAULT_FACTORY_INFO;
+    const clientName = InquiryService.extractUsernameFromEmail(inquiry.customerEmail);
+
+    return {
+      // Exporter
+      exporterName: exporter?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
+      exporterAddr: exporter?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan",
+      exporterPhone: Number.parseInt(exporter?.contactPhone || "0", 10),
+      exporterEmail: "sales@dongqifootwear.com",
+      exporterWeb: "www.dongqifootwear.com",
+
+      // Factory (Dynamic Mapping)
+      factoryName: mainFactory.name,
+      factoryAddr: mainFactory.address || DEFAULT_FACTORY_INFO.address,
+      factoryEmail: mainFactory.email || DEFAULT_FACTORY_INFO.email, // 此处已包含获取到的管理员邮箱
+      fatoryWeb: "www.dongqishoes.com", // Keeping typo as per template requirement
+      // Factory Address & Web Slots (Safe Fallback)
+      factoryAddr1: factories[0]?.address || DEFAULT_FACTORY_INFO.address,
+      factoryAddr2: factories[1]?.address || "",
+      factoryAddr3: factories[2]?.address || "",
+      factoryWeb1: factories[0]?.web || "",
+      factoryWeb2: factories[1]?.web || "",
+      factoryWeb3: factories[2]?.web || "",
+      factoryPhone: mainFactory.contactPhone || "",
+
+
+      // Client
+      clientCompanyName: inquiry.customerCompany || "",
+      clientFullName: inquiry.customerName || clientName,
+      clientUserName: clientName,
+      clientEmail: inquiry.customerEmail,
+      clientPhone: Number.parseInt(inquiry.customerPhone || "0", 10),
+      clientWhatsApp: inquiry.customerWhatsapp || "",
+
+
+
+      // Product / Terms
+      photoForRefer: photo,
+      termsCode1: siteSku?.id || "-",
+      termsDesc1: inquiry.productDescription || siteProduct.siteName || "",
+      termsUnits1: "pcs",
+      termsUsd1: String(inquiry.price || 0),
+      termsRemark1: inquiry.customerRequirements || "",
+      termsTTL: inquiry.quantity,
+      termsUSD: Number(inquiry.price || 0) * inquiry.quantity,
+
+      // Metadata
+      date: new Date().toISOString().split("T")[0],
+      timeNo: inquiry.inquiryNum,
+      payWay: `Payment Method: ${inquiry.paymentMethod || "TBD"}`,
+      exporterBehalf: "Michael Tse", // Could be parameterized if needed
+    };
+  }
+
+  /**
+   * 🏢 获取出口商、工厂和租户信息
+   *
+   * 逻辑：
+   * - 如果当前站点是工厂站点，只返回当前工厂
+   * - 如果当前站点是出口商站点，返回所有子工厂
+   * - 同时获取租户信息（银行信息等）
+   */
+  private async getExporterAndFactoryInfo(siteId: string) {
+    const site = await db.query.siteTable.findFirst({
+      where: { id: siteId },
+      with: { department: true },
+    });
+
+    if (!site?.department) return { exporter: null, factories: [], tenant: null };
+
+    // 并行获取出口商/工厂信息和租户信息
+    const [tenant] = await Promise.all([
+      db.query.tenantTable.findFirst({
+        where: { id: site.tenantId },
+        columns: { id: true, name: true, address: true, website: true, bankInfo: true },
+      }),
+    ]);
+
+    let exporter = null;
+    let factories = [];
+
+    if (site.siteType === "group") {
+      // 出口商站点：返回所有子工厂
+      exporter = site.department;
+      factories = await db.query.departmentTable.findMany({
+        where: { parentId: exporter.id, category: "factory", isActive: true },
+      });
+    } else {
+      // 工厂站点：只返回当前工厂
+      if (site.department.parentId) {
+        exporter = await db.query.departmentTable.findFirst({
+          where: { id: site.department.parentId },
+        });
+      }
+      factories = [site.department]; // 只返回当前工厂
+    }
+
+    return { exporter, factories, tenant };
+  }
+
+  /**
+   * 📧 批量获取工厂管理员邮箱
+   */
+  private async resolveFactoryEmails(factories: any[]): Promise<string[]> {
+    return Promise.all(
+      factories.map((f) => this.getFactoryAdminEmail(f.id))
+    );
+  }
+
+  // --- Utility Methods ---
+
+  private async getProductMasterCategories(productId: string): Promise<string[]> {
+    const cats = await db.query.productMasterCategoryTable.findMany({
+      where: { productId },
+    });
+    return cats.length ? cats.map((c) => c.masterCategoryId) : [];
+  }
+
+  private async updateSalesRepLastAssigned(id: string, tx: TxType) {
     await tx
       .update(salesResponsibilityTable)
       .set({ lastAssignedAt: new Date() })
-      .where(eq(salesResponsibilityTable.id, responsibilityId));
+      .where(eq(salesResponsibilityTable.id, id));
   }
 
-  /**
-   * 👤 客户 Upsert 逻辑
-   *
-   * 如果客户邮箱已存在则更新，否则创建新客户
-   */
-  private async upsertCustomer(
-    body: typeof InquiryContract.Create.static,
-    ctx: ServiceContext,
-    tx: TxType
-  ) {
-    const { site } = ctx;
-    const tenantId = site.tenantId;
+  private async upsertCustomer(body: any, tenantId: string, tx: TxType) {
+    const existing = await tx.query.customerTable.findFirst({
+      where: {
+        email: body.customerEmail,
+      },
+    });
 
-    const [existing] = await tx
-      .select()
-      .from(customerTable)
-      .where(eq(customerTable.email, body.customerEmail))
-      .limit(1);
-
-    const customerData = {
+    const data = {
       companyName: body.customerCompany,
       name: body.customerName,
       email: body.customerEmail,
@@ -554,19 +643,59 @@ export class InquiryService {
     };
 
     if (existing) {
-      await tx
-        .update(customerTable)
-        .set(customerData)
-        .where(eq(customerTable.id, existing.id));
-      return existing.id;
+      await tx.update(customerTable).set(data).where(eq(customerTable.id, existing.id));
+    } else {
+      await tx.insert(customerTable).values(data);
     }
-
-    const [newCustomer] = await tx
-      .insert(customerTable)
-      .values(customerData)
-      .returning();
-    return newCustomer.id;
   }
+
+  /**
+   * 🛠️ 静态工具：从邮箱提取用户名
+   */
+  public static extractUsernameFromEmail(email: string): string {
+    return email?.split("@")[0] || "";
+  }
+
+  /**
+   * 🛠️ 静态工具：转换 Inquiry 为邮件模板所需的 Items 格式
+   */
+  public static transformInquiry(inquiry: any) {
+    return {
+      ...inquiry,
+      items: [
+        {
+          productName: inquiry.productName || "",
+          productDescription: inquiry.productDescription || "",
+          skuQuantity: inquiry.quantity,
+          skuPrice: inquiry.price?.toString() || "",
+          customerRequirements: inquiry.customerRequirements || "",
+        },
+      ],
+    };
+  }
+
+
+  private async downloadImage(url?: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+    if (!url) return null;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      return {
+        buffer: Buffer.from(await resp.arrayBuffer()),
+        mimeType: resp.headers.get("content-type") || "image/jpeg",
+      };
+    } catch {
+      return null;
+    }
+  }
+
+
+
+
+
+
+
+
 
   /**
    * 👥 获取需要抄送的管理员
@@ -664,447 +793,127 @@ export class InquiryService {
     return adminEmails;
   }
 
-  /**
-   * 🏢 根据站点类型获取出口商和工厂信息
-   *
-   * 逻辑：
-   * - 集团站 (siteType = "group")：boundDeptId 就是出口商（总部）
-   * - 工厂站 (siteType = "factory")：boundDeptId 的 parent 才是出口商
-   *
-   * @param siteId - 站点ID
-   * @returns 出口商和工厂信息
-   */
-  private async getExporterAndFactoryInfo(
-    siteId: string
-  ): Promise<ExporterAndFactory> {
-    console.log("[🏢] 开始获取出口商和工厂信息，站点ID:", siteId);
 
-    // 1. 查询站点及其绑定部门
-    const site = await db.query.siteTable.findFirst({
-      where: { id: siteId },
-      with: { department: true },
-    });
-
-    if (!site?.department) {
-      console.warn("[⚠️] 未找到站点或绑定部门");
-      return { exporter: null, factories: [] };
-    }
-
-    console.log("[📍] 站点类型:", site.siteType);
-    console.log("[📍] 绑定部门:", site.department.name, "类别:", site.department.category);
-
-    let exporter: ExporterInfo | null = null;
-    let factories: FactoryInfo[] = [];
-
-    if (site.siteType === "group") {
-      // 集团站：boundDeptId 就是出口商（总部）
-      console.log("[🏢] 集团站：绑定部门即为出口商");
-      exporter = {
-        id: site.department.id,
-        name: site.department.name,
-        address: site.department.address,
-        contactPhone: site.department.contactPhone,
-      };
-
-      // 查询出口商下的所有工厂（category = "factory" 且 parentId = exporter.id）
-      const subFactories = await db.query.departmentTable.findMany({
-        where: {
-          parentId: exporter.id,
-          category: "factory",
-          isActive: true,
-        },
-      });
-
-      factories = subFactories.map((f) => ({
-        id: f.id,
-        name: f.name,
-        address: f.address,
-        contactPhone: f.contactPhone,
-      }));
-
-      console.log(`[🏭] 找到 ${factories.length} 个子工厂`);
-    } else if (site.siteType === "factory") {
-      // 工厂站：boundDeptId 的 parent 才是出口商
-      console.log("[🏢] 工厂站：需要查找父级部门作为出口商");
-
-      if (!site.department.parentId) {
-        console.warn("[⚠️] 工厂站没有父级部门");
-        return { exporter: null, factories: [] };
-      }
-
-      // 查询父级部门（出口商）
-      const exporterDept = await db.query.departmentTable.findFirst({
-        where: {
-          id: site.department.parentId!,
-        },
-      });
-
-      if (!exporterDept) {
-        console.warn("[⚠️] 未找到父级出口商部门");
-        return { exporter: null, factories: [] };
-      }
-
-      exporter = {
-        id: exporterDept.id,
-        name: exporterDept.name,
-        address: exporterDept.address,
-        contactPhone: exporterDept.contactPhone,
-      };
-
-      console.log("[🏢] 找到出口商:", exporter.name);
-
-      // 当前绑定的工厂就是站点绑定的部门
-      factories = [
-        {
-          id: site.department.id,
-          name: site.department.name,
-          address: site.department.address,
-          contactPhone: site.department.contactPhone,
-        },
-      ];
-
-      // 查询出口商下的所有工厂（包括当前工厂）
-      const allFactories = await db.query.departmentTable.findMany({
-        where: {
-          parentId: exporter.id,
-          category: "factory",
-          isActive: true,
-        },
-      });
-
-      console.log(`[🏭] 出口商下共有 ${allFactories.length} 个工厂`);
-    }
-
-    console.log("[✅] 出口商信息:", {
-      name: exporter?.name,
-      phone: exporter?.contactPhone,
-      address: exporter?.address,
-    });
-    console.log("[✅] 工厂列表:", factories.map((f) => ({ name: f.name, phone: f.contactPhone })));
-
-    return { exporter, factories };
-  }
 
   /**
-   * 📧 使用 Resend 发送询价邮件
+   * 🏭 获取单个工厂的管理员邮箱
    *
-   * 邮件发送规则：
-   * - 收件人：分配的业务员（工厂业务员 或 出口商业务员，二选一）
-   * - 抄送：出口商管理员（tenant_admin 角色的用户）
+   * 查询指定工厂部门的管理员（角色名：工厂管理员）
    *
-   * 流程：
-   * 1. 获取出口商和工厂信息（从站点的绑定部门）
-   * 2. 获取需要抄送的出口商管理员
-   * 3. 获取 SKU 媒体信息
-   * 4. 下载产品图片（仅当媒体类型为 image 时）
-   * 5. 生成 Excel 报价单
-   * 6. 使用 sendSalesInquiryEmailViaResend 发送邮件
+   * @param factoryDeptId - 工厂部门ID
+   * @returns 工厂管理员邮箱（第一个）或默认邮箱
    */
-  private async sendFullInquiryEmailViaResend(
-    targetRep: NonNullable<UserWithResponsibility>,
-    inquiry: Inquiry,
-    siteProduct: SiteProduct,
-    siteSku: SiteSku,
-    skuMediaId: string,
-    body: typeof InquiryContract.Create.static
-  ) {
-    console.log("=== 🚀 [Resend] 开始发送邮件流程 ===");
-    console.log("[1] 询价单号:", inquiry.inquiryNum);
-    console.log("[2] 业务员信息:", {
-      name: targetRep.user.name,
-      email: targetRep.user.email,
-      userId: targetRep.user.id,
-    });
-
+  private async getFactoryAdminEmail(
+    factoryDeptId: string
+  ): Promise<string> {
     try {
-      // 1. 🏢 获取出口商和工厂信息（根据站点类型动态获取）
-      console.log("[3] 开始获取出口商和工厂信息，站点ID:", inquiry.siteId);
-      const { exporter, factories } = await this.getExporterAndFactoryInfo(inquiry.siteId);
+      const [deptManagerRole] = await db
+        .select()
+        .from(roleTable)
+        .where(eq(roleTable.name, "工厂管理员"))
+        .limit(1);
 
-      if (!exporter) {
-        console.error("[❌] 未找到出口商信息，取消发送邮件");
-        return;
+      if (!deptManagerRole) {
+        console.log(`[⚠️] 未找到"工厂管理员"角色，使用默认邮箱`);
+        return DEFAULT_FACTORY_INFO.email;
       }
 
-      // 使用第一个工厂作为主要工厂（用于邮件模板）
-      const mainFactory = factories[0] || null;
-      console.log("[4] 出口商信息:", {
-        name: exporter.name,
-        phone: exporter.contactPhone,
-        address: exporter.address,
-      });
-      console.log("[5] 主工厂信息:", mainFactory ? {
-        name: mainFactory.name,
-        phone: mainFactory.contactPhone,
-        address: mainFactory.address,
-      } : "无工厂");
-
-
-      // 2. 获取需要抄送的管理员（目前仅出口商管理员）
-      console.log("[6] 开始获取管理员列表");
-      const adminEmails = mainFactory
-        ? await this.getAdminEmails(inquiry.tenantId, mainFactory.id)
-        : [];
-
-      console.log("[6.2] 管理员邮箱列表:", adminEmails);
-
-
-
-      // 3. 获取 SKU 媒体信息
-      console.log("[7] 开始获取媒体信息，媒体ID:", skuMediaId);
-      const media = skuMediaId
-        ? await db.query.mediaTable.findFirst({
-          where: { id: skuMediaId },
+      const [deptManager] = await db
+        .select({
+          email: userTable.email,
+          name: userTable.name,
         })
-        : null;
-      console.log(
-        "[8] 媒体查询结果:",
-        media
-          ? {
-            id: media.id,
-            url: media.url,
-            mediaType: media.mediaType,
-            mimeType: media.mimeType,
-          }
-          : "未找到"
-      );
+        .from(userTable)
+        .innerJoin(
+          userRoleTable,
+          eq(userRoleTable.userId, userTable.id)
+        )
+        .where(
+          and(
+            eq(userRoleTable.roleId, deptManagerRole.id),
+            eq(userTable.deptId, factoryDeptId),
+            eq(userTable.isActive, true)
+          )
+        )
+        .limit(1);
 
-      // 4. 下载产品图片（仅当媒体类型为 image 时）
-      console.log("[9] 开始下载产品图片");
-      const photoData =
-        media?.mediaType === "image" && media?.url
-          ? await this.downloadImage(media.url)
-          : null;
-
-      if (media && media.mediaType !== "image") {
-        console.warn(
-          `[⚠️] 媒体类型不是图片 (${media.mediaType})，跳过下载`
-        );
-      }
-      console.log("[10] 图片下载结果:", photoData ? "成功" : "失败");
-
-      // 5. 生成 Excel 报价单
-      console.log("[11] 准备生成 Excel 报价单");
-      let excelBuffer: Buffer | null = null;
-
-      try {
-        const quotationData = this.mapToExcelData(
-          inquiry,
-          siteProduct,
-          siteSku,
-          exporter,
-          factories,
-          photoData
-        );
-        console.log("[12] Excel 数据准备完成");
-        console.log("[13] 开始生成 Excel 文件");
-        excelBuffer = await generateQuotationExcel(quotationData);
-        console.log(
-          "[14] Excel 生成完成，大小:",
-          excelBuffer?.length || 0,
-          "bytes"
-        );
-      } catch (error) {
-        console.warn(
-          "[⚠️] Excel 生成失败，将不附加 Excel 文件:",
-          error instanceof Error ? error.message : error
-        );
-        excelBuffer = null;
+      if (deptManager?.email) {
+        console.log(`[🏭] 找到工厂管理员: ${deptManager.name} (${deptManager.email})`);
+        return deptManager.email;
       }
 
-      // 6. 验证业务员邮箱
-      console.log("[15] 验证业务员邮箱");
-      if (!targetRep.user.email) {
-        console.error("[❌] 业务员邮箱为空，取消发送");
-        return;
-      }
-      console.log("[16] 邮箱验证通过:", targetRep.user.email);
-
-      // 7. 转换询价数据格式
-      const inquiryWithItems = InquiryService.transformInquiry(inquiry);
-
-      console.log("[17] 准备使用 Resend 发送邮件");
-
-      // 8. 使用 Resend 发送邮件（将工厂列表转换为邮件模板需要的格式）
-      const factoriesForEmail = factories.map((f) => ({
-        name: f.name,
-        address: f.address ?? undefined,
-      }));
-
-      const result = await sendSalesInquiryEmailViaResend(
-        targetRep.user.email,
-        adminEmails,
-        inquiryWithItems,
-        inquiry.inquiryNum,
-        factoriesForEmail.length > 0 ? factoriesForEmail : [{ name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" }],
-        {
-          name: targetRep.user.name,
-          email: targetRep.user.email,
-        },
-        excelBuffer ?? undefined
-      );
-
-      if (result.success) {
-        console.log("=== ✅ [Resend] 邮件发送成功 ===");
-        console.log(
-          `[Inquiry] Email sent for ${inquiry.inquiryNum} to ${targetRep.user.email}`
-        );
-        if (adminEmails.length > 0) {
-          console.log(
-            `[Inquiry] BCC to ${adminEmails.length} admin(s): ${adminEmails.join(", ")}`
-          );
-        }
-      } else {
-        console.error("=== ❌ [Resend] 邮件发送失败 ===");
-        console.error("[错误详情]:", result.error);
-      }
+      console.log(`[⚠️] 工厂 ${factoryDeptId} 没有管理员，使用默认邮箱`);
+      return DEFAULT_FACTORY_INFO.email;
     } catch (error) {
-      console.error("=== ❌ [Resend] 邮件发送失败 ===");
-      console.error("[错误详情]:", error);
-      console.error(
-        "[错误堆栈]:",
-        error instanceof Error ? error.stack : "No stack trace"
+      console.error("[❌] 获取工厂管理员邮箱失败:", error);
+      return DEFAULT_FACTORY_INFO.email;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+  /**
+   * 🎨 [还原逻辑] 识别颜色属性键
+   * 寻找与商品关联的模板中，代表“颜色”的属性 Key
+   */
+  private async identifyColorAttribute(productId: string) {
+    // 1. 找到商品关联的模板
+    const [productTemplate] = await db
+      .select()
+      .from(productTemplateTable)
+      .where(eq(productTemplateTable.productId, productId))
+      .limit(1);
+
+    if (!productTemplate) return null;
+
+    // 2. 查找该模板下所有的 SKU 规格属性
+    const keys = await db
+      .select()
+      .from(templateKeyTable)
+      .where(
+        and(
+          eq(templateKeyTable.templateId, productTemplate.templateId),
+          eq(templateKeyTable.isSkuSpec, true)
+        )
       );
 
-      // 更详细的错误信息
-      if (error instanceof Error) {
-        console.error("[错误名称]:", error.name);
-        console.error("[错误消息]:", error.message);
-      }
-    }
-  }
+    // 3. 正则匹配 "color", "颜色", "colour"
+    const colorKey = keys.find((k) => /color|颜色|colour/i.test(k.key));
 
-  // 1. 提取这个纯逻辑函数，它是你的"类型源"
-  static transformInquiry(inquiry: Inquiry) {
-    return {
-      ...inquiry,
-      items: [
-        {
-          productName: inquiry.productName || "",
-          productDescription: inquiry.productDescription || "",
-          skuQuantity: inquiry.quantity,
-          skuPrice: inquiry.price?.toString() || "",
-          customerRequirements: inquiry.customerRequirements || "",
-        },
-      ],
-    };
+    return colorKey ? { key: colorKey.key, keyId: colorKey.id } : null;
   }
 
   /**
-   * 📊 内部方法：将模型数据映射为 Excel 模板所需格式
-   *
-   * @param inquiry - 询价数据
-   * @param siteProduct - 站点产品
-   * @param siteSku - 站点 SKU
-   * @param exporter - 出口商信息（从数据库动态获取）
-   * @param factories - 工厂列表（从数据库动态获取）
-   * @param photo - 产品图片
+   * 🎨 [还原逻辑] 获取属性具体值的 ID
+   * 根据 KeyID 和 文本值（如 "Red"），找到对应的 ValueID
    */
-  private mapToExcelData(
-    inquiry: Inquiry,
-    siteProduct: SiteProduct,
-    siteSku: SiteSku,
-    exporter: ExporterInfo | null,
-    factories: FactoryInfo[],
-    photo: any
-  ) {
-    // 使用第一个工厂作为主工厂，如果没有工厂则使用默认值
-    const mainFactory = factories[0] || { name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD" };
+  private async getAttributeValueId(keyId: string, valueStr: string) {
+    if (!valueStr) return null;
 
-    // 🔧 从邮箱前缀提取客户用户名
-    const extractUsernameFromEmail = (email: string): string => {
-      if (!email) return "";
-      const match = email.match(/^([^@]+)@/);
-      return match ? match[1] : "";
-    };
+    // 在 templateValueTable 中查找对应的值
+    // 注意：这里假设 value 是精确匹配。如果数据库存的是 "Red " 而传入 "Red"，可能需要 trim
+    const [val] = await db
+      .select()
+      .from(templateValueTable)
+      .where(
+        and(
+          eq(templateValueTable.templateKeyId, keyId),
+          eq(templateValueTable.value, valueStr) // 或者使用 like 模糊匹配
+        )
+      )
+      .limit(1);
 
-    return {
-      // Exporter (出口商) - 使用从数据库获取的实际数据
-      exporterName: exporter?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
-      exporterAddr: exporter?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan, Guangdong, China",
-      exporterWeb: "www.dongqifootwear.com",
-      exporterEmail: "sales@dongqifootwear.com",
-      exporterPhone: exporter?.contactPhone ? Number.parseInt(exporter.contactPhone, 10) || 0 : 0,
-
-      // Factory (工厂) - 使用从数据库获取的实际数据
-      factoryName: mainFactory.name,
-      factoryAddr1: factories[0]?.address || "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
-      factoryAddr2: factories[1]?.address || "Industrial Road #3, Shangrao Industrial Zone, Shangrao, Jiangxi,China",
-      factoryAddr3: factories[2]?.address || "Qifu Road #2, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi,China",
-      factoryWeb1: "www.dongqishoes.com",
-      factoryWeb2: "www.dongqifootwear.com",
-      factoryWeb3: "www.dongqifootwear.com",
-      factoryPhone: mainFactory?.contactPhone ? Number.parseInt(mainFactory.contactPhone, 10) || 0 : 0,
-
-      // Client (客户)
-      clientCompanyName: inquiry.customerCompany || "",
-      clientFullName: extractUsernameFromEmail(inquiry.customerEmail), // 🔧 使用邮箱前缀作为客户全名
-      clientUserName: extractUsernameFromEmail(inquiry.customerEmail), // 🔧 从邮箱前缀提取用户名
-      clientWhatsApp: inquiry.customerWhatsapp || "",
-      clientEmail: inquiry.customerEmail,
-      clientPhone: inquiry.customerPhone ? Number.parseInt(inquiry.customerPhone, 10) || 0 : 0,
-      photoForRefer: photo
-        ? {
-          // 🔧 确保 buffer 是 Buffer 类型（处理可能从 fetch 返回的 Uint8Array）
-          buffer: Buffer.isBuffer(photo.buffer) ? photo.buffer : Buffer.from(photo.buffer),
-          mimeType: photo.mimeType,
-          name: `ref-${inquiry.inquiryNum}`,
-        }
-        : null,
-
-      // Terms (报价项) - 使用第一个 SKU 信息填充第一行
-      termsCode1: siteSku!.id || null,
-      termsDesc1: inquiry.productDescription || siteProduct.product?.name || "",
-      termsUnits1: "pcs",
-      termsUsd1: inquiry.price ? String(inquiry.price) : "",
-      termsRemark1: inquiry.customerRequirements || "",
-
-      termsCode2: null,
-      termsDesc2: "",
-      termsUnits2: "",
-      termsUsd2: 0,
-      termsRemark2: "",
-
-      termsCode3: null,
-      termsDesc3: "",
-      termsUnits3: "",
-      termsUsd3: 0,
-      termsRemark3: "",
-      termsTTL: inquiry.quantity,
-      termsUSD: Number(inquiry.price || 0) * inquiry.quantity,
-
-      // Bank Info (银行信息)
-      bankBeneficiary: "DONG QI FOOTWEAR INTL MFG CO., LTD",
-      bankAccountNo: 0,
-      bankName: "BANK OF CHINA",
-      bankAddr: "DONGGUAN BRANCH",
-
-      // Signed By (签署代表)
-      exporterBehalf: "Michael Tse",
-      date: new Date().toISOString().split("T")[0],
-      timeNo: inquiry.inquiryNum,
-      clientAddr: inquiry.customerCompany || "",
-      payWay: `Payment Method: ${inquiry.paymentMethod || "TBD"}`,
-    };
+    return val ? val.id : null;
   }
-  /**
-   * 🖼️ 下载图片为 Buffer
-   *
-   * 从给定的 URL 下载图片并转换为 Buffer
-   */
-  private async downloadImage(url?: string) {
-    if (!url) return null;
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) return null;
-      return {
-        buffer: Buffer.from(await resp.arrayBuffer()),
-        mimeType: resp.headers.get("content-type") || "image/jpeg",
-      };
-    } catch {
-      return null;
-    }
-  }
+
+
 }
 // 3. 关键：在文件末尾导出类型，完全不需要手写 interface
 export type InquiryWithItems = ReturnType<

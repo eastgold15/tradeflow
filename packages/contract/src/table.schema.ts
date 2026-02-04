@@ -113,6 +113,9 @@ export const departmentTable = p.pgTable("sys_dept", {
     employeeCount?: number;
   }>(),
 
+  // 工厂合作状态：true=已合作(优先分配给工厂业务员), false=未合作(分配给出口商业务员)
+  isCooperating: p.boolean("is_cooperating").default(false),
+
   isActive: p.boolean("is_active").default(true),
 });
 

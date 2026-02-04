@@ -62,89 +62,111 @@ export class UserService {
       with: {
         roles: true,
         department: true,
+        assignMasterCategories: true,
       },
     });
 
     return res;
   }
 
+  /**
+   * 更新用户信息
+   * 支持更新基础信息、角色、密码以及业务员的主分类分配
+   */
   public async update(
     id: string,
     body: UserContract["Update"],
     ctx: ServiceContext,
     headers: any
   ) {
+    console.log("=== [UserService.update] 开始 ===");
+    console.log("[DEBUG] 接收到的完整 body:", JSON.stringify(body, null, 2));
+    console.log("[DEBUG] masterCategoryIds:", body.masterCategoryIds);
+    console.log("[DEBUG] masterCategoryIds 类型:", typeof body.masterCategoryIds);
+    console.log("[DEBUG] masterCategoryIds 是否为数组:", Array.isArray(body.masterCategoryIds));
+
     return await ctx.db.transaction(async (tx) => {
       const { masterCategoryIds, roleId, password, ...updateData } = body;
 
+      console.log("[DEBUG] 解构后的 masterCategoryIds:", masterCategoryIds);
+      console.log("[DEBUG] 解构后的 updateData:", updateData);
+
+      // 1. 更新用户基础信息
       const [updatedUser] = await tx
         .update(userTable)
         .set(updateData)
         .where(eq(userTable.id, id))
         .returning();
 
+      console.log("[DEBUG] 更新用户基础信息成功, userId:", updatedUser.id);
+
+      // 2. 如果提供了密码，更新密码
       if (password) {
-        const data = await auth.api.setUserPassword({
+        await auth.api.setUserPassword({
           body: {
-            newPassword: password, // required
-            userId: updatedUser.id, // required
+            newPassword: password,
+            userId: updatedUser.id,
           },
-          // This endpoint requires session cookies.
           headers,
         });
       }
 
+      // 3. 处理角色更新（先删除旧角色，再插入新角色）
       if (roleId) {
+        console.log("[DEBUG] 开始处理角色更新, roleId:", roleId);
         await tx.delete(userRoleTable).where(eq(userRoleTable.userId, id));
         await tx.insert(userRoleTable).values({
           userId: id,
           roleId,
         });
+        console.log("[DEBUG] 角色更新完成");
       }
 
-      if (masterCategoryIds) {
-        await tx
-          .delete(salesResponsibilityTable)
-          .where(eq(salesResponsibilityTable.userId, id));
+      // 4. 处理主分类分配（业务员专用）
+      console.log("[DEBUG] 开始检查 masterCategoryIds");
+      console.log("[DEBUG] masterCategoryIds 存在:", !!masterCategoryIds);
+      console.log("[DEBUG] masterCategoryIds 值:", masterCategoryIds);
 
+      if (masterCategoryIds) {
+        console.log("[DEBUG] 开始处理主分类分配, 数量:", masterCategoryIds.length);
+        console.log("[DEBUG] 主分类 ID 列表:", masterCategoryIds);
+
+        // 先删除旧的主分类关联
+        const deleteResult = await tx
+          .delete(salesResponsibilityTable)
+          .where(eq(salesResponsibilityTable.userId, id))
+          .returning();
+        console.log("[DEBUG] 删除旧的主分类关联完成, 删除数量:", deleteResult.length);
+
+        // 如果有新的主分类，批量插入
         if (masterCategoryIds.length > 0) {
-          await tx.insert(salesResponsibilityTable).values(
-            masterCategoryIds.map((catId: string) => ({
+          const insertData = masterCategoryIds.map((catId: string) => {
+            console.log("[DEBUG] 准备插入主分类, catId:", catId);
+            return {
               userId: id,
               masterCategoryId: catId,
               siteId: ctx.user.context.site.id,
               tenantId: ctx.user.context.tenantId!,
-            }))
-          );
+            };
+          });
+          console.log("[DEBUG] 准备插入的数据:", JSON.stringify(insertData, null, 2));
+
+          try {
+            await tx.insert(salesResponsibilityTable).values(insertData);
+            console.log("[DEBUG] 主分类插入完成");
+          } catch (error: any) {
+            console.error("[❌] 主分类插入失败:", error.message);
+            console.error("[❌] 完整错误:", error);
+            throw error;
+          }
+        } else {
+          console.log("[DEBUG] masterCategoryIds 为空数组，跳过插入");
         }
+      } else {
+        console.log("[DEBUG] masterCategoryIds 为 undefined/null，跳过处理");
       }
 
-      // 4. 处理角色（先删除旧角色，再插入新角色）
-      if (roleId) {
-        await tx.delete(userRoleTable).where(eq(userRoleTable.userId, id));
-        await tx.insert(userRoleTable).values({
-          userId: id,
-          roleId,
-        });
-      }
-
-      if (masterCategoryIds) {
-        await tx
-          .delete(salesResponsibilityTable)
-          .where(eq(salesResponsibilityTable.userId, id));
-
-        if (masterCategoryIds.length > 0) {
-          await tx.insert(salesResponsibilityTable).values(
-            masterCategoryIds.map((catId: string) => ({
-              userId: id,
-              masterCategoryId: catId,
-              siteId: ctx.user.context.site.id,
-              tenantId: ctx.user.context.tenantId!,
-            }))
-          );
-        }
-      }
-
+      console.log("=== [UserService.update] 结束 ===");
       return updatedUser;
     });
   }
@@ -263,11 +285,11 @@ export class UserService {
         parentId: dept.parentId,
         site: dept.site
           ? {
-              id: dept.site.id,
-              name: dept.site.name,
-              domain: dept.site.domain,
-              siteType: dept.site.siteType,
-            }
+            id: dept.site.id,
+            name: dept.site.name,
+            domain: dept.site.domain,
+            siteType: dept.site.siteType,
+          }
           : null,
       })),
     };

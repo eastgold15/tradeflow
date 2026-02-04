@@ -11,7 +11,8 @@ export type PhotoReference = {
 //   name?: string;
 // };
 /**
- * 报价单数据结构 - 修正版（共 38 个字段）
+ * 报价单数据结构 - 修正版（共 42 个字段）
+ * 🔥 新增字段：factoryAddr, fatoryWeb, factoryEmail
  */
 export interface QuotationData {
   // Exporter (出口商)
@@ -24,13 +25,17 @@ export interface QuotationData {
   // Factory (工厂)
   factoryName: string;
   factoryAddr1: string;
-  factoryAddr2: string;
-  factoryAddr3: string;
-  factoryWeb1: string;
-  factoryWeb2: string;
-  factoryWeb3: string;
-  // factoryEmail: string;
+  factoryAddr2?: string; // 设为可选
+  factoryAddr3?: string; // 设为可选
+  factoryWeb1?: string;  // 设为可选
+  factoryWeb2?: string;  // 设为可选
+  factoryWeb3?: string;  // 设为可选
   factoryPhone: number;
+
+  // 🔥 新增字段（兼容新模板）
+  factoryAddr?: string;    // FTY ADDR - 工厂地址（合并或单行显示）
+  fatoryWeb?: string;       // web - 工厂网站（注意模板拼写错误：fatoryWeb）
+  factoryEmail?: string;    // email - 工厂邮箱
 
   // Client (客户)
   clientCompanyName: string;
@@ -42,25 +47,23 @@ export interface QuotationData {
   photoForRefer?: PhotoReference | null;
 
   // Terms (报价项) - 支持 3 行
-  termsCode1: string | null;
+  termsCode1: string;
   termsDesc1: string;
   termsUnits1: string;
   termsUsd1: string;
   termsRemark1: string;
-
-  termsCode2: number | null;
-  termsDesc2: string;
-  termsUnits2: string;
-  termsUsd2: number;
-  termsRemark2: string;
-
-  termsCode3: number | null;
-  termsDesc3: string;
-  termsUnits3: string;
-  termsUsd3: number;
-  termsRemark3: string;
   termsTTL: number;
   termsUSD: number;
+  termsCode2?: string;   // 设为可选
+  termsDesc2?: string;   // 设为可选
+  termsUnits2?: string;  // 设为可选
+  termsUsd2?: string;    // 设为可选
+  termsRemark2?: string; // 设为可选
+  termsCode3?: string;   // 设为可选
+  termsDesc3?: string;   // 设为可选
+  termsUnits3?: string;  // 设为可选
+  termsUsd3?: string;    // 设为可选
+  termsRemark3?: string; // 设为可选
 
   // Bank Info (银行信息)
   bankBeneficiary: string;
@@ -111,22 +114,22 @@ export const quotationDefaultData: QuotationData = {
   photoForRefer: null, // 占位图，把商品图片放上去，
 
   // === Terms (报价项) - 全部为空 ===
-  termsCode1: null,
+  termsCode1: "",
   termsDesc1: "",
   termsUnits1: "",
   termsUsd1: "",
   termsRemark1: "",
 
-  termsCode2: null,
+  termsCode2: undefined,
   termsDesc2: "",
   termsUnits2: "",
-  termsUsd2: 0,
+  termsUsd2: undefined,
   termsRemark2: "",
 
-  termsCode3: null,
+  termsCode3: undefined,
   termsDesc3: "",
   termsUnits3: "",
-  termsUsd3: 0,
+  termsUsd3: undefined,
   termsRemark3: "",
   termsTTL: 0,
   termsUSD: 0,
