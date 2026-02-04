@@ -623,6 +623,7 @@ export const siteCategoryTable = p.pgTable("site_category", {
     .uuid("master_category_id")
     .references(() => masterCategoryTable.id, { onDelete: "set null" }),
   url: p.varchar("url", { length: 500 }), // 外部链接 URL（可选）
+  slug: p.varchar("slug", { length: 500 }), // URL slug，用于生成 SEO 友好的分类链接
 });
 // 站点商品分裂
 export const siteProductSiteCategoryTable = p.pgTable(

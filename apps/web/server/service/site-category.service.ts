@@ -7,7 +7,7 @@ import {
   siteSkuTable,
   skuTable,
 } from "@repo/contract";
-import { and, desc, eq, min, sql } from "drizzle-orm";
+import { and, desc, eq, min, or, sql } from "drizzle-orm";
 import type { ServiceContext } from "~/middleware/site";
 
 /**
@@ -198,5 +198,137 @@ export class SiteCategoryService {
       },
     });
     return res;
+  }
+
+  /**
+   * 根据 slug 获取分类详情
+   */
+  async getBySlug(slug: string, ctx: ServiceContext) {
+    // 标准化 slug：确保有前导斜杠（数据库中存储的是 /new, /flats 等）
+    const normalizedSlug = slug.startsWith('/') ? slug : '/' + slug;
+
+    const res = await ctx.db.query.siteCategoryTable.findFirst({
+      where: {
+        slug: normalizedSlug,
+        siteId: ctx.site.id,
+      },
+    });
+    return res;
+  }
+
+  /**
+   * 根据 slug 获取分类下的商品（支持子分类）
+   */
+  async getProductsByCategorySlug(
+    ctx: ServiceContext,
+    slug: string,
+    query: { page: number; limit: number }
+  ) {
+    // 标准化 slug：确保有前导斜杠（数据库中存储的是 /new, /flats 等）
+    const normalizedSlug = slug.startsWith('/') ? slug : '/' + slug;
+
+    console.log('=== getProductsByCategorySlug 开始 ===');
+    console.log('1. 原始 slug:', slug, '标准化后:', normalizedSlug);
+    console.log('2. siteId:', ctx.site.id);
+
+    // 先通过 slug 获取分类
+    const category = await ctx.db.query.siteCategoryTable.findFirst({
+      where: {
+        slug: normalizedSlug,
+        siteId: ctx.site.id,
+      },
+      with: {
+        children: {
+          with: {
+            children: true, // 支持三级分类
+          },
+        },
+      },
+    });
+
+    console.log('3. 查询到的分类:', category ? { id: category.id, name: category.name, slug: category.slug } : null);
+
+    if (!category) {
+      console.log('❌ 未找到分类，返回空数组');
+      return [];
+    }
+
+    // 收集当前分类及所有子分类的ID
+    const categoryIds = [category.id];
+    const collectChildIds = (children: any[]) => {
+      if (!children) return;
+      for (const child of children) {
+        categoryIds.push(child.id);
+        if (child.children) {
+          collectChildIds(child.children);
+        }
+      }
+    };
+    collectChildIds(category.children);
+
+    console.log('4. 分类ID列表（包括子分类）:', categoryIds);
+
+    const { page = 1, limit = 10 } = query;
+    console.log('5. 分页参数:', { page, limit });
+
+    try {
+      // 构建多个 OR 条件来匹配分类ID
+      const categoryConditions = categoryIds.map((id) =>
+        eq(siteProductSiteCategoryTable.siteCategoryId, id)
+      );
+
+      const flatProducts = await ctx.db
+        .select({
+          id: siteProductTable.id,
+          displayName: sql<string>`COALESCE(${siteProductTable.siteName}, ${productTable.name})`,
+          displayDesc: sql<string>`COALESCE(${siteProductTable.siteDescription}, ${productTable.description})`,
+          mainMedia: sql<string>`(
+            SELECT ${mediaTable.url}
+            FROM ${productMediaTable}
+            INNER JOIN ${mediaTable} ON ${mediaTable.id} = ${productMediaTable.mediaId}
+            WHERE ${productMediaTable.productId} = ${productTable.id}
+            ORDER BY ${productMediaTable.sortOrder} ASC
+            LIMIT 1
+          )`,
+          minPrice: min(
+            sql`COALESCE(${siteSkuTable.price}, ${skuTable.price})`
+          ).as("min_price"),
+          spuCode: productTable.spuCode,
+          isFeatured: siteProductTable.isFeatured,
+        })
+        .from(siteProductSiteCategoryTable)
+        .innerJoin(siteProductTable, eq(siteProductSiteCategoryTable.siteProductId, siteProductTable.id))
+        .innerJoin(productTable, eq(siteProductTable.productId, productTable.id))
+        .innerJoin(skuTable, eq(skuTable.productId, productTable.id))
+        .leftJoin(
+          siteSkuTable,
+          and(
+            eq(siteSkuTable.skuId, skuTable.id),
+            eq(siteSkuTable.siteId, ctx.site.id)
+          )
+        )
+        .where(
+          and(
+            // 使用 or 来匹配任意一个分类ID
+            or(...categoryConditions),
+            eq(siteProductTable.siteId, ctx.site.id),
+            eq(siteProductTable.isVisible, true)
+          )
+        )
+        .groupBy(siteProductTable.id, productTable.id)
+        .orderBy(siteProductTable.sortOrder, productTable.createdAt)
+        .limit(limit)
+        .offset((page - 1) * limit);
+
+      console.log('6. 查询到的商品数量:', flatProducts.length);
+      console.log('=== getProductsByCategorySlug 结束 ===');
+
+      return flatProducts;
+    } catch (error) {
+      console.error('❌ 查询商品时出错:', error);
+      console.error('错误详情:', JSON.stringify(error, null, 2));
+      return [];
+    }
+
   }
 }

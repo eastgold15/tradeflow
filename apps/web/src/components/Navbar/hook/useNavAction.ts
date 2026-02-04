@@ -6,9 +6,9 @@ export const useNavAction = () => {
   const router = useRouter();
 
   /**
-   * 生成标准分类路径
+   * 生成标准分类路径（使用 slug）
    */
-  const getCategoryHref = useCallback((id: string) => `/category?id=${id}`, []);
+  const getCategoryHref = useCallback((slug: string) => `/category/${slug}`, []);
 
   /**
    * 处理导航动作（包含副作用：滚动、关闭菜单）

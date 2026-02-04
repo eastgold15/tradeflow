@@ -1,7 +1,6 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import ProductCard from "@/components/product/productCard";
 import {
@@ -10,9 +9,11 @@ import {
 } from "@/hooks/api/site-category";
 import type { SiteCategoryProductRes } from "@/hooks/api/site-category.type";
 
-export default function CategoryClient() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+interface CategoryClientProps {
+  slugProp: string; // 从 props 传入的 slug（用于新路由 /category/[slug]）
+}
+
+export default function CategoryClient({ slugProp }: CategoryClientProps) {
   const queryClient = useQueryClient();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -30,7 +31,7 @@ export default function CategoryClient() {
     data: categoryData,
     isLoading: isCategoryLoading,
     error: categoryError,
-  } = useSiteCategoryDetail(id || "", { enabled: isMounted && !!id });
+  } = useSiteCategoryDetail(slugProp, { enabled: isMounted && !!slugProp });
 
   // 查询分类下的产品列表
   const {
@@ -38,9 +39,9 @@ export default function CategoryClient() {
     isLoading: isProductLoading,
     error: productError,
   } = useSiteCategoryProducts(
-    id || "",
+    slugProp,
     { page, limit },
-    { enabled: isMounted && !!id }
+    { enabled: isMounted && !!slugProp }
   );
 
   // 当新数据加载完成时，更新商品列表
@@ -69,18 +70,18 @@ export default function CategoryClient() {
     setPage((prev) => prev + 1);
   }, []);
 
-  // 重置分页当分类ID改变时
+  // 重置分页当分类 slug 改变时
   useEffect(() => {
-    console.log("id changed:", id);
+    console.log("slug changed:", slugProp);
     setPage(1);
     setAllProducts([]);
     setIsLoadingMore(false);
     // 清除缓存，确保重新获取数据
-    if (id) {
-      queryClient.removeQueries({ queryKey: ["category-products"] });
-      queryClient.removeQueries({ queryKey: ["category-detail"] });
+    if (slugProp) {
+      queryClient.removeQueries({ queryKey: ["category-products-slug"] });
+      queryClient.removeQueries({ queryKey: ["category-detail-slug"] });
     }
-  }, [id, queryClient]);
+  }, [slugProp, queryClient]);
 
   if (isLoading) {
     return null;

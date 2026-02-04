@@ -12,7 +12,7 @@ import {
 // 类型定义
 
 export type SiteCategoryListRes = NonNullable<
-  Treaty.Data<typeof rpc.site_category.get>
+  Treaty.Data<typeof rpc.site_category.tree.get>
 >;
 
 // 获取站点分类目录列表（支持分页）
@@ -20,7 +20,7 @@ export function useSiteCategoryList(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.categories.list(),
     queryFn: async () => {
-      const { data, error } = await rpc.site_category.get();
+      const { data, error } = await rpc.site_category.tree.get();
       if (error) {
         toast.error((error.value as any)?.message || "获取分类目录失败");
       }
@@ -33,39 +33,39 @@ export function useSiteCategoryList(options?: { enabled?: boolean }) {
   });
 }
 
-// 获取分类目录详情
+// 根据 slug 获取分类目录详情
 export function useSiteCategoryDetail(
-  id: string,
+  slug: string,
   options?: { enabled?: boolean }
 ) {
   return useQuery({
-    queryKey: queryKeys.categories.desc(id),
+    queryKey: ["category-detail-slug", slug],
     queryFn: async () => {
-      const { data, error } = await rpc.site_category.detail({ id }).get();
+      const { data, error } = await rpc.site_category.detail({ slug }).get();
       if (error) {
         toast.error(error.value?.message || "获取分类目录详情失败");
       }
       return data! as unknown as SiteCategoryDetailRes;
     },
-    enabled: options?.enabled ?? !!id,
+    enabled: options?.enabled ?? !!slug,
     staleTime: 5 * 60 * 1000, // 5分钟
     retry: 2,
     refetchOnWindowFocus: false,
   });
 }
 
-// 获取分类目录下的商品列表（支持分页）
+// 根据 slug 获取分类目录下的商品列表（支持分页）
 export function useSiteCategoryProducts(
-  id: string,
+  slug: string,
   params: { page: number; limit: number } = { page: 1, limit: 10 },
   options?: { enabled?: boolean }
 ) {
   return useQuery({
-    queryKey: ["category-products", id, params],
+    queryKey: ["category-products-slug", slug, params],
     queryFn: async () => {
-      console.log("Fetching category products:", id, params);
+      console.log("Fetching category products by slug:", slug, params);
       const { data, error } = await rpc.site_category
-        .category({ id })
+        .category({ slug })
         .get({ query: params });
 
       console.log("Category products response:", { data, error });
@@ -75,10 +75,10 @@ export function useSiteCategoryProducts(
       }
       return data! as unknown as SiteCategoryProductRes[];
     },
-    enabled: options?.enabled ?? !!id,
+    enabled: options?.enabled ?? !!slug,
     staleTime: 5 * 60 * 1000,
     retry: 2,
-    refetchOnMount: "always", // 确保每次挂载时重新获取数据
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 }

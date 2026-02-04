@@ -26,20 +26,20 @@ export const sitecategoriesController = new Elysia({
     }
   )
   .get(
-    "/category/:id",
-    async ({ params: { id }, db, query, site }) => {
-      return await siteCategoryService.getProductsByCategoryId(
+    "/category/:slug",
+    async ({ params: { slug }, db, query, site }) => {
+      return await siteCategoryService.getProductsByCategorySlug(
         {
           db,
           site,
         },
-        id,
+        slug,
         query
       );
     },
     {
       params: t.Object({
-        id: t.String(),
+        slug: t.String(),
       }),
       query: t.Object({
         page: t.Number(),
@@ -47,25 +47,25 @@ export const sitecategoriesController = new Elysia({
       }),
       detail: {
         tags: ["Products"],
-        summary: "获取分类下的商品",
-        description: "根据分类ID获取该分类下的所有商品",
+        summary: "根据分类 slug 获取商品",
+        description: "根据分类的 slug 获取该分类下的所有商品",
       },
     }
   )
   .get(
-    "/detail/:id",
-    ({ params: { id }, db, site }) => {
-      // 获取单个分类 - 前端用户使用
-      return siteCategoryService.getById(id, { db, site });
+    "/detail/:slug",
+    ({ params: { slug }, db, site }) => {
+      // 获取单个分类 - 通过 slug
+      return siteCategoryService.getBySlug(slug, { db, site });
     },
     {
       params: t.Object({
-        id: t.String(),
+        slug: t.String(),
       }),
       detail: {
         tags: ["Categories"],
-        summary: "获取分类详情",
-        description: "根据分类ID获取详细信息，包括名称、描述、父子关系等",
+        summary: "根据 slug 获取分类详情",
+        description: "根据分类的 slug 获取详细信息",
       },
     }
   );

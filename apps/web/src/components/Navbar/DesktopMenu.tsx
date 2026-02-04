@@ -10,7 +10,8 @@ export type CategoryWithChildren = Omit<
   "children"
 > & {
   children?: CategoryWithChildren[];
-  url?: string | null; // 添加 url 字段，匹配数据库返回类型
+  url?: string | null; // 外部链接
+  slug?: string | null; // 用于生成分类链接的 slug
 };
 
 // 单个菜单项组件（递归核心）
@@ -20,8 +21,8 @@ const MenuItem = ({ category }: { category: CategoryWithChildren }) => {
   const { getCategoryHref, handleNavigate } = useNavAction();
 
   const hasChildren = category.children && category.children.length > 0;
-  // 如果有 url 则使用 url，否则使用分类链接
-  const href = category.url || getCategoryHref(category.id);
+  // 如果有 url 则使用 url，否则使用分类链接（使用 slug）
+  const href = category.url || getCategoryHref(category.slug || category.id);
   const isExternal = category.url ? isExternalUrl(category.url) : false;
 
   // 鼠标交互逻辑优化
@@ -88,8 +89,8 @@ const MenuItem = ({ category }: { category: CategoryWithChildren }) => {
 // 下拉菜单项（显示子分类）
 const DropdownItem = ({ category }: { category: CategoryWithChildren }) => {
   const { getCategoryHref, handleNavigate } = useNavAction();
-  // 如果有 url 则使用 url，否则使用分类链接
-  const href = category.url || getCategoryHref(category.id);
+  // 如果有 url 则使用 url，否则使用分类链接（使用 slug）
+  const href = category.url || getCategoryHref(category.slug || category.id);
   const isExternal = category.url ? isExternalUrl(category.url) : false;
 
   // 如果是外部链接，使用原生 a 标签

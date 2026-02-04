@@ -19,7 +19,7 @@ export const NavCategoryItem = ({ category, onClose, depth = 0 }: NavItemProps) 
   const { getCategoryHref, handleNavigate } = useNavAction();
 
   const hasChildren = category.children && category.children.length > 0;
-  const href = category.url || getCategoryHref(category.id);
+  const href = category.url || getCategoryHref(category.slug || category.id);
   const isExternal = category.url ? isExternalUrl(category.url) : false;
 
   // 基础样式：根据深度和屏幕尺寸动态计算
