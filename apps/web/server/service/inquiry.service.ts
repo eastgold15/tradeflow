@@ -51,6 +51,7 @@ type ExporterInfo = {
   name: string;
   address?: string | null;
   contactPhone?: string | null;
+  email?: string | null; // 出口商管理员邮箱
 };
 
 type FactoryInfo = {
@@ -58,20 +59,38 @@ type FactoryInfo = {
   name: string;
   address?: string | null;
   contactPhone?: string | null;
-  email?: string | null; // 🔥 新增：工厂管理员邮箱
+  email?: string | null; // 工厂管理员邮箱
 };
+
+type TenantInfo = {
+  name: string;
+  address?: string | null;
+  website?: string | null;
+  bankInfo?: { beneficiary: string; accountNo: string } | null;
+};
+
+
+
+// 外部业务工具
+// 类型定义
+
+type UserWithResponsibility = Awaited<
+  ReturnType<typeof InquiryService.prototype.findBestSalesperson>
+>;
+type validateAndGetSkuData = Awaited<
+  ReturnType<typeof InquiryService.prototype.validateAndResolveSku>
+>;
+
+type Inquiry = typeof inquiryTable.$inferSelect;
+type SiteSku = validateAndGetSkuData["siteSku"];
+type SiteProduct = validateAndGetSkuData["siteProduct"];
+
+
 
 type ExporterAndFactory = {
   exporter: ExporterInfo | null;
   factories: FactoryInfo[];
-};
-
-// 📊 默认工厂信息常量
-const DEFAULT_FACTORY_INFO = {
-  name: "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
-  address: "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi, China",
-  email: "sales@dongqishoes.com",
-  web: "www.dongqishoes.com",
+  tenant: TenantInfo | null;
 };
 
 /**
@@ -84,6 +103,7 @@ export class InquiryService {
    */
   async submit(body: typeof InquiryContract.Create.static, ctx: ServiceContext) {
     const { site } = ctx;
+
 
     // 1. 验证并获取商品/SKU数据 (逻辑解耦)
     const skuData = await this.validateAndResolveSku(body, ctx);
@@ -276,7 +296,7 @@ export class InquiryService {
       mediaId ? db.query.mediaTable.findFirst({ where: { id: mediaId } }) : null,
     ]);
 
-    const { exporter, factories } = exporterAndFactories;
+    const { exporter, factories, tenant } = exporterAndFactories;
     const mainFactory = factories[0];
 
     // 获取工厂的合作状态
@@ -289,33 +309,24 @@ export class InquiryService {
     console.log('工厂合作状态:', isCooperating ? '✅ 已合作' : '❌ 未合作');
 
     // 🔥 二次并行：依赖于上面结果的数据
-    const [adminEmails, photoData, factoryAdminEmails] = await Promise.all([
+    const [adminEmails, photoData] = await Promise.all([
       this.getAdminEmails(inquiry.tenantId, mainFactory.id), // 出口商管理员
       this.downloadImage(mediaInfo?.url),
-      this.resolveFactoryEmails(factories), // 工厂管理员邮箱
     ]);
 
-    // 📧 构建 BCC 列表：出口商管理员永远抄送，工厂管理员看合作状态
+    // 📧 构建 BCC 列表：出口商管理员永远抄送，工厂用户看合作状态
     const bccEmails = [...adminEmails];
-    if (isCooperating && factoryAdminEmails.length > 0) {
-      // 工厂已合作，添加工厂管理员到抄送
-      factoryAdminEmails.forEach(email => {
-        if (email && !bccEmails.includes(email)) {
-          bccEmails.push(email);
+    if (isCooperating) {
+      // 工厂已合作，添加工厂用户到抄送
+      factories.forEach(f => {
+        if (f.email && !bccEmails.includes(f.email)) {
+          bccEmails.push(f.email);
         }
       });
-      console.log('✅ 工厂已合作，抄送工厂管理员:', factoryAdminEmails);
+      console.log('✅ 工厂已合作，抄送工厂用户:', factories.map(f => f.email).filter(Boolean));
     } else {
-      console.log('⚠️ 工厂未合作，不抄送工厂管理员');
+      console.log('⚠️ 工厂未合作，不抄送工厂用户');
     }
-
-    // 1. 定义一个临时类型（或者直接在断言里写）
-    type FactoryWithEmail = typeof factories[0] & { email: string };
-
-    // 2. 断言 factories 为包含 email 的数组，然后遍历
-    (factories as FactoryWithEmail[]).forEach((f, index) => {
-      f.email = factoryAdminEmails[index] || DEFAULT_FACTORY_INFO.email;
-    });
 
     // 生成 Excel
     const excelBuffer = await this.generateExcelSafe(
@@ -324,6 +335,7 @@ export class InquiryService {
       siteSku,
       exporter,
       factories,
+      tenant,
       photoData,
     );
 
@@ -460,27 +472,67 @@ export class InquiryService {
     siteSku: any,
     exporter: any,
     factories: any[],
+    tenant: any,
     photoBuffer: { buffer: Buffer<ArrayBufferLike>; mimeType: string; } | null,
   ) {
     try {
+      // 获取站点域名
+      const site = await db.query.siteTable.findFirst({
+        where: { id: inquiry.siteId },
+        columns: { domain: true },
+      });
+      const siteWeb = site?.domain ? `www.${site.domain}` : tenant?.website || "www.dongqifootwear.com";
+
       const data = this.mapToExcelData(
         inquiry,
         siteProduct,
         siteSku,
         exporter,
         factories,
+        tenant,
+        siteWeb,
         photoBuffer ? { buffer: photoBuffer.buffer, mimeType: photoBuffer.mimeType, name: "ref-img" } : null
       );
 
-      // 添加缺失的银行信息和客户地址字段（使用默认值）
+      // 添加缺失的银行信息和客户地址字段（优先使用数据库中的值）
       const fullData: QuotationData = {
         ...data,
-        bankBeneficiary: "DONG QI FOOTWEAR (JIANGXI) CO., LTD", // 银行受益人
-        bankAccountNo: 1234567890123456, // 银行账号
-        bankName: "Bank of China", // 银行名称
-        bankAddr: "No.1 Fuxingmen Nei Street, Beijing, China", // 银行地址
+        bankBeneficiary: tenant?.bankInfo?.beneficiary || exporter?.name || "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
+        bankAccountNo: tenant?.bankInfo?.accountNo || "",
+        bankName: "Bank of China", // 可从租户配置获取
+        bankAddr: tenant?.address || "No.1 Fuxingmen Nei Street, Beijing, China",
         clientAddr: inquiry.customerAddress || "N/A", // 客户地址（可选）
       };
+
+      // 🖨️ 打印传给 Excel 的值
+      console.log('=== 📊 [Excel] 传给 Excel 的数据 ===');
+      console.log('Exporter:', {
+        name: fullData.exporterName,
+        address: fullData.exporterAddr,
+        phone: fullData.exporterPhone,
+        email: fullData.exporterEmail,
+        web: fullData.exporterWeb,
+      });
+      console.log('Factory:', {
+        name: fullData.factoryName,
+        address: fullData.factoryAddr,
+        email: fullData.factoryEmail,
+        web: fullData.fatoryWeb,
+        phone: fullData.factoryPhone,
+      });
+      console.log('Bank:', {
+        beneficiary: fullData.bankBeneficiary,
+        accountNo: fullData.bankAccountNo,
+        bankName: fullData.bankName,
+        bankAddr: fullData.bankAddr,
+      });
+      console.log('Tenant:', {
+        name: tenant?.name,
+        address: tenant?.address,
+        website: tenant?.website,
+        bankInfo: tenant?.bankInfo,
+      });
+      console.log('=====================================');
 
       return await generateQuotationExcel(fullData);
     } catch (e) {
@@ -499,32 +551,33 @@ export class InquiryService {
     exporter: any,
     factories: any[],
     tenant: any,
+    siteWeb: string,
     photo: any
   ) {
-    const mainFactory = factories[0] || DEFAULT_FACTORY_INFO;
+    const mainFactory = factories[0];
     const clientName = InquiryService.extractUsernameFromEmail(inquiry.customerEmail);
 
     return {
-      // Exporter
-      exporterName: exporter?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
-      exporterAddr: exporter?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan",
+      // Exporter (优先使用数据库中的值)
+      exporterName: exporter?.name || tenant?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
+      exporterAddr: exporter?.address || tenant?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan",
       exporterPhone: Number.parseInt(exporter?.contactPhone || "0", 10),
-      exporterEmail: "sales@dongqifootwear.com",
-      exporterWeb: "www.dongqifootwear.com",
+      exporterEmail: exporter?.email || "sales@dongqifootwear.com",
+      exporterWeb: siteWeb,
 
-      // Factory (Dynamic Mapping)
-      factoryName: mainFactory.name,
-      factoryAddr: mainFactory.address || DEFAULT_FACTORY_INFO.address,
-      factoryEmail: mainFactory.email || DEFAULT_FACTORY_INFO.email, // 此处已包含获取到的管理员邮箱
-      fatoryWeb: "www.dongqishoes.com", // Keeping typo as per template requirement
+      // Factory (Dynamic Mapping - 优先使用数据库中的值)
+      factoryName: mainFactory?.name || "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
+      factoryAddr: mainFactory?.address || "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi, China",
+      factoryEmail: mainFactory?.email || "sales@dongqishoes.com",
+      fatoryWeb: siteWeb, // Keeping typo as per template requirement
       // Factory Address & Web Slots (Safe Fallback)
-      factoryAddr1: factories[0]?.address || DEFAULT_FACTORY_INFO.address,
+      factoryAddr1: factories[0]?.address || "",
       factoryAddr2: factories[1]?.address || "",
       factoryAddr3: factories[2]?.address || "",
-      factoryWeb1: factories[0]?.web || "",
-      factoryWeb2: factories[1]?.web || "",
-      factoryWeb3: factories[2]?.web || "",
-      factoryPhone: mainFactory.contactPhone || "",
+      factoryWeb1: tenant?.website || "",
+      factoryWeb2: "",
+      factoryWeb3: "",
+      factoryPhone: mainFactory?.contactPhone || "",
 
 
       // Client
@@ -562,6 +615,7 @@ export class InquiryService {
    * - 如果当前站点是工厂站点，只返回当前工厂
    * - 如果当前站点是出口商站点，返回所有子工厂
    * - 同时获取租户信息（银行信息等）
+   * - 获取出口商和工厂绑定的用户邮箱
    */
   private async getExporterAndFactoryInfo(siteId: string) {
     const site = await db.query.siteTable.findFirst({
@@ -598,7 +652,26 @@ export class InquiryService {
       factories = [site.department]; // 只返回当前工厂
     }
 
-    return { exporter, factories, tenant };
+    // 📧 获取出口商和工厂的用户邮箱
+    const [exporterAdminEmail, ...factoryAdminEmails] = await Promise.all([
+      // 出口商管理员邮箱（出口商管理员角色）
+      this.getExporterAdminEmail(exporter?.id, site.tenantId),
+      // 各工厂的用户邮箱
+      ...factories.map(f => this.getDeptUserEmail(f.id))
+    ]);
+
+    // 将邮箱添加到对应的对象中
+    const exporterWithEmail: (typeof exporter & ExporterInfo) | null = exporter ? {
+      ...exporter,
+      email: exporterAdminEmail
+    } : null;
+
+    const factoriesWithEmail: (typeof factories[0] & FactoryInfo)[] = factories.map((f, i) => ({
+      ...f,
+      email: factoryAdminEmails[i]
+    }));
+
+    return { exporter: exporterWithEmail, factories: factoriesWithEmail, tenant };
   }
 
   /**
@@ -793,6 +866,95 @@ export class InquiryService {
     return adminEmails;
   }
 
+  /**
+   * 📧 获取出口商管理员邮箱
+   *
+   * 查询出口商部门的管理员（角色名：出口商管理员）
+   *
+   * @param exporterDeptId - 出口商部门ID
+   * @param tenantId - 租户ID
+   * @returns 出口商管理员邮箱（第一个）或空字符串
+   */
+  private async getExporterAdminEmail(
+    exporterDeptId: string | undefined,
+    tenantId: string
+  ): Promise<string> {
+    if (!exporterDeptId) return "";
+
+    try {
+      const [deptManagerRole] = await db
+        .select()
+        .from(roleTable)
+        .where(eq(roleTable.name, "出口商管理员"))
+        .limit(1);
+
+      if (!deptManagerRole) {
+        // 如果没有"出口商管理员"角色，尝试获取该部门的管理员
+        return await this.getDeptUserEmail(exporterDeptId);
+      }
+
+      const [deptManager] = await db
+        .select({
+          email: userTable.email,
+          name: userTable.name,
+        })
+        .from(userTable)
+        .innerJoin(
+          userRoleTable,
+          eq(userRoleTable.userId, userTable.id)
+        )
+        .where(
+          and(
+            eq(userRoleTable.roleId, deptManagerRole.id),
+            eq(userTable.deptId, exporterDeptId),
+            eq(userTable.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (deptManager?.email) {
+        console.log(`[📋] 找到出口商管理员: ${deptManager.name} (${deptManager.email})`);
+        return deptManager.email;
+      }
+
+      return await this.getDeptUserEmail(exporterDeptId);
+    } catch (error) {
+      console.error("[❌] 获取出口商管理员邮箱失败:", error);
+      return "";
+    }
+  }
+
+  /**
+   * 📧 获取部门用户邮箱（获取该部门的第一个活跃用户）
+   *
+   * @param deptId - 部门ID
+   * @returns 用户邮箱或空字符串
+   */
+  private async getDeptUserEmail(deptId: string): Promise<string> {
+    try {
+      const [user] = await db
+        .select({
+          email: userTable.email,
+          name: userTable.name,
+        })
+        .from(userTable)
+        .where(
+          and(
+            eq(userTable.deptId, deptId),
+            eq(userTable.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (user?.email) {
+        return user.email;
+      }
+      return "";
+    } catch (error) {
+      console.error("[❌] 获取部门用户邮箱失败:", error);
+      return "";
+    }
+  }
 
 
   /**
@@ -801,7 +963,7 @@ export class InquiryService {
    * 查询指定工厂部门的管理员（角色名：工厂管理员）
    *
    * @param factoryDeptId - 工厂部门ID
-   * @returns 工厂管理员邮箱（第一个）或默认邮箱
+   * @returns 工厂管理员邮箱（第一个）或空字符串
    */
   private async getFactoryAdminEmail(
     factoryDeptId: string
@@ -814,8 +976,8 @@ export class InquiryService {
         .limit(1);
 
       if (!deptManagerRole) {
-        console.log(`[⚠️] 未找到"工厂管理员"角色，使用默认邮箱`);
-        return DEFAULT_FACTORY_INFO.email;
+        console.log(`[⚠️] 未找到"工厂管理员"角色`);
+        return "";
       }
 
       const [deptManager] = await db
@@ -842,11 +1004,11 @@ export class InquiryService {
         return deptManager.email;
       }
 
-      console.log(`[⚠️] 工厂 ${factoryDeptId} 没有管理员，使用默认邮箱`);
-      return DEFAULT_FACTORY_INFO.email;
+      console.log(`[⚠️] 工厂 ${factoryDeptId} 没有管理员`);
+      return "";
     } catch (error) {
       console.error("[❌] 获取工厂管理员邮箱失败:", error);
-      return DEFAULT_FACTORY_INFO.email;
+      return "";
     }
   }
 

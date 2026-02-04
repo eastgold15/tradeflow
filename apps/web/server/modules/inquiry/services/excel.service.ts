@@ -157,45 +157,42 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
 
     console.log("[Excel] 开始处理图片:", { name, mimeType, bufferSize: buffer.length });
 
-    // 1. 先找到并清除图片占位符（在添加图片之前）
-    let targetCellAddr = "K9"; // 默认位置
-    let photoFound = false;
-    worksheet.eachRow((row) => {
-      row.eachCell((cell) => {
-        if (cell.value === "{{PHOTO_PLACEHOLDER}}") {
-          targetCellAddr = cell.address; // 如 "D5"
-          cell.value = ""; // 清空占位符
-          photoFound = true;
-        }
-      });
-    });
+    // 图片位置：K6 到 L22（17行）
+    const startRow = 6; // K6
+    const endRow = 22;  // L22
+    const totalRows = endRow - startRow + 1; // 17 行
 
-    console.log("[Excel] 图片占位符已清除，位置:", targetCellAddr, "找到占位符:", photoFound);
+    const targetCellAddr = "K6";
 
-    // 2. 获取目标单元格的位置
+    // 获取目标单元格的位置
     const targetCell = worksheet.getCell(targetCellAddr);
     const col = typeof targetCell.col === 'number' ? targetCell.col : parseInt(targetCell.col as string, 10);
     const row = typeof targetCell.row === 'number' ? targetCell.row : parseInt(targetCell.row as string, 10);
 
-    // 3. 计算 K 到 L 列的总像素宽度（作为旋转后图片的目标高度）
+    // 计算 K 到 L 列的总像素宽度（作为旋转后图片的目标高度）
     const kColWidth = worksheet.getColumn(11).width || 10; // K列
     const lColWidth = worksheet.getColumn(12).width || 10; // L列
-    const targetImageHeightPx = (kColWidth + lColWidth) * 7.5; // K9:L9的总宽度（像素）
+    const targetImageHeightPx = (kColWidth + lColWidth) * 7.5; // K+L列的总宽度（像素）
+
+    // 缩小 1/4
+    const scaledImageHeightPx = targetImageHeightPx / 4;
 
     console.log("[Excel] 目标图片高度（K+L列宽）:", {
       kColWidth,
       lColWidth,
       targetImageHeightPx,
+      scaledImageHeightPx,
     });
 
-    // 4. 调整行高，确保单元格能放下这个高度
-    // 行高单位是点（point），1 inch = 72 points，约等于 像素 * 0.75
-    worksheet.getRow(row).height = targetImageHeightPx * 0.75;
+    // 调整从 K6 到 K22 的所有行高
+    for (let r = startRow;r <= endRow;r++) {
+      worksheet.getRow(r).height = scaledImageHeightPx * 0.75 / totalRows;
+    }
 
-    // 5. 处理图片旋转并获取自适应宽度
+    // 处理图片旋转并调整尺寸
     let imageBuffer = Buffer.from(buffer);
-    let finalWidth = 200; // 默认占位
-    let finalHeight = targetImageHeightPx;
+    let finalWidth = 200;
+    let finalHeight = scaledImageHeightPx;
 
     try {
       // 获取原始图片元数据
@@ -207,13 +204,12 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
         const rotatedWidth = metadata.height;
         const rotatedHeight = metadata.width;
 
-        // 计算自适应宽度：保持旋转后的比例
-        // 公式：(目标高度 / 旋转后原始高度) * 旋转后原始宽度
-        const ratio = targetImageHeightPx / rotatedHeight;
+        // 计算自适应宽度：保持旋转后的比例，缩小 1/3
+        const ratio = scaledImageHeightPx / rotatedHeight;
         finalWidth = rotatedWidth * ratio;
-        finalHeight = targetImageHeightPx;
+        finalHeight = scaledImageHeightPx;
 
-        console.log("[Excel] 图片旋转并调整尺寸:", {
+        console.log("[Excel] 图片旋转并调整尺寸（缩小1/3）:", {
           rotatedWidth,
           rotatedHeight,
           ratio,
@@ -221,15 +217,18 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
           finalHeight,
         });
 
-        // 旋转图片
-        const rotatedBuffer = await sharp(buffer).rotate(90).toBuffer();
+        // 旋转图片并缩放
+        const rotatedBuffer = await sharp(buffer)
+          .rotate(90)
+          .resize(Math.round(finalWidth), Math.round(finalHeight))
+          .toBuffer();
         imageBuffer = Buffer.from(rotatedBuffer);
       }
     } catch (error) {
       console.error("[Excel] 图片处理失败，使用原始图片:", error);
     }
 
-    // 6. 将图片添加到 workbook
+    // 将图片添加到 workbook
     const imageId = workbook.addImage({
       buffer: imageBuffer as any,
       extension: mimeType.split("/")[1] as "png" | "jpeg" | "gif",
@@ -237,20 +236,20 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
 
     console.log("[Excel] 图片已添加到 workbook，imageId:", imageId);
 
-    // 7. 插入图片
+    // 插入图片到 K6 位置，跨越到 L22
     worksheet.addImage(imageId, {
       tl: {
-        col: col - 1, // 列索引从 0 开始，所以要 -1
-        row: row - 1,  // 行索引从 0 开始，所以要 -1
+        col: col - 1, // K列（索引从0开始）
+        row: row - 1,  // 第6行
       },
       ext: {
-        width: finalWidth,            // 宽度根据比例自适应
-        height: finalHeight,          // 高度等于 K9 到 L9 的宽度
+        width: finalWidth,     // L列
+        height: finalHeight,  // 第22行
       },
-      editAs: "oneCell", // 图片随单元格移动/缩放
+      editAs: "oneCell",
     });
 
-    console.log("[Excel] 图片插入完成，位置:", targetCellAddr, "尺寸:", { width: finalWidth, height: finalHeight });
+    console.log("[Excel] 图片插入完成，位置: K6-L22, 尺寸:", { width: finalWidth, height: finalHeight });
   }
 
   // 4. 生成并返回 Buffer（注意：这必须在 all rows 处理完之后！）
