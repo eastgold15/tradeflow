@@ -168,41 +168,39 @@ export function CreateTemplateModal({
 
   // 提交表单
   const onSubmit = async (data: TemplateFormValues) => {
-    try {
-      const submitData = {
-        name: data.name.trim(),
-        masterCategoryId: data.masterCategoryId,
-        // ...(data.siteCategoryId && { siteCategoryId: data.siteCategoryId }),
-        fields: data.fields.map((f) => ({
-          ...(f.id && { id: f.id }), // 🔥 传回 field.id，用于更新而非删除重建
-          key: f.key,
-          inputType: f.inputType,
-          isRequired: f.isRequired,
-          isSkuSpec: f.isSkuSpec,
-          value: f.value,
-          ...(f.options &&
-            f.options.length > 0 && {
-            options: f.options,
-          }),
-        })),
-      };
 
-      if (isEdit) {
-        await updateMutation.mutateAsync({
-          id: editingTemplate.id,
-          data: submitData,
-        });
-        toast.success("模版更新成功");
-      } else {
-        await createMutation.mutateAsync(submitData);
-        toast.success("模版创建成功");
-      }
+    const submitData = {
+      name: data.name.trim(),
+      masterCategoryId: data.masterCategoryId,
+      // ...(data.siteCategoryId && { siteCategoryId: data.siteCategoryId }),
+      fields: data.fields.map((f) => ({
+        ...(f.id && { id: f.id }), // 🔥 传回 field.id，用于更新而非删除重建
+        key: f.key,
+        inputType: f.inputType,
+        isRequired: f.isRequired,
+        isSkuSpec: f.isSkuSpec,
+        value: f.value,
+        ...(f.options &&
+          f.options.length > 0 && {
+          options: f.options,
+        }),
+      })),
+    };
 
-      onSuccess?.();
-      handleOpenChange(false);
-    } catch (error: any) {
-      toast.error(error?.message || "操作失败");
+    if (isEdit) {
+      await updateMutation.mutateAsync({
+        id: editingTemplate.id,
+        data: submitData,
+      });
+      toast.success("模版更新成功");
+    } else {
+      await createMutation.mutateAsync(submitData);
+      toast.success("模版创建成功");
     }
+
+    onSuccess?.();
+    handleOpenChange(false);
+
   };
 
   const handleOpenChange = (isOpen: boolean) => {

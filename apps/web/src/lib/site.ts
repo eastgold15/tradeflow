@@ -71,10 +71,21 @@ export async function getSiteByDomain(domain: string): Promise<Site | null> {
  * 从请求头中获取站点信息
  * @param headers - Next.js 请求头
  * @returns 站点信息，如果找不到则返回 null
+ *
+ * 注意：优先使用 proxy.ts 注入的 x-site-domain 请求头
+ * 该请求头已经经过了规范化处理，包含了本地环境的兜底逻辑
  */
 export async function getSiteFromHeaders(
   headers: Headers
 ): Promise<Site | null> {
+  // 优先使用 proxy.ts 注入的规范化域名
+  const siteDomain = headers.get("x-site-domain");
+
+  if (siteDomain) {
+    return getSiteByDomain(siteDomain);
+  }
+
+  // 兜底：如果没有 x-site-domain，尝试直接从 host 获取
   const rawHost = headers.get("host") || headers.get("x-forwarded-host") || "";
   return getSiteByDomain(rawHost);
 }

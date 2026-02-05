@@ -60,6 +60,12 @@ export function useCreateTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
     },
+    onError: (error: any) => {
+      // 支持 RFC 7807 Problem Details 格式和普通错误格式
+      // error.detail 是 Problem Details 标准字段
+      const errorMessage = error?.detail || error?.message || error?.title || "创建模板失败";
+      toast.error(errorMessage);
+    },
   });
 }
 

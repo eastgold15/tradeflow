@@ -890,7 +890,7 @@ export const seoConfigTable = p.pgTable("seo_config", {
 
   // 基本信息
   name: p.varchar("name", { length: 200 }).notNull(), // 配置名称，如 "首页 SEO", "产品列表页 SEO"
-  code: p.varchar("code", { length: 100 }).unique().notNull(), // 唯一标识，如 "home", "product-list"
+  code: p.varchar("code", { length: 100 }).notNull(), // 唯一标识，如 "home", "product-list"
 
   // 页面类型和路径
   pageType: p.varchar("page_type", { length: 50 }).notNull(), // 页面类型：home, product, category, inquiry, custom

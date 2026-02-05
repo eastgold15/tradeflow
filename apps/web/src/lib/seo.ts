@@ -42,8 +42,14 @@ export async function getSeoMetadata(
       return fallback || getDefaultMetadata();
     }
 
+    // 1. 定义 metadataBase（区分本地开发和线上环境）
+    const metadataBase = process.env.NODE_ENV === 'production'
+      ? new URL(process.env.DOMAIN!) // 替换成你的线上域名（比如 https://www.example.com）
+      : new URL('http://localhost:3000'); // 本地开发地址（对应你的 Next.js 启动端口）
+
     // 3. 构建完整的 Metadata
     const metadata: Metadata = {
+      metadataBase,
       title: config.title || undefined,
       description: config.description || undefined,
       keywords: config.keywords || undefined,

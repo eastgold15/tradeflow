@@ -7,8 +7,13 @@ export const useNavAction = () => {
 
   /**
    * 生成标准分类路径（使用 slug）
+   * 移除 slug 中可能存在的前导斜杠，避免双斜杠问题
    */
-  const getCategoryHref = useCallback((slug: string) => `/category/${slug}`, []);
+  const getCategoryHref = useCallback((slug: string) => {
+    // 移除前导斜杠，防止产生双斜杠
+    const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+    return `/category/${cleanSlug}`;
+  }, []);
 
   /**
    * 处理导航动作（包含副作用：滚动、关闭菜单）
