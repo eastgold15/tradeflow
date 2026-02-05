@@ -231,58 +231,7 @@ export function EditSKUModal({
                 <CardTitle className="text-sm">价格信息</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>售价 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            min={0}
-                            placeholder="0.00"
-                            step={0.01}
-                            type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                Number.parseFloat(e.target.value) || 0
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>库存 *</FormLabel>
-                        <FormControl>
-                          <Input
-                            min={0}
-                            placeholder="0"
-                            type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(
-                                Number.parseInt(e.target.value, 10) || 0
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <FormField
                     control={form.control}
                     name="marketPrice"
@@ -312,10 +261,35 @@ export function EditSKUModal({
 
                   <FormField
                     control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>批发价 *</FormLabel>
+                        <FormControl>
+                          <Input
+                            min={0}
+                            placeholder="0.00"
+                            step={0.01}
+                            type="number"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(
+                                Number.parseFloat(e.target.value) || 0
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="costPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>成本价</FormLabel>
+                        <FormLabel>出厂价</FormLabel>
                         <FormControl>
                           <Input
                             min={0}
@@ -328,6 +302,32 @@ export function EditSKUModal({
                                 e.target.value
                                   ? Number.parseFloat(e.target.value)
                                   : undefined
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="stock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>库存 *</FormLabel>
+                        <FormControl>
+                          <Input
+                            min={0}
+                            placeholder="0"
+                            type="number"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(
+                                Number.parseInt(e.target.value, 10) || 0
                               )
                             }
                           />

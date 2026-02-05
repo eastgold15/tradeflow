@@ -378,11 +378,11 @@ export function CreateSKUModal({
                             {currentProduct?.specs?.map((spec) => (
                               <TableHead key={spec.key}>{spec.label}</TableHead>
                             ))}
+                            <TableHead className="w-25">零售价</TableHead>
                             <TableHead className="w-25">
-                              销售价 *
+                              批发价 *
                             </TableHead>
-                            <TableHead className="w-[100px]">市场价</TableHead>
-                            <TableHead className="w-[100px]">成本价</TableHead>
+                            <TableHead className="w-25">出厂价</TableHead>
                             <TableHead className="w-[80px]">库存 *</TableHead>
                             <TableHead className="w-[80px]">重量</TableHead>
                             <TableHead className="w-[80px]">体积</TableHead>
@@ -413,29 +413,7 @@ export function CreateSKUModal({
                                 </TableCell>
                               ))}
 
-                              {/* 销售价 */}
-                              <TableCell>
-                                <FormField
-                                  control={form.control}
-                                  name={`skus.${index}.price`}
-                                  render={({ field }) => (
-                                    <Input
-                                      {...field}
-                                      className="h-8 w-full"
-                                      min={0}
-                                      onChange={(e) =>
-                                        field.onChange(
-                                          Number.parseFloat(e.target.value) || 0
-                                        )
-                                      }
-                                      step={0.01}
-                                      type="number"
-                                    />
-                                  )}
-                                />
-                              </TableCell>
-
-                              {/* 市场价 */}
+                              {/* 零售价 */}
                               <TableCell>
                                 <FormField
                                   control={form.control}
@@ -457,7 +435,29 @@ export function CreateSKUModal({
                                 />
                               </TableCell>
 
-                              {/* 成本价 */}
+                              {/* 批发价 */}
+                              <TableCell>
+                                <FormField
+                                  control={form.control}
+                                  name={`skus.${index}.price`}
+                                  render={({ field }) => (
+                                    <Input
+                                      {...field}
+                                      className="h-8 w-full"
+                                      min={0}
+                                      onChange={(e) =>
+                                        field.onChange(
+                                          Number.parseFloat(e.target.value) || 0
+                                        )
+                                      }
+                                      step={0.01}
+                                      type="number"
+                                    />
+                                  )}
+                                />
+                              </TableCell>
+
+                              {/* 出厂价 */}
                               <TableCell>
                                 <FormField
                                   control={form.control}
@@ -547,7 +547,7 @@ export function CreateSKUModal({
 
                               {/* SKU 预览 */}
                               <TableCell>
-                                <span className="block max-w-[150px] truncate text-muted-foreground text-xs">
+                                <span className="block max-w-37.5 truncate text-muted-foreground text-xs">
                                   {form.watch("baseSkuCode")
                                     ? `${form.watch("baseSkuCode")}-${String(index + 1).padStart(3, "0")}`
                                     : "-"}
@@ -580,10 +580,10 @@ export function CreateSKUModal({
                       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
 
 
-                        {/* 市场价 */}
+                        {/* 零售价 */}
                         <div className="space-y-2">
                           <label className="text-muted-foreground text-xs">
-                            统一市场价
+                            统一零售价
                           </label>
                           <Input
                             min={0}
@@ -597,10 +597,10 @@ export function CreateSKUModal({
                             type="number"
                           />
                         </div>
-                        {/* 销售价 */}
+                        {/* 批发价 */}
                         <div className="space-y-2">
                           <label className="text-muted-foreground text-xs">
-                            统一销售价
+                            统一批发价
                           </label>
                           <Input
                             min={0}
@@ -615,10 +615,10 @@ export function CreateSKUModal({
                           />
                         </div>
 
-                        {/* 成本价 */}
+                        {/* 出厂价 */}
                         <div className="space-y-2">
                           <label className="text-muted-foreground text-xs">
-                            统一成本价
+                            统一出厂价
                           </label>
                           <Input
                             min={0}

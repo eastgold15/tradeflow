@@ -378,7 +378,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
             {/* 数量与支付 */}
             <div className="mb-8 space-y-6">
               <div>
-                <span className="mb-2 block font-bold text-[10px] text-gray-500 uppercase tracking-widest">Quantity</span>
+
+                <div className="flex justify-between items-center">
+
+                  <span className="font-bold text-[10px] text-gray-500 uppercase tracking-widest">Quantity</span>
+
+                  <span className="text-gray-500 font-bold text-[10px]  tracking-widest">Please choose QTY & Payment term</span>
+                </div>
                 <div className="flex items-center gap-2 border border-gray-200 px-2 py-1">
                   <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50 transition-colors" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
                     <Minus className="h-4 w-4 text-gray-600" />
@@ -416,6 +422,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
                 <ChevronDown className="pointer-events-none absolute right-4 bottom-3.5 h-4 w-4 text-gray-500" />
               </div>
             </div>
+
+            <p className="text-gray-500  tracking-widest  text-sm text-center" tracking-widest>  push below button for <b className="font-bold text text-lg" > discount offer</b></p>
+
 
             <button
               className="w-full bg-black py-4 font-bold text-[11px] text-white uppercase tracking-[0.2em] transition-colors hover:bg-gray-800"

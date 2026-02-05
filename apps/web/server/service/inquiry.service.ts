@@ -40,6 +40,72 @@ import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service
 
 import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inquiry-resend";
 
+
+type Exporter = {
+  // 唯一标识 ID
+  id: string;
+  // 创建时间（ISO 格式字符串）
+  createdAt: string;
+  // 更新时间（ISO 格式字符串）
+  updatedAt: string;
+  // 租户 ID
+  tenantId: string;
+  // 父级 ID（可为 null，表示无父级）
+  parentId: string | null;
+  // 企业名称
+  name: string;
+  // 企业编码
+  code: string;
+  // 企业分类（此处为固定值 "group"，也可扩展为联合类型）
+  category: string; // 若需严格约束，可改为：category: "group" | "company" | "branch";
+  // 企业地址
+  address: string;
+  // 联系电话
+  contactPhone: string;
+  // 企业 logo（可为 null，表示无 logo）
+  logo: string | null;
+  // 扩展字段（可为 null，表示无扩展信息）
+  extensions: unknown | null; // 若知道扩展字段结构，可替换 unknown 为具体类型
+  // 是否正在合作
+  isCooperating: boolean;
+  // 是否启用
+  isActive: boolean;
+  // 企业邮箱
+  email: string;
+}
+
+type Factory = {
+  // 唯一标识 ID
+  id: string;
+  // 创建时间（ISO 格式字符串）
+  createdAt: string;
+  // 更新时间（ISO 格式字符串）
+  updatedAt: string;
+  // 租户 ID
+  tenantId: string;
+  // 父级 ID（此处为具体字符串，兼容之前的 null 场景，保证通用性）
+  parentId: string | null;
+  // 企业/工厂名称
+  name: string;
+  // 企业编码
+  code: string;
+  // 企业分类（目前出现 factory/group，做字面量联合约束，提升类型安全）
+  category: "factory" | "group";
+  // 企业详细地址
+  address: string;
+  // 联系电话
+  contactPhone: string;
+  // 企业 Logo（无则为 null，暂定义为 string | null，后续有文件路径可直接适配）
+  logo: string | null;
+  // 扩展字段（无则为 null，未知结构用 unknown，比 any 更安全）
+  extensions: unknown | null;
+  // 是否正在合作
+  isCooperating: boolean;
+  // 是否启用
+  isActive: boolean;
+  // 企业邮箱
+  email: string;
+}
 // 外部业务工具
 // 类型定义
 type TransactionFn = Parameters<(typeof db)["transaction"]>[0];
@@ -548,8 +614,8 @@ export class InquiryService {
     inquiry: Inquiry,
     siteProduct: SiteProduct,
     siteSku: SiteSku,
-    exporter: any,
-    factories: any[],
+    exporter: Exporter,
+    factories: Factory[],
     tenant: any,
     siteWeb: string,
     photo: any
@@ -559,16 +625,16 @@ export class InquiryService {
 
     return {
       // Exporter (优先使用数据库中的值)
-      exporterName: exporter?.name || tenant?.name || "DONG QI FOOTWEAR INTL MFG CO., LTD",
-      exporterAddr: exporter?.address || tenant?.address || "No.2 Chiling Road, Chiling Industrial Zone, Houjie, Dongguan",
-      exporterPhone: Number.parseInt(exporter?.contactPhone || "0", 10),
-      exporterEmail: exporter?.email || "sales@dongqifootwear.com",
+      exporterName: exporter.name,
+      exporterAddr: exporter.address,
+      exporterPhone: Number.parseInt(exporter.contactPhone || "0", 10),
+      exporterEmail: exporter.email,
       exporterWeb: siteWeb,
 
       // Factory (Dynamic Mapping - 优先使用数据库中的值)
-      factoryName: mainFactory?.name || "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
-      factoryAddr: mainFactory?.address || "Qifu Road #1, ShangOu Industrial Park, Yudu, Ganzhou, Jiangxi, China",
-      factoryEmail: mainFactory?.email || "sales@dongqishoes.com",
+      factoryName: mainFactory.name,
+      factoryAddr: mainFactory.address,
+      factoryEmail: mainFactory.email,
       fatoryWeb: siteWeb, // Keeping typo as per template requirement
       // Factory Address & Web Slots (Safe Fallback)
       factoryAddr1: factories[0]?.address || "",

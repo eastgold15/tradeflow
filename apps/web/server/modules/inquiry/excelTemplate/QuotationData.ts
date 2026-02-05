@@ -30,7 +30,7 @@ export interface QuotationData {
   factoryWeb1?: string;  // 设为可选
   factoryWeb2?: string;  // 设为可选
   factoryWeb3?: string;  // 设为可选
-  factoryPhone: number;
+  factoryPhone: string;
 
   // 🔥 新增字段（兼容新模板）
   factoryAddr?: string;    // FTY ADDR - 工厂地址（合并或单行显示）
@@ -101,7 +101,7 @@ export const quotationDefaultData: QuotationData = {
   factoryWeb2: "www.dongqifootwear.com",
   factoryWeb3: "www.dongqifootwear.com",
   // factoryEmail: "sales@dongqishoes.com",
-  factoryPhone: 1_000_000_000,
+  factoryPhone: "000000000",
   // factoryPhone 未出现，忽略
 
   // === Client (客户) ===
