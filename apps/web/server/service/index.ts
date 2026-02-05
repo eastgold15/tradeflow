@@ -19,3 +19,7 @@ export const inquiryService = new InquiryService();
 
 import { NewsletterService } from "./newsletter.service";
 export const newsletterService = new NewsletterService();
+
+
+import { SeoConfigService } from "./seo-config.service";
+export const seoConfigService = new SeoConfigService();

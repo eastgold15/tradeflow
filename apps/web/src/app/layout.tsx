@@ -4,6 +4,8 @@ import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Metadata } from "next";
+import { getSeoMetadata } from "@/lib/seo";
 
 // 1. 无衬线体：用于正文，极具现代感
 const inter = Inter({
@@ -25,6 +27,13 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-mono",
   display: "swap",
 });
+
+
+export async function generateMetadata(): Promise<Metadata> {
+  // 从数据库获取首页 SEO 配置 (code = "home")
+  return await getSeoMetadata("home");
+}
+
 export default function RootLayout({
   children,
 }: {

@@ -15,6 +15,7 @@ import { newsletterController } from "./_custom/newsletter.controller";
 import { sitecategoriesController } from "./_custom/site-category.controller";
 import { siteConfigController } from "./_custom/site-config.controller";
 import { siteProductsController } from "./_custom/site-products.controller";
+import { seoconfigController } from "./_custom/seoconfig.controller";
 
 export const appRouter = new Elysia({ name: "appRouter" })
   .use(adsController)
@@ -24,4 +25,5 @@ export const appRouter = new Elysia({ name: "appRouter" })
   .use(sitecategoriesController)
   .use(inquiryController)
   .use(newsletterController)
-  .use(siteConfigController);
+  .use(siteConfigController)
+  .use(seoconfigController)

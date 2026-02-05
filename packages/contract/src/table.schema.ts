@@ -883,3 +883,58 @@ export const newsletterSubscriptionTable = p.pgTable(
     unsubscribedAt: p.timestamp("unsubscribed_at"),
   }
 );
+
+// SEO 配置表
+export const seoConfigTable = p.pgTable("seo_config", {
+  ...Audit,
+
+  // 基本信息
+  name: p.varchar("name", { length: 200 }).notNull(), // 配置名称，如 "首页 SEO", "产品列表页 SEO"
+  code: p.varchar("code", { length: 100 }).unique().notNull(), // 唯一标识，如 "home", "product-list"
+
+  // 页面类型和路径
+  pageType: p.varchar("page_type", { length: 50 }).notNull(), // 页面类型：home, product, category, inquiry, custom
+  pathPattern: p.varchar("path_pattern", { length: 500 }), // 路径模式，如 "/products/:id"
+
+  // 租户和站点关联
+  tenantId: p
+    .uuid("tenant_id")
+    .notNull()
+    .references(() => tenantTable.id, { onDelete: "cascade" }),
+  siteId: p
+    .uuid("site_id")
+    .references(() => siteTable.id, { onDelete: "cascade" }),
+
+  // 基础 SEO 字段
+  title: p.varchar("title", { length: 255 }), // 页面标题
+  description: p.text("description"), // 页面描述
+  keywords: p.text("keywords"), // 关键词
+
+  // Open Graph 配置
+  ogTitle: p.varchar("og_title", { length: 255 }), // OG 标题
+  ogDescription: p.text("og_description"), // OG 描述
+  ogImage: p.varchar("og_image", { length: 500 }), // OG 图片 URL
+  ogType: p.varchar("og_type", { length: 50 }).default("website"), // OG 类型
+
+  // Twitter Card 配置
+  twitterCard: p.varchar("twitter_card", { length: 50 }), // summary, summary_large_image
+  twitterTitle: p.varchar("twitter_title", { length: 255 }),
+  twitterDescription: p.text("twitter_description"),
+  twitterImage: p.varchar("twitter_image", { length: 500 }),
+
+  // 结构化数据 (JSON)
+  structuredData: p.json("structured_data").$type<any>(), // JSON-LD 结构化数据
+
+  // 规范链接
+  canonicalUrl: p.varchar("canonical_url", { length: 500 }),
+
+  // 元机器人指令
+  robots: p.varchar("robots", { length: 100 }), // index, noindex, follow, nofollow
+
+  // 优先级和状态
+  priority: p.integer("priority").default(0), // 优先级，数字越大优先级越高
+  isActive: p.boolean("is_active").default(true).notNull(),
+
+  // 备注
+  remark: p.text("remark"),
+});
