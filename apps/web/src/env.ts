@@ -11,7 +11,7 @@ export const env = createEnv({
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
-    DOMAIN: z.string().min(1, "DOMAIN 是必需的"),
+    DOMAIN: z.string().min(1, "DOMAIN 是必需的，他是获取后端数据的关键"),
   },
   client: {},
   runtimeEnv: {
