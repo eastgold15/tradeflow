@@ -26,13 +26,13 @@ export default {
         disallow: ['/api', '/ws'],
       },
     ],
-    // additionalSitemaps: [
-    //   `${SITE_URL}/server-sitemap.xml`, // 动态 sitemap
-    // ],
+    additionalSitemaps: [
+      `${SITE_URL}/api/sitemap-dynamic.xml`, // 动态 sitemap
+    ],
   },
 
   // 静态页面转换
-  transform: async (config, path) => {
+  transform: async (path) => {
     // 首页最高优先级
     if (path === '/') {
       return {

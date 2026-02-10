@@ -162,3 +162,5 @@ packages/contract/src/helper/utils.types.d.ts
 **.exe
 packages/sync-db.bat
 packages/contract/sync-db.bat
+apps/web/public/robots.txt
+apps/web/public/sitemap.xml

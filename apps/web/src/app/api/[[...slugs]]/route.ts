@@ -1,5 +1,6 @@
 import openapi, { fromTypes } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
+import { NextRequest, NextResponse } from "next/server";
 import { appRouter } from "~/controllers/app-router";
 import { dbPlugin } from "~/db/connection";
 import { loggerPlugin } from "~/middleware/logger";
@@ -12,6 +13,9 @@ process.on("unhandledRejection", (reason, promise) => {
 process.on("uncaughtException", (error) => {
   console.error("❌ 未捕获的异常:", error);
 });
+
+
+
 
 /**
  * 使用 server.ts 中定义的服务器实例
@@ -53,7 +57,20 @@ const app = new Elysia({ name: "app", prefix: "/api" })
   // 自动挂载所有控制器（包括自定义和生成的）
   .use(appRouter);
 
-export const GET = app.handle;
+
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  // ✅ 让 Next.js 自己处理 sitemap 和 robots（不交给 Elysia）
+  if (path === '/api/sitemap-dynamic.xml' || path === '/robots.txt') {
+    return NextResponse.next(); // 交给 Next.js 路由系统
+  }
+
+  // 其他请求交给 Elysia
+  return app.handle(request);
+}
+
 export const POST = app.handle;
 export const PUT = app.handle;
 export const DELETE = app.handle;
