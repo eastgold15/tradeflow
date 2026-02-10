@@ -1,4 +1,5 @@
-import { getSiteFromHeaders } from "@/lib/site";
+
+import { getSiteFromEnv } from "@/lib/site";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "~/db/connection";
@@ -11,8 +12,7 @@ export const dynamic = "force-dynamic";
  * 动态服务器端 sitemap - 从数据库获取产品和分类
  */
 export async function GET() {
-  const headersList = await headers();
-  const site = await getSiteFromHeaders(headersList as any);
+  const site = await getSiteFromEnv();
 
   if (!site) {
     return NextResponse.json({ error: "Site not found" }, { status: 404 });

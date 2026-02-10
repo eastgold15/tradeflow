@@ -1,9 +1,10 @@
+// next-sitemap.config.mjs
 /** @type {import('next-sitemap').IConfig} */
 const SITE_URL = process.env.DOMAIN
   ? `https://${process.env.DOMAIN.replace(/:\d+$/, '')}` // 移除端口号
   : 'https://dongqishoes.com';
 
-module.exports = {
+export default {
   siteUrl: SITE_URL,
 
   // 生成 robots.txt
@@ -14,7 +15,7 @@ module.exports = {
   priority: 0.7,
 
   // 排除的路径
-  exclude: ['/api/*', '/ws'],
+  exclude: ['/api/**', '/ws/**', '/_next/**'],
 
   // robots.txt 配置
   robotsTxtOptions: {
@@ -25,9 +26,9 @@ module.exports = {
         disallow: ['/api', '/ws'],
       },
     ],
-    additionalSitemaps: [
-      `${SITE_URL}/server-sitemap.xml`, // 动态 sitemap
-    ],
+    // additionalSitemaps: [
+    //   `${SITE_URL}/server-sitemap.xml`, // 动态 sitemap
+    // ],
   },
 
   // 静态页面转换

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev -p 8001",
     "build": "NODE_ENV=production bun next build",
-    "postbuild": "bun next-sitemap",
+    "postbuild": "next-sitemap --config next-sitemap.config.mjs",
     "start": "NODE_ENV=production bun  next start ",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist .turbo logs  .next"
