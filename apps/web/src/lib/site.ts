@@ -11,7 +11,7 @@ export interface Site {
   name: string;
   siteType: "group" | "factory";
   boundDeptId: string | null;
-  // 其他字段...
+
 }
 
 /**
@@ -28,23 +28,28 @@ export function normalizeDomain(rawHost: string): string {
 }
 
 /**
- * 根据域名获取站点信息
- * @param domain - 域名（可以是原始格式，会自动规范化）
+ * 直接从环境变量获取站点信息
+ * 不再依赖请求头，统一使用环境变量中的 DOMAIN
+ *
  * @returns 站点信息，如果找不到则返回 null
  */
-export async function getSiteByDomain(domain: string): Promise<Site | null> {
-  const normalizedDomain = normalizeDomain(domain);
+export async function getSiteFromEnv(): Promise<Site | null> {
+  // 直接从环境变量获取域名
+  const rawDomain = process.env.DOMAIN;
 
-  // 兜底逻辑：如果是本地地址，使用环境变量
-  const finalDomain =
-    !normalizedDomain ||
-      normalizedDomain === "localhost" ||
-      normalizedDomain === "127.0.0.1"
-      ? normalizeDomain(process.env.DOMAIN || "")
-      : normalizedDomain;
+  if (!rawDomain) {
+    console.error(`[Site] DOMAIN environment variable not found`);
+    console.error(`[Site] Please set DOMAIN in .env.development or .env.production`);
+    return null;
+  }
+
+  // 规范化域名（去除端口号）
+  const finalDomain = normalizeDomain(rawDomain);
+
+  console.log(`[Site] Using domain from environment: "${rawDomain}" -> "${finalDomain}"`);
 
   if (!finalDomain) {
-    console.error("[Site] No domain found in Host header or DOMAIN env");
+    console.error(`[Site] No valid domain found. Raw domain: "${rawDomain}"`);
     return null;
   }
 
@@ -57,35 +62,21 @@ export async function getSiteByDomain(domain: string): Promise<Site | null> {
 
     if (!site) {
       console.error(`[Site] Site not found for domain: "${finalDomain}"`);
+      console.error(`[Site] Please ensure the site exists in the database`);
       return null;
     }
+
+    console.log(`[Site] Found site:`, {
+      id: site.id,
+      name: site.name,
+      domain: site.domain,
+      tenantId: site.tenantId,
+      siteType: site.siteType
+    });
 
     return site as Site;
   } catch (error) {
     console.error(`[Site] Error fetching site for domain "${finalDomain}":`, error);
     return null;
   }
-}
-
-/**
- * 从请求头中获取站点信息
- * @param headers - Next.js 请求头
- * @returns 站点信息，如果找不到则返回 null
- *
- * 注意：优先使用 proxy.ts 注入的 x-site-domain 请求头
- * 该请求头已经经过了规范化处理，包含了本地环境的兜底逻辑
- */
-export async function getSiteFromHeaders(
-  headers: Headers
-): Promise<Site | null> {
-  // 优先使用 proxy.ts 注入的规范化域名
-  const siteDomain = headers.get("x-site-domain");
-
-  if (siteDomain) {
-    return getSiteByDomain(siteDomain);
-  }
-
-  // 兜底：如果没有 x-site-domain，尝试直接从 host 获取
-  const rawHost = headers.get("host") || headers.get("x-forwarded-host") || "";
-  return getSiteByDomain(rawHost);
 }
