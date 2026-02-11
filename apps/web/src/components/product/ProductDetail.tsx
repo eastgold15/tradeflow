@@ -383,7 +383,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
 
                   <span className="font-bold text-[10px] text-gray-500 uppercase tracking-widest">Quantity</span>
 
-                  <span className="text-gray-500 font-bold text-[10px]  tracking-widest">Please choose QTY & Payment term</span>
+                  <span className="text-gray-500 font-bold text-[10px]  tracking-widest"></span>
                 </div>
                 <div className="flex items-center gap-2 border border-gray-200 px-2 py-1">
                   <button className="flex h-10 w-10 items-center justify-center hover:bg-gray-50 transition-colors" onClick={() => setQuantity(q => Math.max(1, q - 1))}>
@@ -423,6 +423,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </div>
             </div>
 
+            <b className="font-bold text text-lg">Please choose QTY & Payment term</b>
             <p className="text-gray-500  tracking-widest  text-sm text-center">push below button for <b className="font-bold text text-lg"> discount wholesale offer</b></p>
 
 
