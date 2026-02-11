@@ -41,8 +41,8 @@ const formSchema = z.object({
   category: z.enum(["group", "factory"]),
   address: z.string().optional(),
   contactPhone: z.string().optional(),
-  siteName: z.string().min(2, "站点名称至少需要2个字符"),
-  domain: z.string().min(2, "站点域名至少需要2个字符"),
+  siteName: z.string().min(2, "网站名称至少需要2个字符"),
+  domain: z.string().min(2, "网站域名至少需要2个字符"),
   adminName: z.string().optional(),
   adminEmail: z.string().optional(),
   adminPassword: z.string().optional(),
@@ -138,59 +138,45 @@ export function EditDepartmentModal({
   }, [initialData, open, form]);
 
   const onSubmit = async (data: FormData) => {
-    try {
-      if (!data.id) {
-        form.setError("id", { message: "部门ID缺失，无法更新" });
-        return;
-      }
 
-      const payload = {
-        department: {
-          id: data.id,
-          name: data.departmentName,
-          code: data.departmentCode,
-          category: data.category,
-          parentId: initialData?.department.parentId,
-          address: data.address,
-          contactPhone: data.contactPhone,
-        },
-        site: {
-          name: data.siteName,
-          domain: data.domain,
-          isActive: true,
-        },
-        admin:
-          data.adminName && data.adminEmail
-            ? {
-              id: initialData?.admin?.id,
-              name: data.adminName,
-              email: data.adminEmail,
-              ...(data.adminPassword && { password: data.adminPassword }),
-              phone: data.adminPhone,
-              position: data.adminPosition,
-            }
-            : undefined,
-      };
-
-      await updateDepartment.mutateAsync(payload as any);
-      form.reset();
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error("更新失败:", error);
-      const errorMessage = error?.message || String(error);
-
-      // 业务错误反馈
-      if (
-        errorMessage.includes("邮箱") &&
-        errorMessage.includes("已被其他部门使用")
-      ) {
-        form.setError("adminEmail", { message: errorMessage });
-      } else {
-        const genericMessage = error?.response?.data?.message || errorMessage;
-        form.setError("adminEmail", { message: genericMessage });
-      }
+    if (!data.id) {
+      form.setError("id", { message: "部门ID缺失，无法更新" });
+      return;
     }
+
+    const payload = {
+      department: {
+        id: data.id,
+        name: data.departmentName,
+        code: data.departmentCode,
+        category: data.category,
+        parentId: initialData?.department.parentId,
+        address: data.address,
+        contactPhone: data.contactPhone,
+      },
+      site: {
+        name: data.siteName,
+        domain: data.domain,
+        isActive: true,
+      },
+      admin:
+        data.adminName && data.adminEmail
+          ? {
+            id: initialData?.admin?.id,
+            name: data.adminName,
+            email: data.adminEmail,
+            ...(data.adminPassword && { password: data.adminPassword }),
+            phone: data.adminPhone,
+            position: data.adminPosition,
+          }
+          : undefined,
+    };
+
+    await updateDepartment.mutateAsync(payload as any);
+    form.reset();
+    onSuccess?.();
+    onOpenChange(false);
+
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -208,10 +194,10 @@ export function EditDepartmentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-indigo-600" />
-            编辑部门
+            编辑工厂
           </DialogTitle>
           <DialogDescription>
-            编辑部门信息、站点设置和管理员信息
+            编辑部门信息、网站设置和管理员信息
           </DialogDescription>
         </DialogHeader>
 
@@ -228,7 +214,7 @@ export function EditDepartmentModal({
               <div className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2">
                   <Building2 className="h-4 w-4 text-indigo-600" />
-                  <h3 className="font-semibold text-slate-900">部门信息</h3>
+                  <h3 className="font-semibold text-slate-900">工厂信息</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -237,6 +223,7 @@ export function EditDepartmentModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>部门名称 *</FormLabel>
+                        <span className="font-normal text-slate-500">工厂或者出口商的名称</span>
                         <FormControl>
                           <Input placeholder="部门名称" {...field} />
                         </FormControl>
@@ -310,11 +297,11 @@ export function EditDepartmentModal({
                 />
               </div>
 
-              {/* 站点信息 */}
+              {/* 网站信息 */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 border-b pb-2">
                   <Server className="h-4 w-4 text-indigo-600" />
-                  <h3 className="font-semibold text-slate-900">站点信息</h3>
+                  <h3 className="font-semibold text-slate-900">网站信息</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -322,9 +309,9 @@ export function EditDepartmentModal({
                     name="siteName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>站点名称 *</FormLabel>
+                        <FormLabel>网站名称 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="站点名称" {...field} />
+                          <Input placeholder="网站名称" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -335,7 +322,7 @@ export function EditDepartmentModal({
                     name="domain"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>站点域名 *</FormLabel>
+                        <FormLabel>网站域名 *</FormLabel>
                         <FormControl>
                           <Input placeholder="域名" {...field} />
                         </FormControl>
@@ -351,8 +338,8 @@ export function EditDepartmentModal({
                 <div className="flex items-center gap-2 border-b pb-2">
                   <User className="h-4 w-4 text-indigo-600" />
                   <h3 className="font-semibold text-slate-900">
-                    管理员信息{" "}
-                    <span className="font-normal text-slate-500">(可选)</span>
+                    部门管理员信息{" "}
+                    {/* <span className="font-normal text-slate-500">(可选)</span> */}
                   </h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -402,9 +389,9 @@ export function EditDepartmentModal({
                     <FormItem>
                       <FormLabel>
                         登录密码{" "}
-                        <span className="font-normal text-slate-400">
+                        {/* <span className="font-normal text-slate-400">
                           (留空不修改)
-                        </span>
+                        </span> */}
                       </FormLabel>
                       <FormControl>
                         <Input

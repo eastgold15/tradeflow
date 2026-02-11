@@ -1,4 +1,3 @@
-import { randomBytes, scryptSync } from "node:crypto";
 import { HttpError } from "@pori15/logixlysia";
 import {
   type DepartmentContract,
@@ -12,17 +11,6 @@ import { eq, inArray } from "drizzle-orm";
 import { auth } from "~/lib/auth";
 import { type ServiceContext } from "../lib/type";
 
-function generateCompatibleHash(password: string) {
-  const salt = randomBytes(16); // 生成16字节随机盐值
-  const hash = scryptSync(password, salt, 64, {
-    N: 16_384,
-    r: 8,
-    p: 1,
-  });
-
-  // 拼接成 salt_hex : hash_hex 格式
-  return `${salt.toString("hex")}:${hash.toString("hex")}`;
-}
 
 export class DepartmentService {
   public async create(body: DepartmentContract["Create"], ctx: ServiceContext) {
@@ -107,20 +95,22 @@ export class DepartmentService {
 
     // 为每个部门添加管理员信息
     const result = res.map((dept) => {
-      const managers =
+      // 查找所有管理员（用于检测异常情况）
+      const allManagers =
         dept.users?.filter((u) =>
           u.roles?.some((r) => r.name === "工厂管理员" || r.name === "出口商管理员")
-        ) || [];
-      const manager =
-        managers.length > 0
-          ? managers.sort(
-            (a, b) =>
-              new Date(b.updatedAt).getTime() -
-              new Date(a.updatedAt).getTime()
-          )[0]
-          : null;
+        ) ?? [];
 
+      // 业务规则：一个部门只能有一个管理员
+      if (allManagers.length > 1) {
+        throw new HttpError.BadRequest(
+          `部门 "${dept.name}" 发现 ${allManagers.length} 个管理员，违反业务规则（一个部门只能有一个管理员）`
+        );
+      }
+
+      const manager = allManagers[0] ?? null;
       const { users, ...deptWithoutUsers } = dept;
+
       return {
         ...deptWithoutUsers,
         manager: manager
@@ -209,14 +199,16 @@ export class DepartmentService {
     });
   }
 
+  /**
+   * 获取部门详情
+   * 业务规则：一个部门只能有一个管理员，如果发现多个则抛出异常
+   */
   public async detail(id: string, ctx: ServiceContext) {
     console.log("=== Department Detail Debug ===");
     console.log("查询部门 ID:", id);
 
     const department = await ctx.db.query.departmentTable.findFirst({
-      where: {
-        id,
-      },
+      where: { id },
       with: {
         users: {
           with: {
@@ -231,28 +223,24 @@ export class DepartmentService {
       throw new HttpError.NotFound(`Department (ID: ${id})：不存在`);
     }
 
-    console.log("部门用户数量:", department.users?.length || 0);
-    console.log("所有用户:", JSON.stringify(department.users, null, 2));
+    // 查找所有管理员（用于检测异常情况）
+    const allManagers = department.users?.filter(
+      (user) =>
+        user.roles.some(
+          (role) => role.name === "工厂管理员" || role.name === "出口商管理员"
+        ) && user.isActive
+    ) ?? [];
 
-    // 选择最新创建/更新的管理员，而不是第一个
-    const managers =
-      department.users?.filter(
-        (user) =>
-          user.roles.some((role) => role.name === "工厂管理员" || role.name === "出口商管理员") && user.isActive
-      ) || [];
+    // 业务规则：一个部门只能有一个管理员
+    if (allManagers.length > 1) {
+      throw new HttpError.BadRequest(
+        `部门 "${department.name}" 发现 ${allManagers.length} 个管理员，违反业务规则（一个部门只能有一个管理员）`
+      );
+    }
 
-    // 按 updatedAt 降序排序，选择最新的
-    const manager =
-      managers.length > 0
-        ? managers.sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        )[0]
-        : null;
+    const manager = allManagers[0] ?? null;
 
-    console.log("找到的管理员:", JSON.stringify(manager, null, 2));
-
-    const result = {
+    return {
       ...department,
       manager: manager
         ? {
@@ -263,9 +251,6 @@ export class DepartmentService {
         }
         : null,
     };
-
-    console.log("返回的部门详情:", JSON.stringify(result, null, 2));
-    return result;
   }
 
   /**
@@ -359,10 +344,11 @@ export class DepartmentService {
 
     console.log("新管理员创建完成，userId:", adminUserId);
 
-    // 步骤3：分配角色给用户
+    // 步骤3：根据部门类型分配角色给用户
+    const roleName = dept.category === "factory" ? "工厂管理员" : "出口商管理员";
     const role = await db.query.roleTable.findFirst({
       where: {
-        name: "工厂管理员",
+        name: roleName,
       },
     });
 
@@ -374,6 +360,8 @@ export class DepartmentService {
           roleId: role.id,
         })
         .onConflictDoNothing();
+    } else {
+      throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
     }
 
     // 构造返回结果
@@ -501,13 +489,20 @@ export class DepartmentService {
         });
       }
 
-      // 如果没传 ID，或者按 ID 没找到，则查找当前部门下是否已经有任何用户
+      // 如果没传 ID，或者按 ID 没找到，则查找当前部门下的管理员用户
       if (!targetUser) {
-        targetUser = await db.query.userTable.findFirst({
+        const deptUsers = await db.query.userTable.findMany({
           where: {
             deptId: departmentId,
           },
+          with: {
+            roles: true,
+          },
         });
+        // 查找具有管理员角色的用户
+        targetUser = deptUsers.find((u) =>
+          u.roles.some((r) => r.name === "工厂管理员" || r.name === "出口商管理员")
+        ) ?? null;
       }
 
       if (targetUser) {
@@ -589,10 +584,11 @@ export class DepartmentService {
         console.log("新管理员创建完成，userId:", adminInfo.id);
       }
 
-      // 步骤3：分配角色给用户
+      // 步骤3：根据部门类型分配角色给用户
+      const roleName = dept.category === "factory" ? "工厂管理员" : "出口商管理员";
       const role = await db.query.roleTable.findFirst({
         where: {
-          name: "工厂管理员",
+          name: roleName,
         },
       });
 
@@ -604,6 +600,8 @@ export class DepartmentService {
             roleId: role.id,
           })
           .onConflictDoNothing();
+      } else {
+        throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
       }
     }
 

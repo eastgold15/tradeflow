@@ -146,15 +146,15 @@ export default function UsersPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-bold text-2xl text-slate-900">部门管理</h1>
+              <h1 className="font-bold text-2xl text-slate-900">工厂管理</h1>
               <p className="mt-1 text-slate-500">
-                管理您的组织架构，创建部门和站点
+                管理您的组织架构，创建工厂和网站
               </p>
             </div>
             <HasRole role={["super_admin", "出口商管理员", "工厂管理员"]}>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2" size={18} />
-                创建部门
+                创建工厂
               </Button>
             </HasRole>
           </div>
@@ -169,9 +169,9 @@ export default function UsersPage() {
           ) : departments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Building2 className="mb-4 h-12 w-12 text-slate-300" />
-              <h3 className="mb-2 font-semibold text-slate-900">暂无部门</h3>
+              <h3 className="mb-2 font-semibold text-slate-900">暂无工厂</h3>
               <p className="mb-4 text-center text-slate-500">
-                您还没有创建任何部门。点击下方按钮开始创建您的第一个部门。
+                您还没有创建任何工厂。点击下方按钮开始创建您的第一个工厂。
               </p>
               <HasRole role={["super_admin", "出口商管理员", "工厂管理员"]}>
                 <Button onClick={handleCreate}>
@@ -240,7 +240,7 @@ export default function UsersPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 text-slate-500 text-xs">
                           <Building2 className="h-5 w-5" />
-                          <span>部门</span>
+                          <span>工厂</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button

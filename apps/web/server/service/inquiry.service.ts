@@ -39,6 +39,8 @@ import { generateInquiryNumber } from "~/modules/inquiry/services/dayCount";
 import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service";
 
 import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inquiry-resend";
+import { findSiteProductWithRelations, findSiteSkuWithRelations, SiteProductWithRelations, SiteSkuWithRelations } from "./inquiry.repos";
+import { isImageMedia } from "~/utils/media";
 
 
 type Exporter = {
@@ -261,29 +263,16 @@ export class InquiryService {
     ctx: ServiceContext
   ) {
     // 1. 获取 SiteProduct
-    const siteProduct = await db.query.siteProductTable.findFirst({
-      where: { id: body.siteProductId, siteId: ctx.site.id },
-      with: {
-        product: {
-          with: {
-            media: true,
-            variantMedia: { with: { media: true, attributeValue: true } },
-          },
-        },
-      },
-    });
+    const siteProduct = await findSiteProductWithRelations(ctx.site.id, body.siteProductId);
 
-    if (!siteProduct) throw new HttpError.BadRequest("Product not found in this site");
+    if (!siteProduct) throw new HttpError.BadRequest(`Product not found in this site${body.siteProductId} `);
 
     // 2. 获取 SiteSku (如果存在)
-    let siteSku = null;
-    if (body.siteSkuId) {
-      siteSku = await db.query.siteSkuTable.findFirst({
-        where: { id: body.siteSkuId, siteProductId: body.siteProductId },
-        with: { sku: { with: { media: true } } },
-      });
-      if (!siteSku) throw new HttpError.BadRequest("SKU not found");
-    }
+
+
+    const siteSku = await findSiteSkuWithRelations(siteProduct.id, body.siteSkuId);
+    if (!siteSku) throw new HttpError.BadRequest("SKU not found");
+
 
     // 3. 解析继承逻辑后的有效媒体 ID
     const effectiveMediaId = await this.resolveEffectiveMediaId(
@@ -299,15 +288,27 @@ export class InquiryService {
    * 🎨 解析媒体 ID (三级继承逻辑：SKU > 变体 > 商品)
    */
   private async resolveEffectiveMediaId(
-    siteProduct: any,
-    siteSku: any,
+    siteProduct: SiteProductWithRelations,
+    siteSku: SiteSkuWithRelations,
     preferredMediaId?: string
   ): Promise<string> {
-    const productMediaIds = siteProduct.product.media.map((m: any) => m.id);
-    const ownMediaIds = siteSku?.sku.media.map((m: any) => m.id) || [];
-    let inheritedMediaIds: string[] = [];
+    // 1. 收集所有媒体 ID + URL 映射（用于判断类型）
+    const mediaMap = new Map<string, string>(); // id -> url
 
-    // 尝试识别颜色属性并获取变体媒体
+    // 商品级媒体
+    for (const m of siteProduct.product.media) {
+      mediaMap.set(m.id, m.url);
+    }
+
+    // SKU 媒体
+    if (siteSku?.sku.media) {
+      for (const m of siteSku.sku.media) {
+        mediaMap.set(m.id, m.url);
+      }
+    }
+
+    // 变体媒体（继承）
+    let inheritedMediaIds: string[] = [];
     if (siteSku) {
       const colorInfo = await this.identifyColorAttribute(siteProduct.productId);
       if (colorInfo) {
@@ -317,21 +318,56 @@ export class InquiryService {
           const attrValId = await this.getAttributeValueId(colorInfo.keyId, colorValue);
           if (attrValId) {
             inheritedMediaIds = siteProduct.product.variantMedia
-              .filter((vm: any) => vm.attributeValueId === attrValId)
-              .map((vm: any) => vm.mediaId);
+              .filter((vm) => vm.attributeValueId === attrValId)
+              .map((vm) => vm.mediaId);
+
+            // 加入 mediaMap
+            for (const vm of siteProduct.product.variantMedia) {
+              if (vm.attributeValueId === attrValId) {
+                mediaMap.set(vm.mediaId, vm.media!.url);
+              }
+            }
           }
         }
       }
     }
 
-    // 构建所有有效 ID 集合
-    const validIds = new Set([...ownMediaIds, ...inheritedMediaIds, ...productMediaIds]);
+    // 2. 构建候选 ID 列表（按优先级）
+    const candidateIds: string[] = [];
 
-    // 优先级策略
-    if (preferredMediaId && validIds.has(preferredMediaId)) {
-      return preferredMediaId;
+    // 优先：用户指定的 preferredMediaId（如果是图片）
+    if (preferredMediaId && mediaMap.has(preferredMediaId)) {
+      const url = mediaMap.get(preferredMediaId)!;
+      if (isImageMedia(url)) {
+        return preferredMediaId; // ✅ 直接返回
+      }
     }
-    return ownMediaIds[0] || inheritedMediaIds[0] || productMediaIds[0];
+
+    // 按优先级收集所有图片 ID
+    const addImageIds = (ids: string[]) => {
+      for (const id of ids) {
+        const url = mediaMap.get(id);
+        if (url && isImageMedia(url)) {
+          candidateIds.push(id);
+        }
+      }
+    };
+
+    // 顺序：SKU → 变体 → 商品
+    if (siteSku?.sku.media) {
+      addImageIds(siteSku.sku.media.map(m => m.id));
+    }
+    addImageIds(inheritedMediaIds);
+    addImageIds(siteProduct.product.media.map(m => m.id));
+
+    // 3. 返回第一个有效图片
+    if (candidateIds.length > 0) {
+      return candidateIds[0];
+    }
+
+    // 4. 如果没有图片，但有媒体，返回第一个（可能是视频，作为兜底）
+    const allIds = Array.from(mediaMap.keys());
+    return allIds[2]
   }
 
 
@@ -442,26 +478,27 @@ export class InquiryService {
     console.log('tenantId:', tenantId);
     console.log('categoryIds:', categoryIds);
 
-    // 获取站点的合作状态（需要查询 department 表）
-    const siteDept = await tx.query.departmentTable.findFirst({
+    // 获取站点的部门合作状态（需要查询 department 表）
+    const Dept = await tx.query.departmentTable.findFirst({
       where: { id: boundDeptId },
       columns: { id: true, name: true, isCooperating: true, parentId: true, category: true },
     });
 
-    if (!siteDept) {
+    if (!Dept) {
       console.log('❌ 未找到站点部门信息');
       return null;
     }
 
-    console.log('站点部门:', siteDept.name);
-    console.log('工厂合作状态:', siteDept.isCooperating ? '✅ 已合作' : '❌ 未合作');
+    console.log('站点部门:', Dept.name);
+    console.log('工厂合作状态:', Dept.isCooperating ? '✅ 已合作' : '❌ 未合作');
 
-    // 查询所有责任记录
+    // 查询当前站点所有责任记录  
     const responsibilities = await tx.query.salesResponsibilityTable.findMany({
       where: {
         masterCategoryId: {
           in: categoryIds
         },
+        siteId,
         tenantId,
         isAutoAssign: true,
       },
@@ -474,19 +511,19 @@ export class InquiryService {
     let targetDeptId: string | null = null;
     let assignmentReason = '';
 
-    if (siteDept.isCooperating) {
+    if (Dept.isCooperating) {
       // 已合作：优先分配给当前工厂的业务员
       targetDeptId = boundDeptId;
       assignmentReason = '工厂已合作，分配给工厂业务员';
     } else {
       // 未合作：分配给出口商的业务员
-      if (siteDept.category === 'group') {
+      if (Dept.category === 'group') {
         // 当前站点本身就是出口商
         targetDeptId = boundDeptId;
         assignmentReason = '当前站点是出口商';
-      } else if (siteDept.parentId) {
+      } else if (Dept.parentId) {
         // 工厂站点，使用父部门（出口商）ID
-        targetDeptId = siteDept.parentId;
+        targetDeptId = Dept.parentId;
         assignmentReason = '工厂未合作，分配给出口商业务员';
       } else {
         // 没有父部门，使用当前部门
