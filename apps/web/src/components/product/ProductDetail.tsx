@@ -309,7 +309,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
             <h1 className="mb-2 font-serif text-5xl text-black italic leading-tight">{siteProduct.name}</h1>
 
             <div className="mb-8 font-light text-lg">
-              USD/PAIR:{" "}
+              RETAIL PRICE:{" "}
               <span className="font-medium text-black">
                 {currentSku ? `USD ${Number(currentSku.price).toFixed(2)}` : "Select options for price"}
               </span>
@@ -423,9 +423,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </div>
             </div>
 
+<<<<<<< HEAD
             <p className="text-gray-500  tracking-widest  text-sm text-center" tracking-widest>push below button for
               <b className="font-bold text text-sm md:text-lg"> discount offer</b>
             </p>
+=======
+            <p className="text-gray-500  tracking-widest  text-sm text-center" tracking-widest>  push below button for <b className="font-bold text text-lg" > discount wholesale offer</b></p>
+>>>>>>> d354875 (```)
 
 
             <button
