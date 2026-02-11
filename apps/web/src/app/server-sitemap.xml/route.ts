@@ -108,7 +108,7 @@ export async function GET() {
   } catch (error) {
     console.error(`[Sitemap] Error:`, error);
     return new NextResponse(
-      `<?xml version="1.0" encoding="UTF-8"?><error>${error.message}</error>`,
+      `<?xml version="1.0" encoding="UTF-8"?><error>${(error as any).message}</error>`,
       {
         status: 500,
         headers: { "Content-Type": "application/xml" },
