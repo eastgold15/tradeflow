@@ -423,7 +423,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </div>
             </div>
 
-            <b className="font-bold text text-lg">Please choose QTY & Payment term</b>
+            <p className="text-center text-gray-500 tracking-widest font-bold text-lg">
+              Please choose QTY & Payment term
+            </p>
             <p className="text-gray-500  tracking-widest  text-sm text-center">push below button for <b className="font-bold text text-lg"> discount wholesale offer</b></p>
 
 
