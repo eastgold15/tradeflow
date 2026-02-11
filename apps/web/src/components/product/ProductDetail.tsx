@@ -423,13 +423,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
               </div>
             </div>
 
-<<<<<<< HEAD
-            <p className="text-gray-500  tracking-widest  text-sm text-center" tracking-widest>push below button for
-              <b className="font-bold text text-sm md:text-lg"> discount offer</b>
-            </p>
-=======
-            <p className="text-gray-500  tracking-widest  text-sm text-center" tracking-widest>  push below button for <b className="font-bold text text-lg" > discount wholesale offer</b></p>
->>>>>>> d354875 (```)
+            <p className="text-gray-500  tracking-widest  text-sm text-center">push below button for <b className="font-bold text text-lg"> discount wholesale offer</b></p>
 
 
             <button
