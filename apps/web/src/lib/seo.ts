@@ -4,11 +4,8 @@
  */
 
 import { Metadata } from "next";
-import { headers } from "next/headers";
-import { and, eq } from "drizzle-orm";
 
 import { db } from "~/db/connection";
-import { seoConfigTable } from "@repo/contract";
 import { getSiteFromEnv } from "./site";
 
 /**
@@ -100,8 +97,10 @@ export async function getSeoMetadata(
     });
 
     // 5. 构建 metadataBase
+    // 确保 domain 不包含协议前缀
+    const cleanDomain = site.domain.replace(/^https?:\/\//, '');
     const metadataBase = process.env.NODE_ENV === 'production'
-      ? new URL(`https://${site.domain}`)
+      ? new URL(`https://${cleanDomain}`)
       : new URL(`http://localhost:8001`);
 
     // 6. 构建完整的 Metadata
