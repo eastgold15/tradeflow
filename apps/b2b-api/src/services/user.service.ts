@@ -302,6 +302,12 @@ export class UserService {
   public async create(body: UserContract["Create"], ctx: ServiceContext) {
     const { db, user } = ctx;
 
+    console.log("=== [UserService.create] 开始 ===");
+    console.log("[DEBUG] 接收到的完整 body:", JSON.stringify(body, null, 2));
+    console.log("[DEBUG] masterCategoryIds:", body.masterCategoryIds);
+    console.log("[DEBUG] masterCategoryIds 类型:", typeof body.masterCategoryIds);
+    console.log("[DEBUG] masterCategoryIds 是否为数组:", Array.isArray(body.masterCategoryIds));
+
     // 使用事务创建用户
     return await db.transaction(async (tx) => {
       // 1. 创建用户（通过 better-auth）

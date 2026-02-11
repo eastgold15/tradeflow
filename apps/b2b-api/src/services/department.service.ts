@@ -204,9 +204,6 @@ export class DepartmentService {
    * 业务规则：一个部门只能有一个管理员，如果发现多个则抛出异常
    */
   public async detail(id: string, ctx: ServiceContext) {
-    console.log("=== Department Detail Debug ===");
-    console.log("查询部门 ID:", id);
-
     const department = await ctx.db.query.departmentTable.findFirst({
       where: { id },
       with: {
@@ -230,6 +227,8 @@ export class DepartmentService {
           (role) => role.name === "工厂管理员" || role.name === "出口商管理员"
         ) && user.isActive
     ) ?? [];
+
+    console.log("筛选出的管理员数量:", allManagers.length);
 
     // 业务规则：一个部门只能有一个管理员
     if (allManagers.length > 1) {
@@ -353,13 +352,16 @@ export class DepartmentService {
     });
 
     if (role) {
+      // 先删除该用户可能存在的旧角色（避免冲突）
       await db
-        .insert(userRoleTable)
-        .values({
-          userId: adminUserId,
-          roleId: role.id,
-        })
-        .onConflictDoNothing();
+        .delete(userRoleTable)
+        .where(eq(userRoleTable.userId, adminUserId));
+
+      // 再插入正确的管理员角色
+      await db.insert(userRoleTable).values({
+        userId: adminUserId,
+        roleId: role.id,
+      });
     } else {
       throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
     }
@@ -593,13 +595,16 @@ export class DepartmentService {
       });
 
       if (role) {
+        // 先删除该用户可能存在的旧角色（避免冲突）
         await db
-          .insert(userRoleTable)
-          .values({
-            userId: adminInfo.id,
-            roleId: role.id,
-          })
-          .onConflictDoNothing();
+          .delete(userRoleTable)
+          .where(eq(userRoleTable.userId, adminInfo.id));
+
+        // 再插入正确的管理员角色
+        await db.insert(userRoleTable).values({
+          userId: adminInfo.id,
+          roleId: role.id,
+        });
       } else {
         throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
       }

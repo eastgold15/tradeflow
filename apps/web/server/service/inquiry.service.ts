@@ -425,9 +425,9 @@ export class InquiryService {
           bccEmails.push(f.email);
         }
       });
-      console.log('✅ 工厂已合作，抄送工厂用户:', factories.map(f => f.email).filter(Boolean));
+      console.log('✅ 工厂已合作，抄送工厂管理员用户:', factories.map(f => f.email).filter(Boolean));
     } else {
-      console.log('⚠️ 工厂未合作，不抄送工厂用户');
+      console.log('⚠️ 工厂未合作，不抄送工厂管理员用户');
     }
 
     // 生成 Excel
@@ -471,6 +471,7 @@ export class InquiryService {
    */
   async findBestSalesperson(categoryIds: string[], ctx: ServiceContext, tx: TxType) {
     const { boundDeptId, tenantId, id: siteId } = ctx.site;
+    ctx.site.id
 
     console.log('=== 🔍 [findBestSalesperson] 开始匹配业务员 ===');
     console.log('站点ID:', siteId);
