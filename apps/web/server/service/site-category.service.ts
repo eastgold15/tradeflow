@@ -207,6 +207,7 @@ export class SiteCategoryService {
     // 标准化 slug：确保有前导斜杠（数据库中存储的是 /new, /flats 等）
     const normalizedSlug = slug.startsWith('/') ? slug : '/' + slug;
 
+
     const res = await ctx.db.query.siteCategoryTable.findFirst({
       where: {
         slug: normalizedSlug,
@@ -227,9 +228,63 @@ export class SiteCategoryService {
     // 标准化 slug：确保有前导斜杠（数据库中存储的是 /new, /flats 等）
     const normalizedSlug = slug.startsWith('/') ? slug : '/' + slug;
 
+
+
     console.log('=== getProductsByCategorySlug 开始 ===');
     console.log('1. 原始 slug:', slug, '标准化后:', normalizedSlug);
     console.log('2. siteId:', ctx.site.id);
+
+    if (normalizedSlug === '/news' || normalizedSlug === '/new') {
+      console.log('>>> 检测到 /news，返回最新商品');
+      const { page = 1, limit = 20 } = query;
+      try {
+        const latestProducts = await ctx.db
+          .select({
+            id: siteProductTable.id,
+            displayName: sql<string>`COALESCE(${siteProductTable.siteName}, ${productTable.name})`,
+            displayDesc: sql<string>`COALESCE(${siteProductTable.siteDescription}, ${productTable.description})`,
+            mainMedia: sql<string>`(
+            SELECT ${mediaTable.url}
+            FROM ${productMediaTable}
+            INNER JOIN ${mediaTable} ON ${mediaTable.id} = ${productMediaTable.mediaId}
+            WHERE ${productMediaTable.productId} = ${productTable.id}
+            ORDER BY ${productMediaTable.sortOrder} ASC
+            LIMIT 1
+          )`,
+            minPrice: min(
+              sql`COALESCE(${siteSkuTable.price}, ${skuTable.price})`
+            ).as("min_price"),
+            spuCode: productTable.spuCode,
+            isFeatured: siteProductTable.isFeatured,
+          })
+          .from(siteProductTable)
+          .innerJoin(productTable, eq(siteProductTable.productId, productTable.id))
+          .innerJoin(skuTable, eq(skuTable.productId, productTable.id))
+          .leftJoin(
+            siteSkuTable,
+            and(
+              eq(siteSkuTable.skuId, skuTable.id),
+              eq(siteSkuTable.siteId, ctx.site.id)
+            )
+          )
+          .where(
+            and(
+              eq(siteProductTable.siteId, ctx.site.id),
+              eq(siteProductTable.isVisible, true)
+            )
+          )
+          .groupBy(siteProductTable.id, productTable.id)
+          .orderBy(desc(productTable.createdAt)) // ⬅️ 按创建时间倒序
+          .limit(limit)
+          .offset((page - 1) * limit);
+
+        return latestProducts;
+      } catch (error) {
+        console.error('❌ 查询最新商品时出错:', error);
+        return [];
+      }
+    }
+
 
     // 先通过 slug 获取分类
     const category = await ctx.db.query.siteCategoryTable.findFirst({
