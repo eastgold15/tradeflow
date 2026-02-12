@@ -40,6 +40,30 @@ async function getSiteConfigValue(key: string): Promise<string | null> {
   }
 }
 
+
+// 获取 Footer 配置数据
+async function getBeianConfig(): Promise<BEIAN_INFO | null> {
+  try {
+    const { data, error } = await rpc.site_config.get({
+      query: {
+        key: SITE_CONFIG_KEY_ENUM.BEIAN_INFO,
+      }
+    })
+
+    if (error) {
+      console.error("Failed to fetch footer config:", error);
+      return null;
+    }
+
+    return data[0]?.jsonValue as BEIAN_INFO
+  } catch (error) {
+    console.error("Error fetching footer config:", error);
+    return null;
+  }
+}
+
+
+
 // Footer 列类型定义
 interface FooterLink {
   label: string;
@@ -62,14 +86,21 @@ interface FooterContent {
   columns: FooterColumn[];
 }
 
+interface BEIAN_INFO {
+  icp: string;
+  police: string;
+  link: string;
+}
+
 export default async function Footer() {
   // 并行获取所有配置数据
-  const [footerContent, copyright, phone, email, qrCode] = await Promise.all([
+  const [footerContent, copyright, phone, email, qrCode, beianConfig] = await Promise.all([
     getFooterConfig(),
     getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_COPYRIGHT),
     getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_PHONE),
     getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_EMAIL),
     getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_ERWEIMA),
+    getBeianConfig(),
   ]);
 
   const columns = footerContent?.columns || [];
@@ -152,10 +183,32 @@ export default async function Footer() {
         {/* 底部版权信息 */}
         <div className="mt-20 border-gray-100 border-t pt-8 text-center text-gray-400 text-xs tracking-wider">
           <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
-            {/* 左侧：版权信息 */}
-            <p>
-              &copy; {new Date().getFullYear()} {copyright || "Your Company"}
-            </p>
+            {/* 左侧：版权信息 + 备案信息 */}
+            <div className="flex flex-col items-start gap-1">
+              <div>
+                &copy; {new Date().getFullYear()} {copyright || "Your Company"}
+              </div>
+              {/* ICP 备案信息 */}
+              <div>
+                {beianConfig && (
+                  <div className="flex items-center gap-2">
+                    {beianConfig.icp && <span>ICP备案号: {beianConfig.icp}</span>}
+                    {beianConfig.police && <span className="ml-2">公安备案号: {beianConfig.police}</span>}
+                    {beianConfig.link && (
+                      <a
+                        href={beianConfig.link}
+                        target="_blank"
+                        rel="nofollow"
+                        className="ml-2 text-blue-400 hover:text-blue-500 transition-colors"
+                      >
+                        备案信息
+                      </a>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
 
             {/* 中间：二维码 */}
             {qrCode && (

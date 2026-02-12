@@ -12,6 +12,9 @@ export const SITE_CONFIG_KEY_ENUM = {
   SITE_EMAIL: "site_email",
   SITE_ERWEIMA: "site_erweima",
 
+  // ICP 备案信息
+  BEIAN_INFO: "beian_info",              // ICP 备案号
+
   // 页面内容配置
   PAGE_ABOUT_CONTENT: "page_about_content",
   PAGE_CONTACT_CONTENT: "page_contact_content",
@@ -38,6 +41,8 @@ export const SITE_CONFIG_KEY_OPTIONS = [
   { value: SITE_CONFIG_KEY_ENUM.PAGE_SIZE_CONTENT, label: "尺码指南" },
   { value: SITE_CONFIG_KEY_ENUM.PAGE_TERMS_CONTENT, label: "服务条款" },
   { value: SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT, label: "页脚内容" },
+  // ICP 备案信息
+  { value: SITE_CONFIG_KEY_ENUM.BEIAN_INFO, label: "备案信息" },
 ] as const;
 
 // ===== 类型定义 =====
