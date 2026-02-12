@@ -431,6 +431,9 @@ export class SkuService {
 
         // 原始价格 (用于前端对比)
         originalPrice: skuTable.price,
+        marketPrice: skuTable.marketPrice,
+        costPrice: skuTable.costPrice,
+
 
         // 上下架状态 (site_sku 控制)
         // 如果 site_sku 没记录，默认为"上架" (或者根据业务定为下架)
