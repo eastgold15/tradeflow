@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Building,
   Building2,
   CheckCircle,
   Loader2,
@@ -211,8 +212,20 @@ export default function UsersPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        <div className="rounded-full bg-green-100 px-2 py-1">
-                          <span className="font-medium text-green-700 text-xs">
+                        <div
+                          className={`rounded-full px-3 py-1 whitespace-nowrap ${
+                            department.category === "group"
+                              ? "bg-purple-100"
+                              : "bg-green-100"
+                          }`}
+                        >
+                          <span
+                            className={`font-medium text-xs ${
+                              department.category === "group"
+                                ? "text-purple-700"
+                                : "text-green-700"
+                            }`}
+                          >
                             {department.category === "group"
                               ? "出口商"
                               : "工厂"}
@@ -238,9 +251,18 @@ export default function UsersPage() {
 
                     <div className="border-slate-100 border-t pt-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-slate-500 text-xs">
-                          <Building2 className="h-5 w-5" />
-                          <span>工厂</span>
+                        <div
+                          className={`flex items-center gap-1 text-xs ${department.category === "group"
+                              ? "text-purple-600"
+                              : "text-slate-500"
+                            }`}
+                        >
+                          {department.category === "group" ? (
+                            <Building className="h-5 w-5" />
+                          ) : (
+                            <Building2 className="h-5 w-5" />
+                          )}
+                          <span>{department.category === "group" ? "出口商" : "工厂"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
