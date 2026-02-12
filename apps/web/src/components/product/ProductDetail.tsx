@@ -311,7 +311,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ siteProduct }) => {
             <div className="mb-8 font-light text-lg">
               RETAIL PRICE:{" "}
               <span className="font-medium text-black">
-                {currentSku ? `USD ${Number(currentSku.price).toFixed(2)}` : "Select options for price"}
+                {currentSku
+                  ? `USD ${Number(currentSku.marketPrice || currentSku.price).toFixed(2)}`
+                  : "Select options for price"}
               </span>
             </div>
 

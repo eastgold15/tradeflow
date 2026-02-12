@@ -448,7 +448,8 @@ export class SiteProductService {
         return {
           id: ss.id,
           skuCode: pSku.skuCode,
-          price: ss.price || pSku.price,
+          price: pSku.marketPrice || pSku.price,  // ← 修改：优先使用市场价，没有则用指导价
+          marketPrice: pSku.marketPrice,  // 保留市场价作为参考
           stock: pSku.stock,
           specJson: specs,
           isActive: ss.isActive,

@@ -103,7 +103,9 @@ export function SkuPanel({
               </TableHead>
               <TableHead className="w-45">SKU 编码</TableHead>
               <TableHead>规格属性</TableHead>
-              <TableHead>价格</TableHead>
+              <TableHead>零售价</TableHead>
+              <TableHead>批发价</TableHead>
+              <TableHead>成本价</TableHead>
               <TableHead>库存</TableHead>
               <TableHead>图片</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -134,7 +136,9 @@ export function SkuPanel({
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>¥{sku.price}</TableCell>
+                <TableCell className="font-medium">¥{sku.marketPrice}</TableCell>
+                <TableCell className="font-medium">¥{sku.price}</TableCell>
+                <TableCell className="font-medium">¥{sku.costPrice}</TableCell>
                 <TableCell>
                   <span
                     className={
