@@ -52,12 +52,12 @@ export class SiteProductService {
         productId: productTable.id,
         spuCode: productTable.spuCode,
 
-        // --- 聚合：最低价 (SiteSku 优先) ---
+        // --- 聚合：最低市场价 (SiteSku 优先) ---
         minPrice: sql<string>`(
-          SELECT MIN(COALESCE(${siteSkuTable.price}, ${skuTable.price}))
+          SELECT MIN(COALESCE(${siteSkuTable.marketPrice}, ${skuTable.marketPrice}))
           FROM ${skuTable}
-          LEFT JOIN ${siteSkuTable} ON 
-            ${siteSkuTable.skuId} = ${skuTable.id} AND 
+          LEFT JOIN ${siteSkuTable} ON
+            ${siteSkuTable.skuId} = ${skuTable.id} AND
             ${siteSkuTable.siteId} = ${ctx.site.id}
           WHERE ${skuTable.productId} = ${productTable.id}
           AND COALESCE(${siteSkuTable.isActive}, true) = true
@@ -451,7 +451,9 @@ export class SiteProductService {
           // 批发价
           price: ss.price || pSku.price,
           //市场价
-          marketPrice: pSku.marketPrice,  // 保留市场价作为参考
+          marketPrice: ss.marketPrice || pSku.marketPrice,
+          //成本价
+          costPrice: ss.costPrice || pSku.costPrice,
           stock: pSku.stock,
           specJson: specs,
           isActive: ss.isActive,

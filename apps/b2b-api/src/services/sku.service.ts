@@ -105,6 +105,8 @@ export class SkuService {
             siteProductId: siteProduct.id,
             skuId: sku.id,
             price: sku.price, // 默认站点价格 = 指导价
+            marketPrice: sku.marketPrice, // 默认站点市场价 = 市场价
+            costPrice: sku.costPrice, // 默认站点成本价 = 成本价
             isActive: true,
           }))
         );
@@ -194,6 +196,8 @@ export class SkuService {
         if (updateFields.weight) physicalUpdate.weight = updateFields.weight;
         if (updateFields.volume) physicalUpdate.volume = updateFields.volume;
         if (updateFields.price) physicalUpdate.price = updateFields.price; // 更新指导价
+        if (updateFields.marketPrice) physicalUpdate.marketPrice = updateFields.marketPrice; // 更新市场价
+        if (updateFields.costPrice) physicalUpdate.costPrice = updateFields.costPrice; // 更新成本价
         if (updateFields.specJson)
           physicalUpdate.specJson = updateFields.specJson;
 
@@ -210,12 +214,16 @@ export class SkuService {
             siteProductId: siteProduct.id,
             skuId: id,
             price: updateFields.price, // 同步价格
+            marketPrice: updateFields.marketPrice, // 同步市场价
+            costPrice: updateFields.costPrice, // 同步成本价
             isActive: true,
           })
           .onConflictDoUpdate({
             target: [siteSkuTable.siteId, siteSkuTable.skuId],
             set: {
               price: updateFields.price,
+              marketPrice: updateFields.marketPrice,
+              costPrice: updateFields.costPrice,
               // 如果工厂想通过 status 字段控制上下架，也可以在这里更新 isActive
             },
           });
@@ -247,6 +255,8 @@ export class SkuService {
         // 准备更新数据
         const siteUpdateData: any = {};
         if (updateFields.price) siteUpdateData.price = updateFields.price;
+        if (updateFields.marketPrice) siteUpdateData.marketPrice = updateFields.marketPrice;
+        if (updateFields.costPrice) siteUpdateData.costPrice = updateFields.costPrice;
         // 如果 body 里有 status 字段，可以映射为 isActive
         // if (updateFields.status !== undefined) siteUpdateData.isActive = updateFields.status === 1;
 

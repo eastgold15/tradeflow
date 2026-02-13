@@ -712,6 +712,8 @@ export const siteSkuTable = p.pgTable(
 
     // 站点覆写数据
     price: p.decimal("price", { precision: 10, scale: 2 }), // 站点自定义价格，为空则继承原价
+    marketPrice: p.decimal("market_price", { precision: 10, scale: 2 }), // 站点自定义市场价，为空则继承原市场价
+    costPrice: p.decimal("cost_price", { precision: 10, scale: 2 }), // 站点自定义成本价，为空则继承原成本价
     isActive: p.boolean("is_active").default(true), // 站点是否上架此规格
   },
   (t) => [uniqueIndex("uk_site_sku_unique").on(t.siteId, t.skuId)]

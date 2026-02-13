@@ -252,7 +252,7 @@ export class SiteCategoryService {
             LIMIT 1
           )`,
             minPrice: min(
-              sql`COALESCE(${siteSkuTable.price}, ${skuTable.price})`
+              sql`COALESCE(${siteSkuTable.marketPrice}, ${skuTable.marketPrice})`
             ).as("min_price"),
             spuCode: productTable.spuCode,
             isFeatured: siteProductTable.isFeatured,
@@ -346,7 +346,7 @@ export class SiteCategoryService {
             LIMIT 1
           )`,
           minPrice: min(
-            sql`COALESCE(${siteSkuTable.price}, ${skuTable.price})`
+            sql`COALESCE(${siteSkuTable.marketPrice}, ${skuTable.marketPrice})`
           ).as("min_price"),
           spuCode: productTable.spuCode,
           isFeatured: siteProductTable.isFeatured,
