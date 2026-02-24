@@ -90,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         )}
 
         <p className="font-bold text-xs tracking-widest">
-          USD {product.minPrice?.toLocaleString() ?? "N/A"}
+          RETAIL USD {product.minPrice?.toLocaleString() ?? "N/A"}
         </p>
       </div>
     </Link>
