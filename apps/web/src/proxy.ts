@@ -1,19 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { normalizeDomain } from "@/lib/site";
-import { SERVER_URL_KEY } from "./lib/utils/constants";
 
 /**
  * Next.js Proxy - 统一处理站点解析与请求转发
  * 代替已废弃的 middleware.ts
+ *
+ * 职责：
+ * 1. 解析域名并规范化
+ * 2. 注入 x-site-domain 请求头，供：
+ *    - Next.js Server Components 使用
+ *    - Elysia siteMiddleware 复用（避免重复计算）
  */
 export default function proxy(request: NextRequest) {
   // 1. 准备新的请求头（基于原始请求头）
   const requestHeaders = new Headers(request.headers);
 
-  // 2. 处理 URL 注入 (SERVER_URL_KEY)
-  requestHeaders.set(SERVER_URL_KEY, request.url);
-
-  // 3. 站点解析逻辑 (Domain Handling)
+  // 2. 站点解析逻辑 (Domain Handling) - 统一入口，避免重复计算
   const rawHost = request.headers.get("host") || request.headers.get("x-forwarded-host") || "";
   const domain = normalizeDomain(rawHost);
 
@@ -23,11 +25,12 @@ export default function proxy(request: NextRequest) {
       ? normalizeDomain(process.env.DOMAIN || "default-domain.com")
       : domain;
 
-  // 注入域名信息到请求头，供服务器组件中的 generateMetadata 或其他 Service 调用
+  // 注入域名信息到请求头，供后续使用：
+  // - Next.js Server Components (generateMetadata, etc.)
+  // - Elysia siteMiddleware (直接读取，避免重复计算)
   requestHeaders.set("x-site-domain", finalDomain);
 
-  // 4. 返回响应
-  // 注意：在 Next.js 16 中，通过 NextResponse.next({ request: { headers: ... } }) 
+  // 3. 返回响应
   // 可以确保这些 headers 被传递给后续的 Server Components
   return NextResponse.next({
     request: {
@@ -41,10 +44,11 @@ export const config = {
   matcher: [
     /*
      * 匹配所有路径除了：
-     * - api 路由
      * - _next, _vercel (内部路由)
      * - 静态文件 (带有后缀名的文件，如 .jpg, .svg 等)
+     *
+     * 注意：现在也处理 /api/* 路由，为 Elysia siteMiddleware 注入 x-site-domain
      */
-    "/((?!api|_next|_vercel|favicon.ico|.*\\..*$).*)",
+    "/((?!_next|_vercel|favicon.ico|.*\\..*$).*)",
   ],
 };

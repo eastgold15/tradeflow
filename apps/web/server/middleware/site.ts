@@ -1,40 +1,44 @@
 import { HttpError } from "@pori15/logixlysia";
 import Elysia from "elysia";
 import { type db, dbPlugin } from "../db/connection";
+import { siteCache } from "@/lib/cache/domain-cache";
 
 /**
  * 站点中间件 - 根据域名查找站点ID并注入上下文
+ * 支持缓存优化，减少数据库查询
  */
 export const siteMiddleware = new Elysia({ name: "site-middleware" })
   .use(dbPlugin)
   .derive(async ({ db, request }) => {
-    // 1. 获取原始 host (例如 "localhost:8001")
-    const rawHost = request.headers.get("host") || "";
+    // 优先使用 proxy.ts 已经计算好的域名（从 x-site-domain 请求头）
+    let domain = request.headers.get("x-site-domain") || "";
 
-    // 2. 统一处理函数：剥离端口、转小写、去 www
-    const normalize = (h: string) => h.split(":")[0].toLowerCase().replace(/^www\./, "");
+    // 如果 proxy.ts 没有传递（比如直接调用 API），则兜底处理
+    if (!domain) {
+      const rawHost = request.headers.get("host") || "";
+      const normalize = (h: string) => h.split(":")[0].toLowerCase().replace(/^www\./, "");
+      domain = normalize(rawHost);
 
-    let domain = normalize(rawHost);
-
-    // 3. 兜底逻辑：如果是本地地址或为空，强行使用 DOMAIN 环境变量
-    if (!domain || domain === "localhost" || domain === "127.0.0.1") {
-      // 关键：对环境变量也要做一次 normalize，防止环境变量里误写了端口或大写
-      domain = normalize(process.env.DOMAIN || "");
+      // 本地开发环境兜底
+      if (!domain || domain === "localhost" || domain === "127.0.0.1") {
+        domain = normalize(process.env.DOMAIN || "");
+      }
     }
 
-    // 4. 最后的防御：如果还是没拿到（环境变量也没配），报错
     if (!domain) {
-      console.error("[CRITICAL] No domain found in Host header or DOMAIN env");
+      console.error("[CRITICAL] No domain found in x-site-domain header, Host header or DOMAIN env");
       throw new HttpError.NotFound("Domain configuration missing");
     }
 
-    const site = await getSite(domain, db);
+    const site = await siteCache.getOrFetch(domain, () => getSite(domain, db));
     return { site };
   })
   .as("global");
 
+/**
+ * 从数据库查询站点信息
+ */
 async function getSite(domain: string, db: DBtype) {
-  // 此时传入的 domain 应该是纯净的 "dongqifootwear.com"
   const res = await db.query.siteTable.findFirst({
     where: {
       domain
@@ -42,7 +46,6 @@ async function getSite(domain: string, db: DBtype) {
   });
 
   if (!res) {
-    // 这里打印的日志就能准确反应数据库到底在查什么
     console.error(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
     throw new HttpError.NotFound(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
   }
@@ -52,10 +55,23 @@ async function getSite(domain: string, db: DBtype) {
 
 export type Site = Awaited<ReturnType<typeof getSite>>;
 export type DBtype = typeof db;
+
 /**
  * 极简上下文：只需 siteId
  */
 export interface ServiceContext {
   db: DBtype;
   site: Site;
+}
+
+/**
+ * 清除站点缓存
+ * 用于站点配置更新后刷新
+ */
+export function clearSiteCache(domain?: string): void {
+  if (domain) {
+    siteCache.delete(domain);
+  } else {
+    siteCache.clear();
+  }
 }
