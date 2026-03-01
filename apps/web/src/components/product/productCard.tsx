@@ -27,7 +27,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <Link
       className="group flex cursor-pointer flex-col items-center"
-      href={`/product/${product.siteProductId}`}
+      href={`/product/${product.slug}`}
     >
       <div
         className={`relative w-full ${aspectRatio} mb-6 overflow-hidden bg-gray-50/50`}

@@ -1,3 +1,4 @@
+'use client'
 import { Providers } from "@/providers/query-provider";
 import "./globals.css";
 
@@ -10,8 +11,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-white font-sans text-black antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-white font-sans text-black antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

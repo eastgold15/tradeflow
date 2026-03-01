@@ -1,30 +1,28 @@
 
 // Navbar.tsx (Server Component)
-import { rpc } from "@/lib/rpc";
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import { NavbarClient } from "../NavbarClient";
+import { getSiteConfigValueForSSR, getSiteCategoriesForSSR } from "@/lib/server-fetch";
 
 async function getSiteName() {
   try {
-
-    const { data } = await rpc.site_config.get({
-      query: { key: SITE_CONFIG_KEY_ENUM.SITE_NAME }
-    });
-    console.log('data:', data)
-    return data?.[0]?.value || "Welcome";
+    const value = await getSiteConfigValueForSSR(SITE_CONFIG_KEY_ENUM.SITE_NAME);
+    return value || "Welcome";
   } catch {
     return "Welcome";
   }
 }
 
-// 假设你的分类导航也可以通过 RPC 获取
+// 获取分类导航 - 直接从数据库读取，避免 API 调用问题
 async function getSiteCategories() {
-  const { data, error } = await rpc.site_category.tree.get();
-  if (error) {
+  try {
+    const categories = await getSiteCategoriesForSSR();
+    console.log('[Navbar] siteCategories fetched from DB:', categories?.length || 0, 'categories');
+    return categories || [];
+  } catch (err) {
+    console.error('[Navbar] Exception fetching categories:', err);
     return [];
   }
-  console.log('siteCategories:', data)
-  return data || [];
 }
 
 
@@ -34,6 +32,9 @@ const Navbar = async () => {
     getSiteName(),
     getSiteCategories(),
   ]);
+
+  console.log('[Navbar] Final data - siteName:', siteName, 'categories:', siteCategories.length);
+
   // 将数据传给客户端组件处理交互
   return <NavbarClient siteName={siteName} initialCategories={siteCategories} />;
 

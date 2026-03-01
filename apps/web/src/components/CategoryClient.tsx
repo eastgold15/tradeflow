@@ -137,6 +137,7 @@ export default function CategoryClient({ slugProp }: CategoryClientProps) {
                   mainMedia: product.mainMedia,
                   isFeatured: product.isFeatured,
                   sortOrder: null,
+                  slug: product.slug,
                 }}
               />
             ))}

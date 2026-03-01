@@ -17,20 +17,24 @@ export default function proxy(request: NextRequest) {
 
   // 2. 站点解析逻辑 (Domain Handling) - 统一入口，避免重复计算
   const rawHost = request.headers.get("host") || request.headers.get("x-forwarded-host") || "";
-  const domain = normalizeDomain(rawHost);
+  let domain = normalizeDomain(rawHost);
 
-  // 兜底逻辑：本地开发环境处理
-  const finalDomain =
-    !domain || domain.includes("localhost") || domain.includes("127.0.0.1")
-      ? normalizeDomain(process.env.DOMAIN || "default-domain.com")
-      : domain;
+  // 3. 兜底逻辑：仅在本地开发环境使用环境变量
+  const isLocalhost = !domain || domain === "localhost" || domain.includes("127.0.0.1");
+  if (isLocalhost) {
+    // 只在非生产环境使用 DOMAIN 环境变量
+    const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+    if (isDev) {
+      domain = normalizeDomain(process.env.DOMAIN || "default-domain.com");
+    }
+  }
 
-  // 注入域名信息到请求头，供后续使用：
+  // 4. 注入域名信息到请求头，供后续使用：
   // - Next.js Server Components (generateMetadata, etc.)
   // - Elysia siteMiddleware (直接读取，避免重复计算)
-  requestHeaders.set("x-site-domain", finalDomain);
+  requestHeaders.set("x-site-domain", domain);
 
-  // 3. 返回响应
+  // 5. 返回响应
   // 可以确保这些 headers 被传递给后续的 Server Components
   return NextResponse.next({
     request: {

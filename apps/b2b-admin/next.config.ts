@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
 import "./src/env.ts";
 import path from "node:path";
+import { env } from "./src/env.ts";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: "standalone",
   poweredByHeader: false,
   images: {
     remotePatterns: [
@@ -18,11 +20,19 @@ const nextConfig: NextConfig = {
       fullUrl: true,
     },
   },
-
+  // 转译 + 打包到next中去
   transpilePackages: ["@repo/contract"],
   turbopack: {
     root: path.resolve(__dirname, "../../"),
   },
+  // API 代理配置 - 解决跨域 Cookie 问题（Safari ITP）
+  // 前端通过 /api/* 请求，Next.js 代理到后端，使浏览器认为是同域请求
+  // rewrites: async () => [
+  //   {
+  //     source: "/api/:path*",
+  //     destination: `${env.NEXT_PUBLIC_API_URL}/api/:path*`,
+  //   },
+  // ],
   rewrites: async () => [
     {
       /**
@@ -35,6 +45,7 @@ const nextConfig: NextConfig = {
       destination: "https://b2b-api-production-1.up.railway.app/api/:path*",
     },
   ],
+
 };
 
 export default nextConfig;

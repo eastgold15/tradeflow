@@ -13,47 +13,51 @@ import type { ServiceContext } from "~/middleware/site";
 /**
  * 🛠️ Category 业务实现
  */
+import { categoryTreeCache } from "@/lib/cache/domain-cache";
+
 export class SiteCategoryService {
   /**
    * 获取站点分类树（支持无限层级）
    */
   async tree(ctx: ServiceContext) {
-    // 获取所有分类（扁平列表），按 sortOrder 排序
-    const allCategories = await ctx.db.query.siteCategoryTable.findMany({
-      where: {
-        siteId: ctx.site.id,
-      },
-      orderBy: {
-        sortOrder: "asc",
-      },
-    });
-
-    // 在内存中构建树形结构
-    const categoryMap = new Map();
-    const rootCategories = [];
-
-    // 先将所有分类存入 map
-    for (const category of allCategories) {
-      categoryMap.set(category.id, {
-        ...category,
-        children: [],
+    return categoryTreeCache.getOrFetch(ctx.site.id, async () => {
+      // 获取所有分类（扁平列表），按 sortOrder 排序
+      const allCategories = await ctx.db.query.siteCategoryTable.findMany({
+        where: {
+          siteId: ctx.site.id,
+        },
+        orderBy: {
+          sortOrder: "asc",
+        },
       });
-    }
 
-    // 构建父子关系
-    for (const category of allCategories) {
-      const node = categoryMap.get(category.id);
-      if (category.parentId) {
-        const parent = categoryMap.get(category.parentId);
-        if (parent) {
-          parent.children.push(node);
-        }
-      } else {
-        rootCategories.push(node);
+      // 在内存中构建树形结构
+      const categoryMap = new Map();
+      const rootCategories = [];
+
+      // 先将所有分类存入 map
+      for (const category of allCategories) {
+        categoryMap.set(category.id, {
+          ...category,
+          children: [],
+        });
       }
-    }
 
-    return rootCategories;
+      // 构建父子关系
+      for (const category of allCategories) {
+        const node = categoryMap.get(category.id);
+        if (category.parentId) {
+          const parent = categoryMap.get(category.parentId);
+          if (parent) {
+            parent.children.push(node);
+          }
+        } else {
+          rootCategories.push(node);
+        }
+      }
+
+      return rootCategories;
+    });
   }
 
   async getProductsByCategoryId(
@@ -102,6 +106,7 @@ export class SiteCategoryService {
 
           spuCode: productTable.spuCode,
           isFeatured: siteProductTable.isFeatured,
+          slug: siteProductTable.slug,
         })
         .from(siteProductTable)
         .innerJoin(
@@ -153,6 +158,7 @@ export class SiteCategoryService {
 
         spuCode: productTable.spuCode,
         isFeatured: siteProductTable.isFeatured,
+        slug: siteProductTable.slug,
       })
       .from(siteProductSiteCategoryTable)
       .innerJoin(
@@ -256,6 +262,7 @@ export class SiteCategoryService {
             ).as("min_price"),
             spuCode: productTable.spuCode,
             isFeatured: siteProductTable.isFeatured,
+            slug: siteProductTable.slug,
           })
           .from(siteProductTable)
           .innerJoin(productTable, eq(siteProductTable.productId, productTable.id))
@@ -350,6 +357,7 @@ export class SiteCategoryService {
           ).as("min_price"),
           spuCode: productTable.spuCode,
           isFeatured: siteProductTable.isFeatured,
+          slug: siteProductTable.slug,
         })
         .from(siteProductSiteCategoryTable)
         .innerJoin(siteProductTable, eq(siteProductSiteCategoryTable.siteProductId, siteProductTable.id))

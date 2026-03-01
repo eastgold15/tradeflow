@@ -22,12 +22,35 @@ import {
 } from "@repo/contract";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { ServiceContext } from "~/middleware/site";
+import { productListCache } from "@/lib/cache/domain-cache";
 
 export class SiteProductService {
   /**
    * 🛒 获取带聚合信息的商品列表
    */
   async list(query: ProductContract["ListQuery"], ctx: ServiceContext) {
+    const {
+      page = 1,
+      limit = 10,
+      sort = "sortOrder",
+      sortOrder = "asc",
+      categoryId, // 站点分类 ID
+      search, // 搜索关键词
+    } = query;
+
+    // 如果有搜索关键词，不使用缓存（实时查询）
+    if (search) {
+      return this.executeQuery(query, ctx);
+    }
+
+    // 使用 Redis 缓存
+    return productListCache.getOrFetch(ctx.site.id, query, () => this.executeQuery(query, ctx));
+  }
+
+  /**
+   * 执行商品列表查询（内部方法）
+   */
+  private async executeQuery(query: ProductContract["ListQuery"], ctx: ServiceContext) {
     const {
       page = 1,
       limit = 10,
@@ -47,6 +70,7 @@ export class SiteProductService {
         displayDesc: sql<string>`COALESCE(${siteProductTable.siteDescription}, ${productTable.description})`,
         isFeatured: siteProductTable.isFeatured,
         sortOrder: siteProductTable.sortOrder,
+        slug: siteProductTable.slug,
 
         // --- 物理产品字段 ---
         productId: productTable.id,
@@ -458,6 +482,194 @@ export class SiteProductService {
           specJson: specs,
           isActive: ss.isActive,
           mediaIds: finalMediaIds, // 前端只需按此数组顺序渲染即可
+        };
+      }),
+      gallery,
+    };
+  }
+
+  /**
+   * 根据 slug 获取商品详情
+   */
+  async getBySlug(slug: string, ctx: ServiceContext) {
+    const result = await ctx.db.query.siteProductTable.findFirst({
+      where: {
+        slug,
+        siteId: ctx.site.id,
+        RAW: (table) => sql`EXISTS (
+          SELECT 1
+          FROM ${productTable}
+          WHERE ${productTable.id} = ${table.productId}
+          AND ${productTable.status} = 1
+        )`,
+      },
+      with: {
+        product: {
+          with: {
+            variantMedia: {
+              with: {
+                media: true,
+                attributeValue: true,
+              },
+            },
+          },
+        },
+        siteCategories: true,
+        siteSkus: {
+          with: {
+            sku: {
+              with: { media: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!result) throw new HttpError.NotFound("商品不存在");
+
+    // 1. 识别颜色属性
+    const identifyColorAttribute = async () => {
+      const [productTemplate] = await ctx.db
+        .select()
+        .from(productTemplateTable)
+        .where(eq(productTemplateTable.productId, result.productId));
+
+      if (!productTemplate) return null;
+
+      const keys = await ctx.db
+        .select()
+        .from(templateKeyTable)
+        .where(
+          and(
+            eq(templateKeyTable.templateId, productTemplate.templateId),
+            eq(templateKeyTable.isSkuSpec, true)
+          )
+        );
+
+      const colorKey = keys.find((k) => /color|颜色|colour/i.test(k.key));
+      return colorKey ? { key: colorKey.key, keyId: colorKey.id } : null;
+    };
+
+    const colorAttr = await identifyColorAttribute();
+
+    // 2. 构建颜色值映射
+    const colorValueToIdMap = new Map<string, string>();
+    if (colorAttr) {
+      const values = await ctx.db
+        .select()
+        .from(templateValueTable)
+        .where(eq(templateValueTable.templateKeyId, colorAttr.keyId));
+
+      values.forEach((v) => {
+        colorValueToIdMap.set(v.value, v.id);
+      });
+    }
+
+    // --- 3. 聚合全量 Gallery (去重并处理权重) ---
+    const galleryMap = new Map<string, any>();
+
+    // 放入变体媒体 (权重基数 1000)
+    result.product.variantMedia?.forEach((vm) => {
+      if (vm.media && !galleryMap.has(vm.media.id)) {
+        let weight = (vm.sortOrder ?? 0) + 1000;
+        if (vm.media.mediaType?.startsWith("video")) weight += 10000;
+        galleryMap.set(vm.media.id, {
+          id: vm.media.id,
+          url: vm.media.url,
+          mediaType: vm.media.mediaType,
+          sortOrder: weight,
+        });
+      }
+    });
+
+    // 放入 SKU 专属媒体 (权重基数 2000)
+    result.siteSkus.forEach((ss) => {
+      ss.sku.media?.forEach((m) => {
+        if (!galleryMap.has(m.id)) {
+          let weight = (m.sortOrder ?? 0) + 2000;
+          if (m.mediaType?.startsWith("video")) weight += 10000;
+          galleryMap.set(m.id, {
+            id: m.id,
+            url: m.url,
+            mediaType: m.mediaType,
+            sortOrder: weight,
+          });
+        }
+      });
+    });
+
+    const gallery = Array.from(galleryMap.values()).sort(
+      (a, b) => a.sortOrder - b.sortOrder
+    );
+
+    // --- 4. 封装响应值与 SKU 媒体排序逻辑 ---
+    return {
+      id: result.id,
+      productId: result.productId,
+      spuCode: result.product?.spuCode,
+
+      // 2. 显示内容
+      name: result.siteName || result.product?.name,
+      description: result.siteDescription || result.product?.description,
+      seoTitle: result.seoTitle,
+      slug: result.slug,
+
+      // 3. 状态与配置
+      isFeatured: result.isFeatured,
+      isVisible: result.isVisible,
+      createdAt: result.createdAt,
+
+      // 4. customAttributes
+      customAttributes: result.product?.customAttributes || {},
+      colorAttributeKey: colorAttr?.key,
+      categories: result.siteCategories.map((sc) => ({
+        id: sc.id,
+        name: sc.name,
+      })),
+
+      // 5. 规格列表 (包含变体媒体继承逻辑)
+      skus: result.siteSkus.map((ss) => {
+        const pSku = ss.sku;
+        const specs = pSku.specJson as Record<string, string>;
+
+        // A. 获取该颜色对应的变体媒体，并严格按 sortOrder 排序
+        let colorVariantMediaIds: string[] = [];
+        if (colorAttr && colorValueToIdMap.size > 0) {
+          const colorValue = specs[colorAttr.key] || specs.颜色 || specs.Color;
+          if (colorValue) {
+            const attributeValueId = colorValueToIdMap.get(colorValue);
+            colorVariantMediaIds = result.product.variantMedia
+              ?.filter((vm) => vm.attributeValueId === attributeValueId)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+              .map((vm) => vm.mediaId) || [];
+          }
+        }
+
+        // B. SKU 专属媒体 ID
+        const ownMediaIds = pSku.media.map((m) => m.id);
+
+        // C. 核心排序逻辑实现
+        const mainImageId = colorVariantMediaIds[0];
+        const remainingVariantIds = colorVariantMediaIds.slice(1);
+
+        const finalMediaIds = Array.from(
+          new Set([
+            ...(mainImageId ? [mainImageId] : []),
+            ...ownMediaIds,
+            ...remainingVariantIds,
+          ])
+        );
+
+        return {
+          id: ss.id,
+          skuCode: pSku.skuCode,
+          price: ss.price || pSku.price,
+          marketPrice: ss.marketPrice || pSku.marketPrice,
+          costPrice: ss.costPrice || pSku.costPrice,
+          stock: pSku.stock,
+          specJson: specs,
+          isActive: ss.isActive,
+          mediaIds: finalMediaIds,
         };
       }),
       gallery,

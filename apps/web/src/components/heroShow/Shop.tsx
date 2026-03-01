@@ -43,7 +43,7 @@ const Shop: React.FC<ShopProps> = ({ onProductSelect }) => {
           <div
             className="group flex cursor-pointer flex-col items-center justify-center"
             key={product.siteProductId}
-            onClick={() => router.push(`/product/${product.siteProductId}`)}
+            onClick={() => router.push(`/product/${product.slug}`)}
           >
             {/* 🔥 图片容器：使用 flex-1 占据除了文字外的所有空间，并用 relative 配合 BaseImage */}
             <div className="relative min-h-0 w-full flex-1">

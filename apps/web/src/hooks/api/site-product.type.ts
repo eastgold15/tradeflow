@@ -9,6 +9,7 @@ export type ProductListItem = {
   spuCode: string;
   minPrice: string;
   mainMedia: string;
+  slug: string;
 };
 
 export type ProductListRes = {

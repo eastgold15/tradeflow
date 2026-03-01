@@ -1,37 +1,52 @@
 import { HttpError } from "@pori15/logixlysia";
 import Elysia from "elysia";
 import { type db, dbPlugin } from "../db/connection";
-import { siteCache } from "@/lib/cache/domain-cache";
+import { siteInfoCache } from "@/lib/cache/domain-cache";
+
+/**
+ * 规范化域名
+ */
+const normalizeDomain = (h: string) =>
+  h.split(":")[0].toLowerCase().replace(/^www\./, "");
 
 /**
  * 站点中间件 - 根据域名查找站点ID并注入上下文
  * 支持缓存优化，减少数据库查询
+ *
+ * 多域名场景：
+ * 1. 优先从 x-site-domain 请求头获取（由前端 proxy.ts 设置）
+ * 2. 兜底从 host 请求头获取（直接 API 调用场景）
+ * 3. 生产环境必须通过域名匹配，不使用环境变量
  */
 export const siteMiddleware = new Elysia({ name: "site-middleware" })
   .use(dbPlugin)
   .derive(async ({ db, request }) => {
-    // 优先使用 proxy.ts 已经计算好的域名（从 x-site-domain 请求头）
+    // 1. 优先使用 proxy.ts 设置的域名
     let domain = request.headers.get("x-site-domain") || "";
 
-    // 如果 proxy.ts 没有传递（比如直接调用 API），则兜底处理
+    // 2. 如果没有 x-site-domain，尝试从 host 获取（直接 API 调用场景）
     if (!domain) {
       const rawHost = request.headers.get("host") || "";
-      const normalize = (h: string) => h.split(":")[0].toLowerCase().replace(/^www\./, "");
-      domain = normalize(rawHost);
+      domain = normalizeDomain(rawHost);
+    }
 
-      // 本地开发环境兜底
-      if (!domain || domain === "localhost" || domain === "127.0.0.1") {
-        domain = normalize(process.env.DOMAIN || "");
+    // 3. 本地开发环境兜底（只用于本地开发）
+    const isLocalhost = domain === "localhost" || domain === "127.0.0.1" || !domain;
+    const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+    if (isLocalhost && isDev) {
+      domain = normalizeDomain(process.env.DOMAIN || "");
+      if (isDev) {
+        console.log(`[SiteMiddleware] Localhost detected, using DOMAIN from env: "${domain}"`);
       }
     }
 
     if (!domain) {
-      console.error("[CRITICAL] No domain found in x-site-domain header, Host header or DOMAIN env");
+      console.error("[SiteMiddleware] No domain found in request");
       throw new HttpError.NotFound("Domain configuration missing");
     }
 
-    const site = await siteCache.getOrFetch(domain, () => getSite(domain, db));
-    return { site };
+    const site = await siteInfoCache.getOrFetch(domain, () => getSite(domain, db));
+    return { site, domain };
   })
   .as("global");
 
@@ -70,8 +85,8 @@ export interface ServiceContext {
  */
 export function clearSiteCache(domain?: string): void {
   if (domain) {
-    siteCache.delete(domain);
+    siteInfoCache.delete(domain);
   } else {
-    siteCache.clear();
+    siteInfoCache.deleteByPrefix("");
   }
 }

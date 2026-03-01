@@ -13,6 +13,7 @@ export interface SiteCategoryDetailRes {
 
 // 获取分类下的商品列表
 export type SiteCategoryProductRes = {
+  slug: string;
   id: string;
   displayName: string;
   displayDesc: string;
@@ -34,6 +35,7 @@ export type SiteProductListRes = {
     spuCode: string;
     minPrice: string;
     mainMedia: string;
+    slug: string;
   }[];
   meta: {
     total: number;

@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
-*.lock
-*.lockb
+
 
 # Build outputs
 dist/
@@ -18,17 +17,14 @@ build/
 .env.development
 .env.production
 .env.test
-apps/*/.env
-apps/*/.env.*
+apps/*/.env*
 !apps/*/.env.example
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
-database.db
 *.sql
-dump.sql
 
 # Testing
 coverage/
@@ -39,44 +35,30 @@ coverage/
 *.log
 logs/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
 # IDE
 .idea/
+
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+.Thumbs.db
 
-# Package manager specific files
-# Root level lock files (managed by pnpm)
+# Package manager lock files (使用 bun)
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
 
-# Allow app-specific lock files
-!apps/backend/bun.lockb
-!apps/frontend/pnpm-lock.yaml
-
 # Temporary files
 *.tmp
 *.temp
-test-error.js
+*.bak
+*.backup
+*.old
 
 # Deployment
-.vercel
+.vercel/
 
 # Biome
 .biome/
@@ -84,35 +66,13 @@ test-error.js
 # Changesets
 .changeset/
 
-apps/backend/src/docker
-apps/backend/docker
-apps/backend/server.exe
-apps/backend/.env.production
-**.env.*
-!**.env.example
-apps/backend/index.exe
-**.tsbuildinfo
+# TypeScript
+*.tsbuildinfo
 apps/frontend/components.d.ts
-apps/frontend/tsconfig.app.tsbuildinfo
-apps/frontend/tsconfig.app.tsbuildinfo
-minio/data/.minio.sys/format.json
-minio/data/.minio.sys/buckets/.bloomcycle.bin/xl.meta
-minio/data/.minio.sys/buckets/.usage-cache.bin/xl.meta
-minio/data/.minio.sys/buckets/.usage-cache.bin.bkp/xl.meta
-minio/data/.minio.sys/buckets/.usage.json/xl.meta
-minio/data/.minio.sys/buckets/buy4/.metadata.bin/xl.meta
-minio/data/.minio.sys/buckets/buy4/.usage-cache.bin/xl.meta
-minio/data/.minio.sys/buckets/buy4/.usage-cache.bin.bkp/xl.meta
-minio/data/.minio.sys/config/config.json/xl.meta
-minio/data/.minio.sys/config/iam/format.json/xl.meta
-minio/data/.minio.sys/config/iam/sts/BIIFWDQG3H0K6P4UKLUU/identity.json/xl.meta
-minio/data/.minio.sys/pool.bin/xl.meta
-minio/data/.minio.sys/tmp/2180dc45-b79c-4f6c-ae17-d99fd603c824
-minio/data/.minio.sys/buckets/.usage-cache.bin/73138f69-f83d-467b-8244-c2db2b771ba2/xl.meta.bkp
-minio/data/.minio.sys/buckets/.usage-cache.bin.bkp/7c3be5a9-e487-46d3-963b-43da949f4336/xl.meta.bkp
-minio/data/.minio.sys/buckets/.usage.json/563418c1-4100-4c02-add3-38a0d13a7a38/xl.meta.bkp
-minio/*
 
+# Executables
+**/*.exe
+**/*.bat
 
 # 敏感文件 - 证书和密钥
 *.key
@@ -129,6 +89,7 @@ keys/
 database/
 db_data/
 postgres-data/
+minio/data/
 
 # 缓存目录
 .cache/
@@ -136,30 +97,16 @@ postgres-data/
 .eslintcache
 .stylelintcache
 
-# 备份文件
-*.bak
-*.backup
-*.old
-
 # 本地配置文件（可能包含敏感信息）
-config.local.js
-config.local.json
+config.local.*
 local.json
 
 # 测试生成的文件
 test-error.js
-apps/web/server/modules/_health/
 
+# 契约层生成的类型文件
+packages/contract/src/**/*.d.ts
 
-packages/contract/src/modules/**.d.ts
-
-packages/contract/src/**.d.ts
-packages/contract/src/helper/constant.d.ts
-packages/contract/src/helper/query-types.model.d.ts
-packages/contract/src/helper/utils.d.ts
-packages/contract/src/helper/utils.types.d.ts
-**.exe
-packages/sync-db.bat
-packages/contract/sync-db.bat
+# SEO 文件（自动生成）
 apps/web/public/robots.txt
 apps/web/public/sitemap.xml

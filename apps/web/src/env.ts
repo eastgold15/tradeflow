@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   server: {
     PORT: z.coerce.number().min(1).max(65_535).default(9001),
     DATABASE_URL: z.string().min(1, "DATABASE_URL 是必需的"),

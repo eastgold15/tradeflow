@@ -663,6 +663,7 @@ export const siteProductTable = p.pgTable(
     sortOrder: p.integer("sort_order").default(0),
     isVisible: p.boolean("is_visible").default(true),
     seoTitle: p.varchar("seo_title", { length: 200 }),
+    slug: p.varchar("slug", { length: 500 }), // SEO 友好的 URL slug
     siteId: p
       .uuid("site_id")
       .references(() => siteTable.id, { onDelete: "cascade" })
@@ -677,9 +678,13 @@ export const siteProductTable = p.pgTable(
     // 这也是 Upsert (On Conflict) 逻辑必须依赖的物理约束
     uniqueIndex("uk_site_product_unique").on(t.siteId, t.productId),
 
-    // 3. 🚀 排序/筛选优化：按站点 + 排序/可见性
+    // 2. 🚀 排序/筛选优化：按站点 + 排序/可见性
     // 场景：获取某个站点的首页推荐商品，按 sortOrder 排序
     index("idx_site_product_sort").on(t.siteId, t.sortOrder, t.isVisible),
+
+    // 3. 🔍 Slug 查询优化：按站点 + slug
+    // 场景：通过 SEO 友好的 URL 查询商品详情
+    index("idx_site_product_slug").on(t.siteId, t.slug),
 
     // 4. 🧹 级联删除优化（可选）：
     // 当你删除一个 Product 时，数据库需要查找所有关联的 site_product 来级联删除。

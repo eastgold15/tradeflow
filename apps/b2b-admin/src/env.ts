@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   /**
    * 服务端变量：仅在 Node.js 环境可用。
    * 使用 z.coerce 将 process.env 的字符串自动转换为数字或布尔值。
@@ -26,7 +27,7 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_API_URL: z
       .url()
-      .default("https://b2b-api-production-1.up.railway.app"),
+      .default("https://b2b-api-production-1.up.railway.app"), // 生产环境 API 地址
   },
 
   /**

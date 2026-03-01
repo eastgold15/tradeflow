@@ -10,7 +10,7 @@ const peoductDetail = async (id: string) => {
 export type ProductDetailRes = NonNullable<Treaty.Data<typeof peoductDetail>>;
 
 /**
- * 获取单个商品详情
+ * 获取单个商品详情（通过 ID）
  */
 export function useProductDetail(id: string) {
   return useQuery({
@@ -24,6 +24,26 @@ export function useProductDetail(id: string) {
       return data! as unknown as ProductDetailRes;
     },
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5分钟缓存
+    retry: 2,
+  });
+}
+
+/**
+ * 获取单个商品详情（通过 slug）
+ */
+export function useProductDetailBySlug(slug: string) {
+  return useQuery({
+    queryKey: ["site_product", "slug", slug],
+    queryFn: async () => {
+      if (!slug) throw new Error("Product slug is required");
+      const { data, error } = await rpc.site_products.slug({ slug }).get();
+      if (error) {
+        toast.error(error.value?.message || "获取商品详情失败");
+      }
+      return data! as unknown as ProductDetailRes;
+    },
+    enabled: !!slug,
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     retry: 2,
   });

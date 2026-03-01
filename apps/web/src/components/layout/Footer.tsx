@@ -1,26 +1,17 @@
 import { NewsletterForm } from "@/components/NewsletterForm";
-import { rpc } from "@/lib/rpc";
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import Image from "next/image";
 import Link from "next/link";
+import { getSiteConfigValueForSSR, getSiteConfigJsonForSSR } from "@/lib/server-fetch";
 
 // 获取 Footer 配置数据
 async function getFooterConfig(): Promise<FooterContent | null> {
   try {
-    const { data, error } = await rpc.site_config.get({
-      query: {
-        key: SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT,
-      }
-    })
-
-    if (error) {
-      console.error("Failed to fetch footer config:", error);
-      return null;
-    }
-
-    return data?.[0]?.jsonValue as FooterContent
+    const result = await getSiteConfigJsonForSSR<FooterContent>(SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT);
+    console.log("[Footer] Footer config fetched from DB:", !!result);
+    return result;
   } catch (error) {
-    console.error("Error fetching footer config:", error);
+    console.error("[Footer] Exception fetching footer config:", error);
     return null;
   }
 }
@@ -28,14 +19,10 @@ async function getFooterConfig(): Promise<FooterContent | null> {
 // 获取单个配置
 async function getSiteConfigValue(key: string): Promise<string | null> {
   try {
-    const { data, error } = await rpc.site_config.get({
-      query: {
-        key,
-      }
-    })
-    if (error) return null;
-    return data?.[0]?.value || null;
-  } catch {
+    const value = await getSiteConfigValueForSSR(key);
+    return value;
+  } catch (error) {
+    console.error(`[Footer] Exception fetching config value for key: ${key}`, error);
     return null;
   }
 }
@@ -44,20 +31,10 @@ async function getSiteConfigValue(key: string): Promise<string | null> {
 // 获取 Footer 配置数据
 async function getBeianConfig(): Promise<BEIAN_INFO | null> {
   try {
-    const { data, error } = await rpc.site_config.get({
-      query: {
-        key: SITE_CONFIG_KEY_ENUM.BEIAN_INFO,
-      }
-    })
-
-    if (error) {
-      console.error("Failed to fetch footer config:", error);
-      return null;
-    }
-
-    return data[0]?.jsonValue as BEIAN_INFO
+    const result = await getSiteConfigJsonForSSR<BEIAN_INFO>(SITE_CONFIG_KEY_ENUM.BEIAN_INFO);
+    return result;
   } catch (error) {
-    console.error("Error fetching footer config:", error);
+    console.error("[Footer] Exception fetching beian config:", error);
     return null;
   }
 }
@@ -182,46 +159,47 @@ export default async function Footer() {
 
         {/* 底部版权信息 */}
         <div className="mt-20 border-gray-100 border-t pt-8 text-center text-gray-400 text-xs tracking-wider">
-          <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
-            {/* 左侧：版权信息 + 备案信息 */}
-            <div className="flex flex-col items-start gap-1">
+          <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
+            {/* 左侧：版权信息 */}
+            <div className="flex flex-col items-center gap-1">
               <div>
                 &copy; {new Date().getFullYear()} {copyright || "Your Company"}
               </div>
-              {/* ICP 备案信息 */}
-              <div>
-                {beianConfig && (
-                  <div className="flex items-center gap-2">
-                    {beianConfig.icp && <span>ICP备案号: {beianConfig.icp}</span>}
-                    {beianConfig.police && <span className="ml-2">公安备案号: {beianConfig.police}</span>}
-                    {beianConfig.link && (
-                      <a
-                        href={beianConfig.link}
-                        target="_blank"
-                        rel="nofollow"
-                        className="ml-2 text-blue-400 hover:text-blue-500 transition-colors"
-                      >
-                        备案信息
-                      </a>
-                    )}
-                  </div>
-                )}
-
-              </div>
             </div>
 
-            {/* 中间：二维码 */}
-            {qrCode && (
-              <div className="relative inline-block">
-                <Image
-                  alt="WhatsApp QR Code"
-                  className="h-24 w-24 cursor-pointer rounded transition-all duration-300 ease-out hover:z-50 hover:scale-150 hover:shadow-2xl"
-                  height={256}
-                  src={qrCode}
-                  width={256}
-                />
-              </div>
-            )}
+            {/* 中间：二维码 + 备案信息 */}
+            <div className="flex flex-col items-center gap-4">
+              {/* 二维码 */}
+              {qrCode && (
+                <div className="relative inline-block">
+                  <Image
+                    alt="WhatsApp QR Code"
+                    className="h-24 w-24 cursor-pointer rounded transition-all duration-300 ease-out hover:z-50 hover:scale-150 hover:shadow-2xl"
+                    height={256}
+                    src={qrCode}
+                    width={256}
+                  />
+                </div>
+              )}
+
+              {/* 备案信息 - 放在二维码下面 */}
+              {beianConfig && (
+                <div className="flex flex-col items-center gap-1 text-gray-500">
+                  {beianConfig.icp && <span className="text-[10px]">ICP备案号: {beianConfig.icp}</span>}
+                  {beianConfig.police && <span className="text-[10px]">公安备案号: {beianConfig.police}</span>}
+                  {beianConfig.link && (
+                    <a
+                      href={beianConfig.link}
+                      target="_blank"
+                      rel="nofollow"
+                      className="text-blue-400 hover:text-blue-500 transition-colors text-[10px]"
+                    >
+                      备案信息
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* 右侧：联系信息 */}
             <div className="flex flex-wrap items-center justify-center gap-4 md:justify-end">

@@ -1,164 +1,135 @@
 /**
- * 通用缓存工具
- * 用于缓存各种数据（站点信息、SEO配置等）
+ * 通用缓存工具 - Redis 缓存
+ * 用于缓存各种数据（站点信息、SEO配置、分类树、产品列表等）
  */
+
+import { RedisCache } from './redis-cache';
+import { CACHE_TTL } from './redis';
+
+// ============================================================================
+// Redis 缓存实例
+// ============================================================================
+
+export const redisCache = new RedisCache();
 
 /**
- * 缓存项接口
+ * 分类树缓存
+ * key: "category:{siteId}"
  */
-export interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
+export const categoryTreeCache = {
+  getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) =>
+    redisCache.getOrFetch(`category:${siteId}`, fetchFn, CACHE_TTL.CATEGORY_TREE),
+
+  delete: (siteId: string) =>
+    redisCache.delete(`category:${siteId}`),
+
+  deleteByPrefix: (prefix: string) =>
+    redisCache.deleteByPrefix(`category:${prefix}`),
+};
 
 /**
- * 缓存配置选项
+ * 产品列表缓存
+ * key: "product:{siteId}:{categoryId}:{page}:{limit}"
  */
-export interface CacheOptions {
-  /** 缓存 TTL（毫秒），默认 10 分钟 */
-  ttl?: number;
-  /** 缓存名称（用于日志） */
-  name?: string;
-}
+export const productListCache = {
+  getOrFetch: <T>(siteId: string, query: { page?: number; limit?: number; categoryId?: string }, fetchFn: () => Promise<T>) => {
+    const queryKey = `${siteId}:${query.categoryId || 'all'}:${query.page || 1}:${query.limit || 10}`;
+    return redisCache.getOrFetch(`product:${queryKey}`, fetchFn, CACHE_TTL.PRODUCT_LIST);
+  },
+
+  delete: (siteId: string, categoryId?: string) => {
+    if (categoryId) {
+      return redisCache.delete(`product:${siteId}:${categoryId}`);
+    }
+    return redisCache.deleteByPrefix(`product:${siteId}`);
+  },
+
+  deleteByPrefix: (siteId: string) =>
+    redisCache.deleteByPrefix(`product:${siteId}`),
+};
 
 /**
- * 默认 TTL: 10 分钟
+ * 站点配置缓存
+ * key: "config:{siteId}:{key}"
  */
-const DEFAULT_TTL = 10 * 60 * 1000;
+export const siteConfigCache = {
+  getOrFetch: <T>(siteId: string, key: string, fetchFn: () => Promise<T>) =>
+    redisCache.getOrFetch(`config:${siteId}:${key}`, fetchFn, CACHE_TTL.SITE_CONFIG),
+
+  delete: (siteId: string, key?: string) => {
+    if (key) {
+      return redisCache.delete(`config:${siteId}:${key}`);
+    }
+    return redisCache.deleteByPrefix(`config:${siteId}`);
+  },
+
+  deleteByPrefix: (siteId: string) =>
+    redisCache.deleteByPrefix(`config:${siteId}`),
+};
 
 /**
- * 创建一个简单的 Map 缓存
+ * 站点信息缓存（Redis 版本）
+ * key: "site:{domain}"
  */
-export class DomainCache<T> {
-  private cache = new Map<string, CacheEntry<T>>();
-  private ttl: number;
-  private name: string;
+export const siteInfoCache = {
+  getOrFetch: <T>(domain: string, fetchFn: () => Promise<T>) =>
+    redisCache.getOrFetch(`site:${domain}`, fetchFn, CACHE_TTL.SITE_INFO),
 
-  constructor(options: CacheOptions = {}) {
-    this.ttl = options.ttl ?? DEFAULT_TTL;
-    this.name = options.name ?? "DomainCache";
-  }
+  delete: (domain: string) =>
+    redisCache.delete(`site:${domain}`),
 
-  /**
-   * 获取缓存
-   * @param key - 缓存键（可以是域名、siteId:code 等任意字符串）
-   * @returns 缓存的数据，如果不存在或已过期则返回 null
-   */
-  get(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) {
-      return null;
-    }
-
-    const isExpired = Date.now() - entry.timestamp > this.ttl;
-    if (isExpired) {
-      this.cache.delete(key);
-      return null;
-    }
-
-    console.log(`[${this.name}] Cache hit for key: "${key}"`);
-    return entry.data;
-  }
-
-  /**
-   * 设置缓存
-   * @param key - 缓存键
-   * @param data - 要缓存的数据
-   */
-  set(key: string, data: T): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-    });
-    console.log(`[${this.name}] Cached data for key: "${key}"`);
-  }
-
-  /**
-   * 删除指定缓存
-   * @param key - 缓存键
-   */
-  delete(key: string): void {
-    const deleted = this.cache.delete(key);
-    if (deleted) {
-      console.log(`[${this.name}] Deleted cache for key: "${key}"`);
-    }
-  }
-
-  /**
-   * 批量删除匹配前缀的缓存
-   * @param prefix - 键前缀（如 "siteId:"）
-   */
-  deleteByPrefix(prefix: string): number {
-    let count = 0;
-    for (const key of this.cache.keys()) {
-      if (key.startsWith(prefix)) {
-        this.cache.delete(key);
-        count++;
-      }
-    }
-    if (count > 0) {
-      console.log(`[${this.name}] Deleted ${count} cache entries with prefix: "${prefix}"`);
-    }
-    return count;
-  }
-
-  /**
-   * 清空所有缓存
-   */
-  clear(): void {
-    const size = this.cache.size;
-    this.cache.clear();
-    console.log(`[${this.name}] Cleared ${size} cache entries`);
-  }
-
-  /**
-   * 获取或设置缓存（fetch 模式）
-   * @param key - 缓存键
-   * @param fetchFn - 缓存未命中时的数据获取函数
-   * @returns 缓存的数据或新获取的数据
-   */
-  async getOrFetch(key: string, fetchFn: () => Promise<T>): Promise<T> {
-    // 1. 尝试从缓存获取
-    const cached = this.get(key);
-    if (cached !== null) {
-      return cached;
-    }
-
-    // 2. 缓存未命中，调用 fetchFn 获取数据
-    console.log(`[${this.name}] Cache miss for key: "${key}", fetching...`);
-    const data = await fetchFn();
-
-    // 3. 存入缓存
-    this.set(key, data);
-
-    return data;
-  }
-
-  /**
-   * 获取缓存统计信息
-   */
-  getStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys()),
-    };
-  }
-}
+  deleteByPrefix: (prefix: string) =>
+    redisCache.deleteByPrefix(`site:${prefix}`),
+};
 
 /**
- * 创建站点缓存实例
- * key: domain (如 "dongqifootwear.com")
+ * SEO 配置缓存
+ * key: "seo:{siteId}:{code}"
  */
-export const siteCache = new DomainCache<any>({
-  ttl: 10 * 60 * 1000, // 10 分钟
-  name: "SiteCache",
-});
+export const seoConfigCache = {
+  getOrFetch: <T>(siteId: string, code: string, fetchFn: () => Promise<T>) =>
+    redisCache.getOrFetch(`seo:${siteId}:${code}`, fetchFn, CACHE_TTL.SEO_CONFIG),
+
+  delete: (siteId: string, code?: string) => {
+    if (code) {
+      return redisCache.delete(`seo:${siteId}:${code}`);
+    }
+    return redisCache.deleteByPrefix(`seo:${siteId}:`);
+  },
+
+  clear: () =>
+    redisCache.deleteByPrefix(`seo:`),
+};
 
 /**
- * 创建 SEO 配置缓存实例
- * key: "${siteId}:${code}" (如 "site-123:home")
+ * Hero Card 缓存
+ * key: "hero:{siteId}"
  */
-export const seoCacheInstance = new DomainCache<any>({
-  ttl: 5 * 60 * 1000, // 5 分钟
-  name: "SeoCache",
-});
+export const heroCardCache = {
+  getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) =>
+    redisCache.getOrFetch(`hero:${siteId}`, fetchFn, 5 * 60), // 5分钟
+
+  delete: (siteId: string) =>
+    redisCache.delete(`hero:${siteId}`),
+
+  deleteByPrefix: (prefix: string) =>
+    redisCache.deleteByPrefix(`hero:${prefix}`),
+};
+
+/**
+ * 广告缓存
+ * key: "ad:{siteId}:{date}" - 按日期缓存
+ */
+export const adCache = {
+  getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) => {
+    // 使用当前日期作为缓存键的一部分，确保广告按时更新
+    const today = new Date().toISOString().split('T')[0];
+    return redisCache.getOrFetch(`ad:${siteId}:${today}`, fetchFn, 1 * 60); // 1分钟
+  },
+
+  delete: (siteId: string) =>
+    redisCache.deleteByPrefix(`ad:${siteId}`),
+
+  deleteByPrefix: (prefix: string) =>
+    redisCache.deleteByPrefix(`ad:${prefix}`),
+};

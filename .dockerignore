@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+build
+.turbo
+.git
+*.md
+docs
+scripts
+script
+docker-compose.yml
+ecosystem.config.cjs
+lefthook.yml
+biome.jsonc
+.env*

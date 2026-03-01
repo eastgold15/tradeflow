@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import {
   AlertCircle,
   Building2,
@@ -36,14 +37,22 @@ export default function UserDashboard() {
   const { data: statistics, isLoading } = useStatistics();
   const { data: notifications } = useNotifications();
 
+  const roleName = user?.roles?.[0]?.name;
+  const roleStats = useMemo(() => {
+    // @ts-expect-error
+    return statistics?.[roleName];
+  }, [statistics, roleName]);
+
+  // 🔥 只在 roleStats 变化时打印一次（用于调试）
+  useEffect(() => {
+    if (roleStats) {
+      console.log("roleStats loaded:", roleStats);
+    }
+  }, [roleStats]);
+
   if (!user) {
     return <DashboardSkeleton />;
   }
-
-  const roleName = user.roles?.[0]?.name;
-  // @ts-expect-error
-  const roleStats = statistics?.[roleName];
-  console.log("roleStats:", roleStats);
 
   return (
     <div className="space-y-8 p-6 lg:p-10">

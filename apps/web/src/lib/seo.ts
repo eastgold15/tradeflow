@@ -6,8 +6,8 @@
 import { Metadata } from "next";
 
 import { db } from "~/db/connection";
-import { getSiteFromEnv } from "./site";
-import { seoCacheInstance } from "./cache/domain-cache";
+import { getSite } from "./site";
+import { seoConfigCache } from "./cache/domain-cache";
 
 /**
  * 根据 code 获取 SEO 配置并生成 Metadata
@@ -19,8 +19,8 @@ export async function getSeoMetadata(
   fallback?: Partial<Metadata>
 ): Promise<Metadata> {
   try {
-    // 1. 从环境变量获取站点信息
-    const site = await getSiteFromEnv();
+    // 1. 从请求头获取站点信息（支持多域名）
+    const site = await getSite();
 
     if (!site) {
       console.warn(`[SEO] No site found, using fallback metadata for code: "${code}"`);
@@ -28,8 +28,7 @@ export async function getSeoMetadata(
     }
 
     // 2. 使用缓存
-    const cacheKey = `${site.id}:${code}`;
-    const metadata = await seoCacheInstance.getOrFetch(cacheKey, async () => {
+    const metadata = await seoConfigCache.getOrFetch(site.id, code, async () => {
       return fetchSeoMetadata(site.id, site.tenantId, site.domain, code, fallback);
     });
 
@@ -50,12 +49,14 @@ async function fetchSeoMetadata(
   code: string,
   fallback?: Partial<Metadata>
 ): Promise<Metadata> {
-  console.log(`[SEO] Fetching config:`, {
-    siteId,
-    tenantId,
-    domain,
-    code,
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[SEO] Fetching config:`, {
+      siteId,
+      tenantId,
+      domain,
+      code,
+    });
+  }
 
   // 查询 SEO 配置（匹配 siteId + code + tenantId）
   const config = await db.query.seoConfigTable.findFirst({
@@ -68,21 +69,25 @@ async function fetchSeoMetadata(
   });
 
   if (!config) {
-    console.warn(`[SEO] No config found for`, {
-      siteId,
-      tenantId,
-      code,
-      fallback: !!fallback,
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[SEO] No config found for`, {
+        siteId,
+        tenantId,
+        code,
+        fallback: !!fallback,
+      });
+    }
     return fallback || getDefaultMetadata();
   }
 
-  console.log(`[SEO] Found config:`, {
-    siteId,
-    code: config.code,
-    title: config.title,
-    description: config.description?.substring(0, 50) + "...",
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[SEO] Found config:`, {
+      siteId,
+      code: config.code,
+      title: config.title,
+      description: config.description?.substring(0, 50) + "...",
+    });
+  }
 
   // 构建 metadataBase
   const cleanDomain = domain.replace(/^https?:\/\//, "");
@@ -156,7 +161,7 @@ export function getDefaultMetadata(): Metadata {
  * 用于配置更新后刷新缓存
  */
 export function clearSeoCache(): void {
-  seoCacheInstance.clear();
+  seoConfigCache.clear();
 }
 
 /**
@@ -164,5 +169,5 @@ export function clearSeoCache(): void {
  * @param siteId - 站点 ID
  */
 export function clearSiteSeoCache(siteId: string): void {
-  seoCacheInstance.deleteByPrefix(`${siteId}:`);
+  seoConfigCache.delete(siteId);
 }

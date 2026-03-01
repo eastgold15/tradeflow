@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ProductDetail from "@/components/product/ProductDetail";
-import { Skeleton } from "@/components/ui/skeleton"; // 假设你已经有这个组件
-import { useProductDetail } from "@/hooks/api/site-product";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useProductDetailBySlug } from "@/hooks/api/site-product";
+export const dynamic = 'force-dynamic';
 
 export default function ProductPage() {
-  const { id } = useParams();
-  const siteProductId = Array.isArray(id) ? id[0] : id;
+  const { slug } = useParams();
+  const productSlug = Array.isArray(slug) ? slug[0] : slug;
 
-  const { data, isLoading, error } = useProductDetail(siteProductId!);
+  const { data, isLoading, error } = useProductDetailBySlug(productSlug!);
 
   if (isLoading) {
     return (

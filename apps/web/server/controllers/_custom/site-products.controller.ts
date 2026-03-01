@@ -44,4 +44,17 @@ export const siteProductsController = new Elysia({ prefix: "/site_products" })
         description: "根据商品ID获取详细的商品信息，包括价格、描述、图片等",
       },
     }
+  )
+  .get(
+    "/slug/:slug",
+    async ({ params: { slug }, db, site }) =>
+      await siteProductService.getBySlug(slug, { db, site }),
+    {
+      params: t.Object({ slug: t.String() }),
+      detail: {
+        tags: ["Site Products"],
+        summary: "根据 slug 获取商品详情",
+        description: "用于前端 SEO 友好的商品详情页",
+      },
+    }
   );
