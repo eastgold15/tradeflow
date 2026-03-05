@@ -39,6 +39,7 @@ const formSchema = z.object({
   siteName: z.string().min(1, "商品名称不能为空"),
   siteDescription: z.string(),
   spuCode: z.string().min(1, "SPU编码不能为空"),
+  slug: z.string().min(1, "URL别名不能为空"),
   status: z.number().optional(),
   templateId: z.string().min(1, "请选择属性模板"),
   seoTitle: z.string().optional(),
@@ -80,6 +81,7 @@ export function CreateProductModal({
       spuCode: "",
       siteName: "",
       siteDescription: "",
+      slug: "",
       siteCategoryId: "",
       templateId: undefined,
       mediaIds: [],
@@ -99,6 +101,7 @@ export function CreateProductModal({
         spuCode: product.spuCode || "",
         siteName: product.siteName || product.name || "",
         siteDescription: product.siteDescription || product.description || "",
+        slug: product.slug || "",
         siteCategoryId: product.siteCategoryId || "",
         templateId: product.templateId || undefined,
         seoTitle: product.seoTitle || "",
@@ -146,6 +149,15 @@ export function CreateProductModal({
       .replace(/[^A-Z0-9]+/g, "")
       .slice(0, 6);
     return `${prefix}${timestamp}`;
+  };
+
+  // 自动生成 URL 别名 (slug)
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[\s\W_]+/g, "-") // 将非字母数字字符替换为连字符
+      .replace(/^-+|-+$/g, ""); // 移除首尾的连字符
   };
 
   return (
@@ -207,9 +219,33 @@ export function CreateProductModal({
                             generateSpuCode(e.target.value)
                           );
                         }
+                        // 如果还没有 slug，自动生成
+                        if (!form.getValues("slug")) {
+                          form.setValue("slug", generateSlug(e.target.value));
+                        }
                       }}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL别名 *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="例如：red-cotton-tshirt"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-muted-foreground text-xs">
+                    用于SEO友好的URL，将自动根据商品名称生成，可手动修改
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

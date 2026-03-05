@@ -11,7 +11,7 @@ RUN bun run turbo prune b2b-admin --docker
 
 
 # ── Stage 2: Install & Build ─────────────────────────────────────────
-FROM oven/bun:1.3.5 AS builder
+FROM registry.cn-hangzhou.aliyuncs.com/oven/bun:1.3.5-slim AS builder
 WORKDIR /app
 
 # Copy pruned lockfile + package.jsons (cache layer)
@@ -35,7 +35,7 @@ ENV DOMAIN=$DOMAIN
 RUN cd apps/b2b-admin && bun run build
 
 # ── Stage 3: Production ─────────────────────────────────────────────
-FROM oven/bun:1.3.5-slim AS runner
+FROM registry.cn-hangzhou.aliyuncs.com/oven/bun:1.3.5-slim-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

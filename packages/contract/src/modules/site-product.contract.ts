@@ -25,6 +25,7 @@ export const SiteProductContract = {
     spuCode: ProductFields.spuCode,
     siteName: ProductFields.name, // 站点商品名称，也是源头商品名称
     siteDescription: ProductFields.description, // 站点商品描述，也是源头商品描述
+    slug: SiteProductInsertFields.slug, // SEO友好的URL别名
 
     productId: t.Optional(t.String()),
     status: t.Optional(ProductFields.status),
@@ -45,6 +46,7 @@ export const SiteProductContract = {
       siteName: SiteProductInsertFields.siteName,
       siteDescription: SiteProductInsertFields.siteDescription,
       spuCode: ProductFields.spuCode,
+      slug: SiteProductInsertFields.slug, // SEO友好的URL别名
       status: ProductFields.status,
 
       templateId: ProductTemplateFields.templateId,
