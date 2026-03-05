@@ -12,11 +12,22 @@ pre-commit:
       stage_fixed: true
 
 
-post-commit:
-  command:
+# 新增 post-push
+post-push:
+  commands:
     push-to-codeup:
-     run: |
-       echo "🚀 正在推送到阿里云 Codeup..."
-         git remote add codeup git@codeup.aliyun.com:65647e9f4b0f448b4f9c6f7c/eastgold15/tradeflow.git 2>/dev/null || true
-         git push codeup ${GIT_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
-         echo "✅ 推送成功！"
+      run: |
+        echo "🚀 正在推送到阿里云 Codeup 备份..."
+        
+        # 1. 确保远程仓库存在
+        git remote add codeup git@codeup.aliyun.com:65647e9f4b0f448b4f9c6f7c/eastgold15/tradeflow.git 2>/dev/null || true
+        
+        # 2. 获取当前分支名
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        
+        # 3. 执行推送
+        # 注意：这里不需要指定分支，因为 post-push 发生时，你刚刚已经 push 过了
+        # 但为了保险，我们显式推送到同名分支
+        git push codeup "$BRANCH"
+        
+        echo "✅ 阿里云 Codeup 备份成功！"
