@@ -11,13 +11,7 @@ build/
 .turbo/
 
 # Environment variables - 绝对不要提交
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
-apps/*/.env*
+.env.*
 !apps/*/.env.example
 
 # Database
@@ -45,10 +39,7 @@ logs/
 .DS_Store
 .Thumbs.db
 
-# Package manager lock files (使用 bun)
-pnpm-lock.yaml
-yarn.lock
-package-lock.json
+
 
 # Temporary files
 *.tmp
@@ -101,12 +92,9 @@ minio/data/
 config.local.*
 local.json
 
-# 测试生成的文件
-test-error.js
+
 
 # 契约层生成的类型文件
 packages/contract/src/**/*.d.ts
 
-# SEO 文件（自动生成）
-apps/web/public/robots.txt
-apps/web/public/sitemap.xml
+
