@@ -10,3 +10,13 @@ pre-commit:
         - "*.jsonc"
         - "*.css"
       stage_fixed: true
+
+
+post-commit:
+  command:
+    push-to-codeup:
+     run: |
+       echo "🚀 正在推送到阿里云 Codeup..."
+         git remote add codeup git@codeup.aliyun.com:65647e9f4b0f448b4f9c6f7c/eastgold15/tradeflow.git 2>/dev/null || true
+         git push codeup ${GIT_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
+         echo "✅ 推送成功！"

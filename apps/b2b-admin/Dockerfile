@@ -1,5 +1,5 @@
 # ── Stage 1: Prune monorepo ──────────────────────────────────────────
-FROM oven/bun:1.3.5 AS pruner
+FROM registry.cn-hangzhou.aliyuncs.com/oven/bun:1.3.5-slim AS pruner
 WORKDIR /app
 # Copy lockfile + package.jsons first, install turbo
 COPY package.json bun.lock turbo.json ./
