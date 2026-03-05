@@ -5,10 +5,3 @@ pre-commit:
       glob: "*.{js,jsx,ts,tsx,json,jsonc,css}"
       stage_fixed: true
 
-
-pre-push:
-  commands:
-    push-to-codeup:
-      run: git push codeup 
-        
-        
