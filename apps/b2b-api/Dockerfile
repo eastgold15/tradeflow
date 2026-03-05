@@ -1,5 +1,5 @@
 # ── Stage 1: Prune monorepo ──────────────────────────────────────────
-FROM registry.cn-hangzhou.aliyuncs.com/oven/bun:1.3.5-slim AS pruner
+FROM oven/bun:1.3.5 AS pruner
 WORKDIR /app
 
 # Copy lockfile + package.jsons first, install turbo
@@ -11,7 +11,7 @@ COPY . .
 RUN bun run turbo prune b2b-api --docker
 
 # ── Stage 2: Install dependencies ────────────────────────────────────
-FROM registry.cn-hangzhou.aliyuncs.com/oven/bun:1.3.5-slim AS installer
+FROM oven/bun:1.3.5 AS installer
 WORKDIR /app
 
 
