@@ -242,7 +242,9 @@ export class HeroCardService {
       .where(and(...whereConditions));
 
     if (cards.length === 0) {
-      throw new HttpError.NotFound(`HeroCard (IDs: ${ids.join(", ")})：未找到可删除的记录`);
+      throw new HttpError.NotFound(
+        `HeroCard (IDs: ${ids.join(", ")})：未找到可删除的记录`
+      );
     }
 
     // 批量删除

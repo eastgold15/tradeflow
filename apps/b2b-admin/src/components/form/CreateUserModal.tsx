@@ -478,7 +478,6 @@ export function CreateUserModal({
                     <Label>负责的主分类</Label>
                   </div>
                   <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
-
                     {masterCategories.length === 0 ? (
                       <p className="text-slate-500 text-sm">暂无主分类</p>
                     ) : (

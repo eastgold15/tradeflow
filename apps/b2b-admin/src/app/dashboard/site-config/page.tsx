@@ -24,11 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useSiteList } from "@/hooks/api/site";
 import {
   useDeleteSiteConfig,
   useSiteConfigList,
 } from "@/hooks/api/site-config";
-import { useSiteList } from "@/hooks/api/site";
 import { DeepNonNullable } from "@/types/utils";
 
 export default function SiteConfigPage() {
@@ -49,10 +49,13 @@ export default function SiteConfigPage() {
   const deleteMutation = useDeleteSiteConfig();
 
   // 创建站点 ID 到站点名称的映射
-  const siteNameMap = (siteListData || []).reduce((acc: Record<string, string>, site: any) => {
-    acc[site.id] = site.name;
-    return acc;
-  }, {} as Record<string, string>);
+  const siteNameMap = (siteListData || []).reduce(
+    (acc: Record<string, string>, site: any) => {
+      acc[site.id] = site.name;
+      return acc;
+    },
+    {} as Record<string, string>
+  );
 
   // 处理删除
   const handleDelete = async (id: string) => {
@@ -67,7 +70,9 @@ export default function SiteConfigPage() {
   };
 
   // 处理编辑
-  const handleEdit = (config: DeepNonNullable<SiteConfigContract["Response"]>) => {
+  const handleEdit = (
+    config: DeepNonNullable<SiteConfigContract["Response"]>
+  ) => {
     setEditingConfig(config);
   };
 
@@ -162,7 +167,9 @@ export default function SiteConfigPage() {
                         selectedSiteId === siteId ? "default" : "outline"
                       }
                     >
-                      {siteId === "all" ? "全部站点" : siteNameMap[siteId] || siteId}
+                      {siteId === "all"
+                        ? "全部站点"
+                        : siteNameMap[siteId] || siteId}
                     </Button>
                   ))}
                 </div>
@@ -226,10 +233,18 @@ export default function SiteConfigPage() {
                                   </p>
 
                                   <div className="mt-2 text-sm">
-                                    <span className="font-medium">配置内容:</span>{" "}
-                                    {config.jsonValue && Object.keys(config.jsonValue).length > 0 ? (
-                                      <Badge variant="outline" className="ml-2 font-mono text-blue-500">
-                                        <code className="text-[10px]">JSON Object</code>
+                                    <span className="font-medium">
+                                      配置内容:
+                                    </span>{" "}
+                                    {config.jsonValue &&
+                                    Object.keys(config.jsonValue).length > 0 ? (
+                                      <Badge
+                                        className="ml-2 font-mono text-blue-500"
+                                        variant="outline"
+                                      >
+                                        <code className="text-[10px]">
+                                          JSON Object
+                                        </code>
                                       </Badge>
                                     ) : (
                                       <span className="text-muted-foreground">

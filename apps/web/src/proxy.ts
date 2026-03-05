@@ -16,14 +16,19 @@ export default function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
 
   // 2. 站点解析逻辑 (Domain Handling) - 统一入口，避免重复计算
-  const rawHost = request.headers.get("host") || request.headers.get("x-forwarded-host") || "";
+  const rawHost =
+    request.headers.get("host") ||
+    request.headers.get("x-forwarded-host") ||
+    "";
   let domain = normalizeDomain(rawHost);
 
   // 3. 兜底逻辑：仅在本地开发环境使用环境变量
-  const isLocalhost = !domain || domain === "localhost" || domain.includes("127.0.0.1");
+  const isLocalhost =
+    !domain || domain === "localhost" || domain.includes("127.0.0.1");
   if (isLocalhost) {
     // 只在非生产环境使用 DOMAIN 环境变量
-    const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+    const isDev =
+      process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
     if (isDev) {
       domain = normalizeDomain(process.env.DOMAIN || "default-domain.com");
     }

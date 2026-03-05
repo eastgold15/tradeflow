@@ -31,6 +31,6 @@ export function useSiteConfigList(query: SiteConfigParams, enabled = true) {
       return response.data;
     },
     enabled: enabled && !!query,
-    staleTime: Infinity, // 第一次请求后永久缓存
+    staleTime: Number.POSITIVE_INFINITY, // 第一次请求后永久缓存
   });
 }

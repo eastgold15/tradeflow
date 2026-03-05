@@ -50,34 +50,37 @@ export function MDXWrapper({ children }: { children: React.ReactNode }) {
 export const mdxComponents: MDXComponents = {
   Alert,
 
-
-
   // 1. 强调容器：用于"我们收集的信息"或"您的权利"
   Section: ({ title, icon: Icon, children, className }: any) => (
-    <div className={`my-8 p-6 border rounded-xl bg-slate-50/50 dark:bg-slate-900/50 ${className}`}>
-      <div className="flex items-center gap-2 mb-4 not-prose">
-        {Icon && <Icon className="w-5 h-5 text-primary" />}
-        <h2 className="text-xl font-bold m-0">{title}</h2>
+    <div
+      className={`my-8 rounded-xl border bg-slate-50/50 p-6 dark:bg-slate-900/50 ${className}`}
+    >
+      <div className="not-prose mb-4 flex items-center gap-2">
+        {Icon && <Icon className="h-5 w-5 text-primary" />}
+        <h2 className="m-0 font-bold text-xl">{title}</h2>
       </div>
       <div>{children}</div>
     </div>
   ),
 
-
   // 2. 数据表格：清晰列出收集项、目的、保存期限
-  DataTable: ({ data }: { data: { item: string; purpose: string; limit: string }[] }) => (
+  DataTable: ({
+    data,
+  }: {
+    data: { item: string; purpose: string; limit: string }[];
+  }) => (
     <div className="my-4 overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b">
-            <th className="text-left py-2">Data type</th>
-            <th className="text-left py-2">Purpose of processing</th>
-            <th className="text-left py-2">Retention period</th>
+            <th className="py-2 text-left">Data type</th>
+            <th className="py-2 text-left">Purpose of processing</th>
+            <th className="py-2 text-left">Retention period</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
-            <tr key={i} className="border-b last:border-0">
+            <tr className="border-b last:border-0" key={i}>
               <td className="py-2 font-medium">{row.item}</td>
               <td className="py-2 text-muted-foreground">{row.purpose}</td>
               <td className="py-2 text-muted-foreground">{row.limit}</td>
@@ -92,10 +95,13 @@ export const mdxComponents: MDXComponents = {
   Notice: ({ type = "info", children }: any) => {
     const styles = {
       info: "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800",
-      warning: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800",
+      warning:
+        "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800",
     };
     return (
-      <div className={`max-w-none p-4 border-l-4 rounded-r-md my-4 ${styles[type as keyof typeof styles]}`}>
+      <div
+        className={`my-4 max-w-none rounded-r-md border-l-4 p-4 ${styles[type as keyof typeof styles]}`}
+      >
         {children}
       </div>
     );

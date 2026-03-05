@@ -213,7 +213,7 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <div
-                          className={`rounded-full px-3 py-1 whitespace-nowrap ${
+                          className={`whitespace-nowrap rounded-full px-3 py-1 ${
                             department.category === "group"
                               ? "bg-purple-100"
                               : "bg-green-100"
@@ -252,17 +252,22 @@ export default function UsersPage() {
                     <div className="border-slate-100 border-t pt-4">
                       <div className="flex items-center justify-between">
                         <div
-                          className={`flex items-center gap-1 text-xs ${department.category === "group"
+                          className={`flex items-center gap-1 text-xs ${
+                            department.category === "group"
                               ? "text-purple-600"
                               : "text-slate-500"
-                            }`}
+                          }`}
                         >
                           {department.category === "group" ? (
                             <Building className="h-5 w-5" />
                           ) : (
                             <Building2 className="h-5 w-5" />
                           )}
-                          <span>{department.category === "group" ? "出口商" : "工厂"}</span>
+                          <span>
+                            {department.category === "group"
+                              ? "出口商"
+                              : "工厂"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button

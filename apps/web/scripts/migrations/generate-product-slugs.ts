@@ -3,10 +3,10 @@
  * 运行方式: bun scripts/migrations/generate-product-slugs.ts
  */
 
-import { db } from "../../server/db/connection";
-import { siteProductTable, productTable } from "@repo/contract";
-import { generateProductSlug } from "@/lib/slug-utils";
+import { productTable, siteProductTable } from "@repo/contract";
 import { eq, isNull } from "drizzle-orm";
+import { generateProductSlug } from "@/lib/slug-utils";
+import { db } from "../../server/db/connection";
 
 async function generateProductSlugs() {
   console.log("开始为现有商品生成 slug...");

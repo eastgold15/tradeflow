@@ -26,11 +26,10 @@ import {
   salesResponsibilityTable,
   templateKeyTable,
   templateValueTable,
-  tenantTable,
   userRoleTable,
-  userTable
+  userTable,
 } from "@repo/contract";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "~/db/connection";
 
 import type { ServiceContext } from "~/middleware/site";
@@ -39,9 +38,13 @@ import { generateInquiryNumber } from "~/modules/inquiry/services/dayCount";
 import { generateQuotationExcel } from "~/modules/inquiry/services/excel.service";
 
 import { sendSalesInquiryEmailViaResend } from "~/utils/email/email-resend/inquiry-resend";
-import { findSiteProductWithRelations, findSiteSkuWithRelations, SiteProductWithRelations, SiteSkuWithRelations } from "./inquiry.repos";
 import { isImageMedia } from "~/utils/media";
-
+import {
+  findSiteProductWithRelations,
+  findSiteSkuWithRelations,
+  SiteProductWithRelations,
+  SiteSkuWithRelations,
+} from "./inquiry.repos";
 
 type Exporter = {
   // 唯一标识 ID
@@ -74,7 +77,7 @@ type Exporter = {
   isActive: boolean;
   // 企业邮箱
   email: string;
-}
+};
 
 type Factory = {
   // 唯一标识 ID
@@ -107,7 +110,7 @@ type Factory = {
   isActive: boolean;
   // 企业邮箱
   email: string;
-}
+};
 // 外部业务工具
 // 类型定义
 type TransactionFn = Parameters<(typeof db)["transaction"]>[0];
@@ -137,8 +140,6 @@ type TenantInfo = {
   bankInfo?: { beneficiary: string; accountNo: string } | null;
 };
 
-
-
 // 外部业务工具
 // 类型定义
 
@@ -153,8 +154,6 @@ type Inquiry = typeof inquiryTable.$inferSelect;
 type SiteSku = validateAndGetSkuData["siteSku"];
 type SiteProduct = validateAndGetSkuData["siteProduct"];
 
-
-
 type ExporterAndFactory = {
   exporter: ExporterInfo | null;
   factories: FactoryInfo[];
@@ -165,20 +164,23 @@ type ExporterAndFactory = {
  * 询价服务类
  */
 export class InquiryService {
-
   /**
    * 🚀 询价提交：事务处理 + 分单逻辑 + 异步通知
    */
-  async submit(body: typeof InquiryContract.Create.static, ctx: ServiceContext) {
+  async submit(
+    body: typeof InquiryContract.Create.static,
+    ctx: ServiceContext
+  ) {
     const { site } = ctx;
-
 
     // 1. 验证并获取商品/SKU数据 (逻辑解耦)
     const skuData = await this.validateAndResolveSku(body, ctx);
     const { siteProduct, siteSku, effectiveMediaId } = skuData;
 
     // 2. 获取商品的主分类（用于匹配业务员）
-    const masterCategoryIds = await this.getProductMasterCategories(siteProduct.productId);
+    const masterCategoryIds = await this.getProductMasterCategories(
+      siteProduct.productId
+    );
 
     // 3. 开启事务处理核心业务逻辑
     const result = await db.transaction(async (tx) => {
@@ -189,7 +191,11 @@ export class InquiryService {
       const inquiryNum = await generateInquiryNumber();
 
       // 3.3 匹配最佳业务员 (增加稳定性排序)
-      const targetRep = await this.findBestSalesperson(masterCategoryIds, ctx, tx);
+      const targetRep = await this.findBestSalesperson(
+        masterCategoryIds,
+        ctx,
+        tx
+      );
 
       // 3.4 创建询价主表
       const [newInquiry] = await tx
@@ -240,7 +246,10 @@ export class InquiryService {
       siteSku,
       effectiveMediaId
     ).catch((err) => {
-      console.error(`[❌ Critical] Async notification failed for ${result.inquiry.inquiryNum}:`, err);
+      console.error(
+        `[❌ Critical] Async notification failed for ${result.inquiry.inquiryNum}:`,
+        err
+      );
     });
 
     return {
@@ -249,7 +258,6 @@ export class InquiryService {
       assignedTo: result.targetRep?.user?.name || "Public Pool",
     };
   }
-
 
   // ===========================================================================
   // 🧩 核心逻辑拆分 (Logic Separation)
@@ -263,16 +271,23 @@ export class InquiryService {
     ctx: ServiceContext
   ) {
     // 1. 获取 SiteProduct
-    const siteProduct = await findSiteProductWithRelations(ctx.site.id, body.siteProductId);
+    const siteProduct = await findSiteProductWithRelations(
+      ctx.site.id,
+      body.siteProductId
+    );
 
-    if (!siteProduct) throw new HttpError.BadRequest(`Product not found in this site${body.siteProductId} `);
+    if (!siteProduct)
+      throw new HttpError.BadRequest(
+        `Product not found in this site${body.siteProductId} `
+      );
 
     // 2. 获取 SiteSku (如果存在)
 
-
-    const siteSku = await findSiteSkuWithRelations(siteProduct.id, body.siteSkuId);
+    const siteSku = await findSiteSkuWithRelations(
+      siteProduct.id,
+      body.siteSkuId
+    );
     if (!siteSku) throw new HttpError.BadRequest("SKU not found");
-
 
     // 3. 解析继承逻辑后的有效媒体 ID
     const effectiveMediaId = await this.resolveEffectiveMediaId(
@@ -310,12 +325,17 @@ export class InquiryService {
     // 变体媒体（继承）
     let inheritedMediaIds: string[] = [];
     if (siteSku) {
-      const colorInfo = await this.identifyColorAttribute(siteProduct.productId);
+      const colorInfo = await this.identifyColorAttribute(
+        siteProduct.productId
+      );
       if (colorInfo) {
         const specs = siteSku.sku.specJson as Record<string, string>;
         const colorValue = specs[colorInfo.key] || specs.颜色;
         if (colorValue) {
-          const attrValId = await this.getAttributeValueId(colorInfo.keyId, colorValue);
+          const attrValId = await this.getAttributeValueId(
+            colorInfo.keyId,
+            colorValue
+          );
           if (attrValId) {
             inheritedMediaIds = siteProduct.product.variantMedia
               .filter((vm) => vm.attributeValueId === attrValId)
@@ -355,10 +375,10 @@ export class InquiryService {
 
     // 顺序：SKU → 变体 → 商品
     if (siteSku?.sku.media) {
-      addImageIds(siteSku.sku.media.map(m => m.id));
+      addImageIds(siteSku.sku.media.map((m) => m.id));
     }
     addImageIds(inheritedMediaIds);
-    addImageIds(siteProduct.product.media.map(m => m.id));
+    addImageIds(siteProduct.product.media.map((m) => m.id));
 
     // 3. 返回第一个有效图片
     if (candidateIds.length > 0) {
@@ -367,9 +387,8 @@ export class InquiryService {
 
     // 4. 如果没有图片，但有媒体，返回第一个（可能是视频，作为兜底）
     const allIds = Array.from(mediaMap.keys());
-    return allIds[2]
+    return allIds[2];
   }
-
 
   /**
    * 📧 处理异步通知 (并行优化)
@@ -386,7 +405,9 @@ export class InquiryService {
     mediaId?: string
   ) {
     if (!targetRep?.user?.email) {
-      console.log("[⚠️] No sales rep assigned or missing email, skipping notification.");
+      console.log(
+        "[⚠️] No sales rep assigned or missing email, skipping notification."
+      );
       return;
     }
 
@@ -395,7 +416,9 @@ export class InquiryService {
     // 🔥 并行获取所有必要数据 (Parallel Fetching)
     const [exporterAndFactories, mediaInfo] = await Promise.all([
       this.getExporterAndFactoryInfo(inquiry.siteId),
-      mediaId ? db.query.mediaTable.findFirst({ where: { id: mediaId } }) : null,
+      mediaId
+        ? db.query.mediaTable.findFirst({ where: { id: mediaId } })
+        : null,
     ]);
 
     const { exporter, factories, tenant } = exporterAndFactories;
@@ -408,7 +431,7 @@ export class InquiryService {
     });
     const isCooperating = siteDept?.isCooperating ?? false;
 
-    console.log('工厂合作状态:', isCooperating ? '✅ 已合作' : '❌ 未合作');
+    console.log("工厂合作状态:", isCooperating ? "✅ 已合作" : "❌ 未合作");
 
     // 🔥 二次并行：依赖于上面结果的数据
     const [adminEmails, photoData] = await Promise.all([
@@ -420,14 +443,17 @@ export class InquiryService {
     const bccEmails = [...adminEmails];
     if (isCooperating) {
       // 工厂已合作，添加工厂用户到抄送
-      factories.forEach(f => {
+      factories.forEach((f) => {
         if (f.email && !bccEmails.includes(f.email)) {
           bccEmails.push(f.email);
         }
       });
-      console.log('✅ 工厂已合作，抄送工厂管理员用户:', factories.map(f => f.email).filter(Boolean));
+      console.log(
+        "✅ 工厂已合作，抄送工厂管理员用户:",
+        factories.map((f) => f.email).filter(Boolean)
+      );
     } else {
-      console.log('⚠️ 工厂未合作，不抄送工厂管理员用户');
+      console.log("⚠️ 工厂未合作，不抄送工厂管理员用户");
     }
 
     // 生成 Excel
@@ -438,7 +464,7 @@ export class InquiryService {
       exporter,
       factories,
       tenant,
-      photoData,
+      photoData
     );
 
     // 转换数据格式
@@ -450,7 +476,7 @@ export class InquiryService {
       bccEmails, // 合并后的 BCC 列表
       inquiryWithItems,
       inquiry.inquiryNum,
-      factories.map(f => ({ name: f.name, address: f.address || '' })),
+      factories.map((f) => ({ name: f.name, address: f.address || "" })),
       { name: targetRep.user.name, email: targetRep.user.email },
       excelBuffer
     );
@@ -469,35 +495,48 @@ export class InquiryService {
    * 1. 如果工厂已合作 (isCooperating=true) → 优先分配给工厂的业务员
    * 2. 如果工厂未合作 (isCooperating=false) → 分配给出口商的业务员
    */
-  async findBestSalesperson(categoryIds: string[], ctx: ServiceContext, tx: TxType) {
+  async findBestSalesperson(
+    categoryIds: string[],
+    ctx: ServiceContext,
+    tx: TxType
+  ) {
     const { boundDeptId, tenantId, id: siteId } = ctx.site;
-    ctx.site.id
+    ctx.site.id;
 
-    console.log('=== 🔍 [findBestSalesperson] 开始匹配业务员 ===');
-    console.log('站点ID:', siteId);
-    console.log('boundDeptId:', boundDeptId);
-    console.log('tenantId:', tenantId);
-    console.log('categoryIds:', categoryIds);
+    console.log("=== 🔍 [findBestSalesperson] 开始匹配业务员 ===");
+    console.log("站点ID:", siteId);
+    console.log("boundDeptId:", boundDeptId);
+    console.log("tenantId:", tenantId);
+    console.log("categoryIds:", categoryIds);
 
     // 获取站点的部门合作状态（需要查询 department 表）
     const Dept = await tx.query.departmentTable.findFirst({
       where: { id: boundDeptId },
-      columns: { id: true, name: true, isCooperating: true, parentId: true, category: true },
+      columns: {
+        id: true,
+        name: true,
+        isCooperating: true,
+        parentId: true,
+        category: true,
+      },
     });
 
     if (!Dept) {
-      console.log('❌ 未找到站点部门信息');
+      console.log("❌ 未找到站点部门信息");
       return null;
     }
 
-    console.log('站点部门:', Dept.name);
-    console.log('工厂合作状态:', Dept.isCooperating ? '✅ 已合作' : '❌ 未合作');
+    console.log("站点部门:", Dept.name);
+    console.log(
+      "工厂合作状态:",
+      Dept.isCooperating ? "✅ 已合作" : "❌ 未合作"
+    );
 
-    // 查询当前站点所有责任记录  
+    // 查询当前站点所有责任记录
     const responsibilities = await tx.query.salesResponsibilityTable.findMany({
       where: {
         masterCategoryId: {
-          in: categoryIds
+          in: categoryIds,
         },
         siteId,
         tenantId,
@@ -506,35 +545,35 @@ export class InquiryService {
       with: { user: true },
     });
 
-    console.log('查询到的责任记录数:', responsibilities.length);
+    console.log("查询到的责任记录数:", responsibilities.length);
 
     // 根据合作状态确定目标部门 ID
     let targetDeptId: string | null = null;
-    let assignmentReason = '';
+    let assignmentReason = "";
 
     if (Dept.isCooperating) {
       // 已合作：优先分配给当前工厂的业务员
       targetDeptId = boundDeptId;
-      assignmentReason = '工厂已合作，分配给工厂业务员';
+      assignmentReason = "工厂已合作，分配给工厂业务员";
     } else {
       // 未合作：分配给出口商的业务员
-      if (Dept.category === 'group') {
+      if (Dept.category === "group") {
         // 当前站点本身就是出口商
         targetDeptId = boundDeptId;
-        assignmentReason = '当前站点是出口商';
+        assignmentReason = "当前站点是出口商";
       } else if (Dept.parentId) {
         // 工厂站点，使用父部门（出口商）ID
         targetDeptId = Dept.parentId;
-        assignmentReason = '工厂未合作，分配给出口商业务员';
+        assignmentReason = "工厂未合作，分配给出口商业务员";
       } else {
         // 没有父部门，使用当前部门
         targetDeptId = boundDeptId;
-        assignmentReason = '无父部门，使用当前部门';
+        assignmentReason = "无父部门，使用当前部门";
       }
     }
 
-    console.log('分配策略:', assignmentReason);
-    console.log('目标部门ID:', targetDeptId);
+    console.log("分配策略:", assignmentReason);
+    console.log("目标部门ID:", targetDeptId);
 
     // 过滤：部门匹配 + 活跃状态
     const candidates = responsibilities.filter((r) => {
@@ -546,10 +585,10 @@ export class InquiryService {
       return isMatch;
     });
 
-    console.log('过滤后的候选人数:', candidates.length);
+    console.log("过滤后的候选人数:", candidates.length);
 
     if (candidates.length === 0) {
-      console.log('❌ 没有找到匹配的业务员');
+      console.log("❌ 没有找到匹配的业务员");
       return null;
     }
 
@@ -562,7 +601,11 @@ export class InquiryService {
     });
 
     const selected = candidates[0];
-    console.log('✅ 选中业务员:', selected.user?.name, `(${selected.user?.email})`);
+    console.log(
+      "✅ 选中业务员:",
+      selected.user?.name,
+      `(${selected.user?.email})`
+    );
 
     return selected;
   }
@@ -577,7 +620,7 @@ export class InquiryService {
     exporter: any,
     factories: any[],
     tenant: any,
-    photoBuffer: { buffer: Buffer<ArrayBufferLike>; mimeType: string; } | null,
+    photoBuffer: { buffer: Buffer<ArrayBufferLike>; mimeType: string } | null
   ) {
     try {
       // 获取站点域名
@@ -585,7 +628,9 @@ export class InquiryService {
         where: { id: inquiry.siteId },
         columns: { domain: true },
       });
-      const siteWeb = site?.domain ? `www.${site.domain}` : tenant?.website || "www.dongqifootwear.com";
+      const siteWeb = site?.domain
+        ? `www.${site.domain}`
+        : tenant?.website || "www.dongqifootwear.com";
 
       const data = this.mapToExcelData(
         inquiry,
@@ -595,52 +640,65 @@ export class InquiryService {
         factories,
         tenant,
         siteWeb,
-        photoBuffer ? { buffer: photoBuffer.buffer, mimeType: photoBuffer.mimeType, name: "ref-img" } : null
+        photoBuffer
+          ? {
+              buffer: photoBuffer.buffer,
+              mimeType: photoBuffer.mimeType,
+              name: "ref-img",
+            }
+          : null
       );
 
       // 添加缺失的银行信息和客户地址字段（优先使用数据库中的值）
       const fullData: QuotationData = {
         ...data,
-        bankBeneficiary: tenant?.bankInfo?.beneficiary || exporter?.name || "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
+        bankBeneficiary:
+          tenant?.bankInfo?.beneficiary ||
+          exporter?.name ||
+          "DONG QI FOOTWEAR (JIANGXI) CO., LTD",
         bankAccountNo: tenant?.bankInfo?.accountNo || "",
         bankName: "Bank of China", // 可从租户配置获取
-        bankAddr: tenant?.address || "No.1 Fuxingmen Nei Street, Beijing, China",
+        bankAddr:
+          tenant?.address || "No.1 Fuxingmen Nei Street, Beijing, China",
         clientAddr: inquiry.customerAddress || "N/A", // 客户地址（可选）
       };
 
       // 🖨️ 打印传给 Excel 的值
-      console.log('=== 📊 [Excel] 传给 Excel 的数据 ===');
-      console.log('Exporter:', {
+      console.log("=== 📊 [Excel] 传给 Excel 的数据 ===");
+      console.log("Exporter:", {
         name: fullData.exporterName,
         address: fullData.exporterAddr,
         phone: fullData.exporterPhone,
         email: fullData.exporterEmail,
         web: fullData.exporterWeb,
       });
-      console.log('Factory:', {
+      console.log("Factory:", {
         name: fullData.factoryName,
         address: fullData.factoryAddr,
         email: fullData.factoryEmail,
         web: fullData.fatoryWeb,
         phone: fullData.factoryPhone,
       });
-      console.log('Bank:', {
+      console.log("Bank:", {
         beneficiary: fullData.bankBeneficiary,
         accountNo: fullData.bankAccountNo,
         bankName: fullData.bankName,
         bankAddr: fullData.bankAddr,
       });
-      console.log('Tenant:', {
+      console.log("Tenant:", {
         name: tenant?.name,
         address: tenant?.address,
         website: tenant?.website,
         bankInfo: tenant?.bankInfo,
       });
-      console.log('=====================================');
+      console.log("=====================================");
 
       return await generateQuotationExcel(fullData);
     } catch (e) {
-      console.error("[⚠️] Excel generation failed (Email will be sent without attachment):", e);
+      console.error(
+        "[⚠️] Excel generation failed (Email will be sent without attachment):",
+        e
+      );
       return undefined;
     }
   }
@@ -659,7 +717,9 @@ export class InquiryService {
     photo: any
   ) {
     const mainFactory = factories[0];
-    const clientName = InquiryService.extractUsernameFromEmail(inquiry.customerEmail);
+    const clientName = InquiryService.extractUsernameFromEmail(
+      inquiry.customerEmail
+    );
 
     return {
       // Exporter (优先使用数据库中的值)
@@ -683,7 +743,6 @@ export class InquiryService {
       factoryWeb3: "",
       factoryPhone: mainFactory?.contactPhone || "",
 
-
       // Client
       clientCompanyName: inquiry.customerCompany || "",
       clientFullName: inquiry.customerName || clientName,
@@ -691,8 +750,6 @@ export class InquiryService {
       clientEmail: inquiry.customerEmail,
       clientPhone: Number.parseInt(inquiry.customerPhone || "0", 10),
       clientWhatsApp: inquiry.customerWhatsapp || "",
-
-
 
       // Product / Terms
       photoForRefer: photo,
@@ -727,13 +784,20 @@ export class InquiryService {
       with: { department: true },
     });
 
-    if (!site?.department) return { exporter: null, factories: [], tenant: null };
+    if (!site?.department)
+      return { exporter: null, factories: [], tenant: null };
 
     // 并行获取出口商/工厂信息和租户信息
     const [tenant] = await Promise.all([
       db.query.tenantTable.findFirst({
         where: { id: site.tenantId },
-        columns: { id: true, name: true, address: true, website: true, bankInfo: true },
+        columns: {
+          id: true,
+          name: true,
+          address: true,
+          website: true,
+          bankInfo: true,
+        },
       }),
     ]);
 
@@ -761,35 +825,42 @@ export class InquiryService {
       // 出口商管理员邮箱（出口商管理员角色）
       this.getExporterAdminEmail(exporter?.id, site.tenantId),
       // 各工厂的用户邮箱
-      ...factories.map(f => this.getDeptUserEmail(f.id))
+      ...factories.map((f) => this.getDeptUserEmail(f.id)),
     ]);
 
     // 将邮箱添加到对应的对象中
-    const exporterWithEmail: (typeof exporter & ExporterInfo) | null = exporter ? {
-      ...exporter,
-      email: exporterAdminEmail
-    } : null;
+    const exporterWithEmail: (typeof exporter & ExporterInfo) | null = exporter
+      ? {
+          ...exporter,
+          email: exporterAdminEmail,
+        }
+      : null;
 
-    const factoriesWithEmail: (typeof factories[0] & FactoryInfo)[] = factories.map((f, i) => ({
-      ...f,
-      email: factoryAdminEmails[i]
-    }));
+    const factoriesWithEmail: ((typeof factories)[0] & FactoryInfo)[] =
+      factories.map((f, i) => ({
+        ...f,
+        email: factoryAdminEmails[i],
+      }));
 
-    return { exporter: exporterWithEmail, factories: factoriesWithEmail, tenant };
+    return {
+      exporter: exporterWithEmail,
+      factories: factoriesWithEmail,
+      tenant,
+    };
   }
 
   /**
    * 📧 批量获取工厂管理员邮箱
    */
   private async resolveFactoryEmails(factories: any[]): Promise<string[]> {
-    return Promise.all(
-      factories.map((f) => this.getFactoryAdminEmail(f.id))
-    );
+    return Promise.all(factories.map((f) => this.getFactoryAdminEmail(f.id)));
   }
 
   // --- Utility Methods ---
 
-  private async getProductMasterCategories(productId: string): Promise<string[]> {
+  private async getProductMasterCategories(
+    productId: string
+  ): Promise<string[]> {
     const cats = await db.query.productMasterCategoryTable.findMany({
       where: { productId },
     });
@@ -820,7 +891,10 @@ export class InquiryService {
     };
 
     if (existing) {
-      await tx.update(customerTable).set(data).where(eq(customerTable.id, existing.id));
+      await tx
+        .update(customerTable)
+        .set(data)
+        .where(eq(customerTable.id, existing.id));
     } else {
       await tx.insert(customerTable).values(data);
     }
@@ -851,8 +925,9 @@ export class InquiryService {
     };
   }
 
-
-  private async downloadImage(url?: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  private async downloadImage(
+    url?: string
+  ): Promise<{ buffer: Buffer; mimeType: string } | null> {
     if (!url) return null;
     try {
       const resp = await fetch(url);
@@ -865,14 +940,6 @@ export class InquiryService {
       return null;
     }
   }
-
-
-
-
-
-
-
-
 
   /**
    * 👥 获取需要抄送的管理员
@@ -908,10 +975,7 @@ export class InquiryService {
             name: userTable.name,
           })
           .from(userTable)
-          .innerJoin(
-            userRoleTable,
-            eq(userRoleTable.userId, userTable.id)
-          )
+          .innerJoin(userRoleTable, eq(userRoleTable.userId, userTable.id))
           .where(
             and(
               eq(userRoleTable.roleId, tenantAdminRole.id),
@@ -1003,10 +1067,7 @@ export class InquiryService {
           name: userTable.name,
         })
         .from(userTable)
-        .innerJoin(
-          userRoleTable,
-          eq(userRoleTable.userId, userTable.id)
-        )
+        .innerJoin(userRoleTable, eq(userRoleTable.userId, userTable.id))
         .where(
           and(
             eq(userRoleTable.roleId, deptManagerRole.id),
@@ -1017,7 +1078,9 @@ export class InquiryService {
         .limit(1);
 
       if (deptManager?.email) {
-        console.log(`[📋] 找到出口商管理员: ${deptManager.name} (${deptManager.email})`);
+        console.log(
+          `[📋] 找到出口商管理员: ${deptManager.name} (${deptManager.email})`
+        );
         return deptManager.email;
       }
 
@@ -1042,12 +1105,7 @@ export class InquiryService {
           name: userTable.name,
         })
         .from(userTable)
-        .where(
-          and(
-            eq(userTable.deptId, deptId),
-            eq(userTable.isActive, true)
-          )
-        )
+        .where(and(eq(userTable.deptId, deptId), eq(userTable.isActive, true)))
         .limit(1);
 
       if (user?.email) {
@@ -1060,7 +1118,6 @@ export class InquiryService {
     }
   }
 
-
   /**
    * 🏭 获取单个工厂的管理员邮箱
    *
@@ -1069,9 +1126,7 @@ export class InquiryService {
    * @param factoryDeptId - 工厂部门ID
    * @returns 工厂管理员邮箱（第一个）或空字符串
    */
-  private async getFactoryAdminEmail(
-    factoryDeptId: string
-  ): Promise<string> {
+  private async getFactoryAdminEmail(factoryDeptId: string): Promise<string> {
     try {
       const [deptManagerRole] = await db
         .select()
@@ -1090,10 +1145,7 @@ export class InquiryService {
           name: userTable.name,
         })
         .from(userTable)
-        .innerJoin(
-          userRoleTable,
-          eq(userRoleTable.userId, userTable.id)
-        )
+        .innerJoin(userRoleTable, eq(userRoleTable.userId, userTable.id))
         .where(
           and(
             eq(userRoleTable.roleId, deptManagerRole.id),
@@ -1104,7 +1156,9 @@ export class InquiryService {
         .limit(1);
 
       if (deptManager?.email) {
-        console.log(`[🏭] 找到工厂管理员: ${deptManager.name} (${deptManager.email})`);
+        console.log(
+          `[🏭] 找到工厂管理员: ${deptManager.name} (${deptManager.email})`
+        );
         return deptManager.email;
       }
 
@@ -1115,15 +1169,6 @@ export class InquiryService {
       return "";
     }
   }
-
-
-
-
-
-
-
-
-
 
   /**
    * 🎨 [还原逻辑] 识别颜色属性键
@@ -1178,8 +1223,6 @@ export class InquiryService {
 
     return val ? val.id : null;
   }
-
-
 }
 // 3. 关键：在文件末尾导出类型，完全不需要手写 interface
 export type InquiryWithItems = ReturnType<

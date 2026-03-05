@@ -5,10 +5,10 @@
 
 import fs, { promises as fsPromises } from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
 import { HttpError } from "@pori15/logixlysia";
 // main.js
 import ExcelJS from "exceljs";
+import sharp from "sharp";
 import type { QuotationData } from "../excelTemplate/QuotationData";
 
 // Excel模板路径 - 修复 Next.js 环境下的路径问题
@@ -96,7 +96,9 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
               return match; // 保持原样，不替换
             }
             const dataValue = quotationData[fieldName as keyof QuotationData];
-            return dataValue !== null && dataValue !== undefined ? String(dataValue) : "";
+            return dataValue !== null && dataValue !== undefined
+              ? String(dataValue)
+              : "";
           }
         );
         cell.value = newValue;
@@ -119,7 +121,9 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
               return match; // 保持原样，不替换
             }
             const dataValue = quotationData[fieldName as keyof QuotationData];
-            return dataValue !== null && dataValue !== undefined ? String(dataValue) : "";
+            return dataValue !== null && dataValue !== undefined
+              ? String(dataValue)
+              : "";
           }
         );
 
@@ -156,7 +160,10 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
   if (quotationData.photoForRefer) {
     const { buffer, mimeType } = quotationData.photoForRefer;
 
-    console.log("[Excel] 开始处理图片:", { mimeType, bufferSize: buffer.length });
+    console.log("[Excel] 开始处理图片:", {
+      mimeType,
+      bufferSize: buffer.length,
+    });
 
     // 1. 获取图片原始尺寸 (不手动旋转，但使用 .rotate() 自动纠正 EXIF 转向错误)
     const img = sharp(buffer).rotate();
@@ -164,7 +171,10 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
     const originalWidth = metadata.width ?? 500;
     const originalHeight = metadata.height ?? 500;
 
-    console.log("[Excel] 原始图片尺寸:", { width: originalWidth, height: originalHeight });
+    console.log("[Excel] 原始图片尺寸:", {
+      width: originalWidth,
+      height: originalHeight,
+    });
 
     // 2. 计算 K+L 列的总像素宽度
     // ExcelJS 列宽 1 单位约等于 7.5 像素 (具体受字体影响，这里取通用值)
@@ -185,19 +195,23 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
     const avgRowHeight = targetHeightPt / totalRows;
 
     // 动态调整行高，防止图片溢出
-    for (let r = startRow;r <= endRow;r++) {
+    for (let r = startRow; r <= endRow; r++) {
       // 如果计算出的行高太小（比如小于 15pt），建议设个最小值保证表格可看
       worksheet.getRow(r).height = Math.max(avgRowHeight, 15);
     }
 
-    console.log("[Excel] 目标尺寸:", { targetWidthPx, targetHeightPx, avgRowHeight });
+    console.log("[Excel] 目标尺寸:", {
+      targetWidthPx,
+      targetHeightPx,
+      avgRowHeight,
+    });
 
     // 5. 调整图片并生成 Buffer
     const processedBuffer = await img
       .resize({
         width: Math.round(targetWidthPx),
         height: Math.round(targetHeightPx),
-        fit: 'contain',
+        fit: "contain",
       })
       .toBuffer();
 
@@ -214,12 +228,14 @@ export async function generateQuotationExcel(quotationData: QuotationData) {
       tl: { col: 10, row: startRow - 1 }, // K6 单元格 (索引从0开始)
       ext: {
         width: targetWidthPx,
-        height: targetHeightPx
+        height: targetHeightPx,
       },
       editAs: "oneCell", // 图片位置随单元格移动但不随之拉伸
     });
 
-    console.log(`[Excel] 图片处理完成: 宽度基准=${targetWidthPx}px, 计算高度=${targetHeightPx.toFixed(2)}px`);
+    console.log(
+      `[Excel] 图片处理完成: 宽度基准=${targetWidthPx}px, 计算高度=${targetHeightPx.toFixed(2)}px`
+    );
   }
 
   // 4. 生成并返回 Buffer（注意：这必须在 all rows 处理完之后！）

@@ -1,12 +1,16 @@
-
 // Navbar.tsx (Server Component)
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
+import {
+  getSiteCategoriesForSSR,
+  getSiteConfigValueForSSR,
+} from "@/lib/server-fetch";
 import { NavbarClient } from "../NavbarClient";
-import { getSiteConfigValueForSSR, getSiteCategoriesForSSR } from "@/lib/server-fetch";
 
 async function getSiteName() {
   try {
-    const value = await getSiteConfigValueForSSR(SITE_CONFIG_KEY_ENUM.SITE_NAME);
+    const value = await getSiteConfigValueForSSR(
+      SITE_CONFIG_KEY_ENUM.SITE_NAME
+    );
     return value || "Welcome";
   } catch {
     return "Welcome";
@@ -17,14 +21,17 @@ async function getSiteName() {
 async function getSiteCategories() {
   try {
     const categories = await getSiteCategoriesForSSR();
-    console.log('[Navbar] siteCategories fetched from DB:', categories?.length || 0, 'categories');
+    console.log(
+      "[Navbar] siteCategories fetched from DB:",
+      categories?.length || 0,
+      "categories"
+    );
     return categories || [];
   } catch (err) {
-    console.error('[Navbar] Exception fetching categories:', err);
+    console.error("[Navbar] Exception fetching categories:", err);
     return [];
   }
 }
-
 
 const Navbar = async () => {
   // 并行获取服务端数据
@@ -33,10 +40,17 @@ const Navbar = async () => {
     getSiteCategories(),
   ]);
 
-  console.log('[Navbar] Final data - siteName:', siteName, 'categories:', siteCategories.length);
+  console.log(
+    "[Navbar] Final data - siteName:",
+    siteName,
+    "categories:",
+    siteCategories.length
+  );
 
   // 将数据传给客户端组件处理交互
-  return <NavbarClient siteName={siteName} initialCategories={siteCategories} />;
+  return (
+    <NavbarClient initialCategories={siteCategories} siteName={siteName} />
+  );
 
   // return (
   //   <nav

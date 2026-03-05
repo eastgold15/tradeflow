@@ -1,7 +1,7 @@
 import { StatisticsContract } from "@repo/contract";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "./api-client";
 import { useAuthStore } from "@/stores/auth-store";
+import { api } from "./api-client";
 
 export const statisticsKeys = {
   all: ["statistics"] as const,

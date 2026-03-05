@@ -1,5 +1,7 @@
 "use client";
 
+import { Flame, Plus, Search, X } from "lucide-react";
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +20,6 @@ import {
 } from "@/components/ui/popover";
 import { useSiteConfigKeys } from "@/hooks/api/site-config";
 import { cn } from "@/lib/utils";
-import { Flame, Plus, Search, X } from "lucide-react";
-import * as React from "react";
 
 interface SiteConfigKeySelectProps {
   value?: string;
@@ -72,8 +72,8 @@ export function SiteConfigKeySelect({
     const safeKey = selectedValue
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/[^a-z0-9_-]/g, '');
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_-]/g, "");
 
     onChange(safeKey);
     setInputValue("");
@@ -167,19 +167,20 @@ export function SiteConfigKeySelect({
               ) : (
                 <>
                   {/* 1. 强制创建入口：只要有输入，且输入的内容不在当前显示列表中，就允许创建 */}
-                  {inputValue.trim() && !allKeys.includes(inputValue.trim()) && (
-                    <CommandGroup heading="新配置键">
-                      <CommandItem
-                        onSelect={() => handleSelect(inputValue.trim())}
-                        value={inputValue.trim()}
-                        className="cursor-pointer font-medium text-primary"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        创建新键: "{inputValue.trim()}"
-                      </CommandItem>
-                      <CommandSeparator />
-                    </CommandGroup>
-                  )}
+                  {inputValue.trim() &&
+                    !allKeys.includes(inputValue.trim()) && (
+                      <CommandGroup heading="新配置键">
+                        <CommandItem
+                          className="cursor-pointer font-medium text-primary"
+                          onSelect={() => handleSelect(inputValue.trim())}
+                          value={inputValue.trim()}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          创建新键: "{inputValue.trim()}"
+                        </CommandItem>
+                        <CommandSeparator />
+                      </CommandGroup>
+                    )}
 
                   {/* 2. 只有在完全没结果时才显示 Empty */}
                   {displayKeys.length === 0 && !inputValue.trim() && (
@@ -209,7 +210,10 @@ export function SiteConfigKeySelect({
                                   <Flame className="h-3 w-3" />
                                 </div>
                                 <span className="flex-1">{keyItem.key}</span>
-                                <Badge className="text-xs ml-2" variant="secondary">
+                                <Badge
+                                  className="ml-2 text-xs"
+                                  variant="secondary"
+                                >
                                   {keyItem.count}
                                 </Badge>
                               </CommandItem>
@@ -223,7 +227,9 @@ export function SiteConfigKeySelect({
 
                   {/* 4. 所有配置 / 搜索结果 */}
                   {displayKeys.length > 0 && (
-                    <CommandGroup heading={inputValue.trim() ? "搜索结果" : "所有配置"}>
+                    <CommandGroup
+                      heading={inputValue.trim() ? "搜索结果" : "所有配置"}
+                    >
                       {displayKeys.map((keyName) => {
                         const isSelected = value === keyName;
                         const popularKey = popularKeys.find(
@@ -273,7 +279,7 @@ export function SiteConfigKeySelect({
         <div className="flex items-center justify-end text-muted-foreground text-xs">
           <span className="text-muted-foreground">{value}</span>
           <Button
-            className="h-6 ml-2 text-xs"
+            className="ml-2 h-6 text-xs"
             onClick={handleClear}
             size="sm"
             type="button"

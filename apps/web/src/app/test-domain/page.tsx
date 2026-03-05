@@ -1,5 +1,5 @@
-import { getCurrentSite } from "@/lib/server-fetch";
 import { headers } from "next/headers";
+import { getCurrentSite } from "@/lib/server-fetch";
 
 /**
  * 测试页面 - 验证域名解析是否正确
@@ -17,14 +17,19 @@ export default async function TestDomainPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-2xl rounded-lg bg-white p-6 shadow-md">
-        <h1 className="mb-6 text-2xl font-bold">域名解析测试</h1>
+        <h1 className="mb-6 font-bold text-2xl">域名解析测试</h1>
 
         <div className="space-y-4">
           <div className="rounded border p-4">
             <h2 className="mb-2 font-semibold text-lg">请求信息</h2>
             <div className="space-y-1 text-sm">
-              <p><span className="font-medium">Host:</span> {host}</p>
-              <p><span className="font-medium">x-site-domain:</span> {xSiteDomain}</p>
+              <p>
+                <span className="font-medium">Host:</span> {host}
+              </p>
+              <p>
+                <span className="font-medium">x-site-domain:</span>{" "}
+                {xSiteDomain}
+              </p>
             </div>
           </div>
 
@@ -32,10 +37,19 @@ export default async function TestDomainPage() {
             <h2 className="mb-2 font-semibold text-lg">解析后的站点信息</h2>
             {site ? (
               <div className="space-y-1 text-sm">
-                <p><span className="font-medium">站点 ID:</span> {site.id}</p>
-                <p><span className="font-medium">站点名称:</span> {site.name}</p>
-                <p><span className="font-medium">站点域名:</span> {site.domain}</p>
-                <p><span className="font-medium">是否激活:</span> {site.isActive ? "是" : "否"}</p>
+                <p>
+                  <span className="font-medium">站点 ID:</span> {site.id}
+                </p>
+                <p>
+                  <span className="font-medium">站点名称:</span> {site.name}
+                </p>
+                <p>
+                  <span className="font-medium">站点域名:</span> {site.domain}
+                </p>
+                <p>
+                  <span className="font-medium">是否激活:</span>{" "}
+                  {site.isActive ? "是" : "否"}
+                </p>
               </div>
             ) : (
               <p className="text-red-500">❌ 未找到站点信息</p>

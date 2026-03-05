@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSubscribeNewsletter } from "@/hooks/api/newsletter-hook";
 
 export const NewsletterForm = () => {
@@ -31,12 +31,14 @@ export const NewsletterForm = () => {
   };
 
   return (
-    <div className=" max-w-xl text-center">
-      <h4 className="mb-2 md:text-left font-serif text-sm">NEWSLETTER</h4>
-      <p className="mb-4 md:text-left text-gray-500 text-xs">Explore the latest series</p>
+    <div className="max-w-xl text-center">
+      <h4 className="mb-2 font-serif text-sm md:text-left">NEWSLETTER</h4>
+      <p className="mb-4 text-gray-500 text-xs md:text-left">
+        Explore the latest series
+      </p>
 
       {showSuccessMessage && (
-        <div className="mb-3 flex items-center gap-2 rounded bg-green-50 px-3 py-2  md:text-left text-green-700 text-xs">
+        <div className="mb-3 flex items-center gap-2 rounded bg-green-50 px-3 py-2 text-green-700 text-xs md:text-left">
           <div className="icon-[mdi--check-circle] text-lg" />
           <span>Subscription successful!</span>
         </div>
@@ -50,10 +52,11 @@ export const NewsletterForm = () => {
       )}
 
       <form className="flex flex-col space-y-2" onSubmit={handleSubscribe}>
-        <div className={`flex border-b pb-2 transition-colors ${emailError ? "border-red-500" : "border-black"}`}>
+        <div
+          className={`flex border-b pb-2 transition-colors ${emailError ? "border-red-500" : "border-black"}`}
+        >
           <input
-            className="flex-1 min-w-0 
-             md:text-start bg-transparent text-sm focus:outline-none disabled:opacity-50"
+            className="min-w-0 flex-1 bg-transparent text-sm focus:outline-none disabled:opacity-50 md:text-start"
             disabled={subscribeMutation.isPending}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="E-mail Address"
@@ -61,7 +64,7 @@ export const NewsletterForm = () => {
             value={email}
           />
           <button
-            className="font-bold text-xs uppercase disabled:text-gray-400  hover:text-black"
+            className="font-bold text-xs uppercase hover:text-black disabled:text-gray-400"
             disabled={subscribeMutation.isPending || !email.trim()}
             type="submit"
           >

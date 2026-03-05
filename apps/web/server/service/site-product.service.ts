@@ -21,8 +21,8 @@ import {
   templateValueTable,
 } from "@repo/contract";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
-import type { ServiceContext } from "~/middleware/site";
 import { productListCache } from "@/lib/cache/domain-cache";
+import type { ServiceContext } from "~/middleware/site";
 
 export class SiteProductService {
   /**
@@ -44,13 +44,18 @@ export class SiteProductService {
     }
 
     // 使用 Redis 缓存
-    return productListCache.getOrFetch(ctx.site.id, query, () => this.executeQuery(query, ctx));
+    return productListCache.getOrFetch(ctx.site.id, query, () =>
+      this.executeQuery(query, ctx)
+    );
   }
 
   /**
    * 执行商品列表查询（内部方法）
    */
-  private async executeQuery(query: ProductContract["ListQuery"], ctx: ServiceContext) {
+  private async executeQuery(
+    query: ProductContract["ListQuery"],
+    ctx: ServiceContext
+  ) {
     const {
       page = 1,
       limit = 10,
@@ -297,7 +302,6 @@ export class SiteProductService {
   //   };
   // }
 
-
   async getDetail(id: string, ctx: ServiceContext) {
     const result = await ctx.db.query.siteProductTable.findFirst({
       where: {
@@ -379,7 +383,7 @@ export class SiteProductService {
     result.product.variantMedia?.forEach((vm) => {
       if (vm.media && !galleryMap.has(vm.media.id)) {
         let weight = (vm.sortOrder ?? 0) + 1000;
-        if (vm.media.mediaType?.startsWith("video")) weight += 10000;
+        if (vm.media.mediaType?.startsWith("video")) weight += 10_000;
         galleryMap.set(vm.media.id, {
           id: vm.media.id,
           url: vm.media.url,
@@ -394,7 +398,7 @@ export class SiteProductService {
       ss.sku.media?.forEach((m) => {
         if (!galleryMap.has(m.id)) {
           let weight = (m.sortOrder ?? 0) + 2000;
-          if (m.mediaType?.startsWith("video")) weight += 10000;
+          if (m.mediaType?.startsWith("video")) weight += 10_000;
           galleryMap.set(m.id, {
             id: m.id,
             url: m.url,
@@ -415,7 +419,7 @@ export class SiteProductService {
       productId: result.productId,
       spuCode: result.product?.spuCode,
 
-      // 2. 显示内容 
+      // 2. 显示内容
       name: result.siteName || result.product?.name,
       description: result.siteDescription || result.product?.description,
       seoTitle: result.seoTitle,
@@ -444,10 +448,11 @@ export class SiteProductService {
           const colorValue = specs[colorAttr.key] || specs.颜色 || specs.Color;
           if (colorValue) {
             const attributeValueId = colorValueToIdMap.get(colorValue);
-            colorVariantMediaIds = result.product.variantMedia
-              ?.filter((vm) => vm.attributeValueId === attributeValueId)
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-              .map((vm) => vm.mediaId) || [];
+            colorVariantMediaIds =
+              result.product.variantMedia
+                ?.filter((vm) => vm.attributeValueId === attributeValueId)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                .map((vm) => vm.mediaId) || [];
           }
         }
 
@@ -572,7 +577,7 @@ export class SiteProductService {
     result.product.variantMedia?.forEach((vm) => {
       if (vm.media && !galleryMap.has(vm.media.id)) {
         let weight = (vm.sortOrder ?? 0) + 1000;
-        if (vm.media.mediaType?.startsWith("video")) weight += 10000;
+        if (vm.media.mediaType?.startsWith("video")) weight += 10_000;
         galleryMap.set(vm.media.id, {
           id: vm.media.id,
           url: vm.media.url,
@@ -587,7 +592,7 @@ export class SiteProductService {
       ss.sku.media?.forEach((m) => {
         if (!galleryMap.has(m.id)) {
           let weight = (m.sortOrder ?? 0) + 2000;
-          if (m.mediaType?.startsWith("video")) weight += 10000;
+          if (m.mediaType?.startsWith("video")) weight += 10_000;
           galleryMap.set(m.id, {
             id: m.id,
             url: m.url,
@@ -638,10 +643,11 @@ export class SiteProductService {
           const colorValue = specs[colorAttr.key] || specs.颜色 || specs.Color;
           if (colorValue) {
             const attributeValueId = colorValueToIdMap.get(colorValue);
-            colorVariantMediaIds = result.product.variantMedia
-              ?.filter((vm) => vm.attributeValueId === attributeValueId)
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-              .map((vm) => vm.mediaId) || [];
+            colorVariantMediaIds =
+              result.product.variantMedia
+                ?.filter((vm) => vm.attributeValueId === attributeValueId)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                .map((vm) => vm.mediaId) || [];
           }
         }
 
@@ -675,5 +681,4 @@ export class SiteProductService {
       gallery,
     };
   }
-
 }

@@ -1,6 +1,6 @@
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -10,8 +10,6 @@ export function cn(...inputs: ClassValue[]) {
 export const isExternalUrl = (url: string) => {
   return url.startsWith("http://") || url.startsWith("https://");
 };
-
-
 
 export const useIsDesktop = () => {
   return useMediaQuery("(min-width: 768px)");

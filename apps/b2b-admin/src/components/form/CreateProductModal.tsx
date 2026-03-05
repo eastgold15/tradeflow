@@ -238,10 +238,7 @@ export function CreateProductModal({
                 <FormItem>
                   <FormLabel>URL别名 *</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="例如：red-cotton-tshirt"
-                      {...field}
-                    />
+                    <Input placeholder="例如：red-cotton-tshirt" {...field} />
                   </FormControl>
                   <p className="text-muted-foreground text-xs">
                     用于SEO友好的URL，将自动根据商品名称生成，可手动修改

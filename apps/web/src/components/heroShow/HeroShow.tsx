@@ -6,10 +6,10 @@ import {
   type HeroCardListRes,
   useCurrentHeroCardsList,
 } from "@/hooks/api/hero-cards-hook";
+import { useNavbarStore } from "@/lib/store/navbar-store";
 import { cn, useIsDesktop } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import Shop from "./Shop";
-import { useNavbarStore } from "@/lib/store/navbar-store";
 
 interface ContentBlockProps {
   bgColor: string;
@@ -43,21 +43,23 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
   isDesktop,
 }) => (
   <div
-    className={cn("grid grid-cols-1 w-full", bgColor)}
+    className={cn("grid w-full grid-cols-1", bgColor)}
     style={{
       // 核心：大屏固定高度，小屏 auto 让图片比例撑开
       gridTemplateRows: isDesktop
-        ? 'calc(100vh - var(--navbar-height)) auto'
-        : 'auto auto',
-      ...navbarHeightStyle
+        ? "calc(100vh - var(--navbar-height)) auto"
+        : "auto auto",
+      ...navbarHeightStyle,
     }}
   >
     {/* 1. 图片行 */}
-    <div className={cn(
-      "relative w-full overflow-hidden",
-      // 小屏下不给固定高度，靠 ImageComponent 撑开
-      isDesktop ? "h-full" : "h-auto"
-    )}>
+    <div
+      className={cn(
+        "relative w-full overflow-hidden",
+        // 小屏下不给固定高度，靠 ImageComponent 撑开
+        isDesktop ? "h-full" : "h-auto"
+      )}
+    >
       {children}
     </div>
 
@@ -65,13 +67,17 @@ const ContentBlock: React.FC<ContentBlockProps> = ({
     {title || description || buttonUrl ? (
       <div className="flex min-h-40 flex-col justify-center p-8 md:p-12">
         {title && (
-          <h3 className={`mb-4 font-serif text-2xl italic md:text-4xl ${titleColor}`}>
+          <h3
+            className={`mb-4 font-serif text-2xl italic md:text-4xl ${titleColor}`}
+          >
             {title}
           </h3>
         )}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           {description && (
-            <p className={`max-w-xl text-sm md:text-base tracking-wide leading-relaxed ${subtitleColor}`}>
+            <p
+              className={`max-w-xl text-sm leading-relaxed tracking-wide md:text-base ${subtitleColor}`}
+            >
               {description}
             </p>
           )}
@@ -101,10 +107,10 @@ export const HeroShowComponent: React.FC = () => {
 
   // 从 store 获取 navbar 高度
   const navbarHeight = useNavbarStore((state) => state.navbarHeight);
-  const navbarHeightStyle = navbarHeight > 0
-    ? { '--navbar-height': `${navbarHeight}px` } as React.CSSProperties
-    : {};
-
+  const navbarHeightStyle =
+    navbarHeight > 0
+      ? ({ "--navbar-height": `${navbarHeight}px` } as React.CSSProperties)
+      : {};
 
   if (isLoading) {
     return (
@@ -112,7 +118,10 @@ export const HeroShowComponent: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <div className="flex flex-col" key={i}>
-              <Skeleton className="h-[55vh] md:h-[calc(100vh-var(--navbar-height))]" variant="rectangle" />
+              <Skeleton
+                className="h-[55vh] md:h-[calc(100vh-var(--navbar-height))]"
+                variant="rectangle"
+              />
               <div className="flex h-50 flex-col justify-center space-y-4 p-8 md:h-62.5">
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
@@ -150,10 +159,7 @@ export const HeroShowComponent: React.FC = () => {
   ];
 
   return (
-    <section
-      className="w-full scroll-smooth"
-      style={navbarHeightStyle}
-    >
+    <section className="w-full scroll-smooth" style={navbarHeightStyle}>
       {/* 这里的 grid 负责左右分列 */}
       <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
         {/* 显示所有后端返回的 hero-card */}
@@ -172,9 +178,9 @@ export const HeroShowComponent: React.FC = () => {
                 key="shop-block"
                 {...config}
                 description="Explore the latest series"
-                title="NEW ARRIVALS"
-                navbarHeightStyle={navbarHeightStyle}
                 isDesktop={isDesktop}
+                navbarHeightStyle={navbarHeightStyle}
+                title="NEW ARRIVALS"
               >
                 <Shop />
               </ContentBlock>
@@ -189,18 +195,18 @@ export const HeroShowComponent: React.FC = () => {
               buttonTextContent={card.buttonText}
               buttonUrl={card.buttonUrl}
               description={card.description}
-              title={card.title}
-              navbarHeightStyle={navbarHeightStyle}
               isDesktop={isDesktop}
+              navbarHeightStyle={navbarHeightStyle}
+              title={card.title}
             >
               <ImageComponent
                 alt={card.title}
                 // 核心：大屏才 fill，小屏不填满（依靠比例撑开高度）
-                fill={isDesktop}
+                aspectRatio={isDesktop ? "h-full" : "aspect-auto"}
                 // 小屏下不设死高度比例，让图片自然显示
-                aspectRatio={!isDesktop ? "aspect-auto" : "h-full"}
+                className="h-full w-full object-cover"
                 containerClassName="w-full h-full"
-                className="object-cover w-full h-full"
+                fill={isDesktop}
                 imageId={card.mediaId}
                 priority={index < 2}
                 sizes="(max-width: 768px) 100vw, 50vw"

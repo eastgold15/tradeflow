@@ -138,7 +138,6 @@ export function EditDepartmentModal({
   }, [initialData, open, form]);
 
   const onSubmit = async (data: FormData) => {
-
     if (!data.id) {
       form.setError("id", { message: "部门ID缺失，无法更新" });
       return;
@@ -162,13 +161,13 @@ export function EditDepartmentModal({
       admin:
         data.adminName && data.adminEmail
           ? {
-            id: initialData?.admin?.id,
-            name: data.adminName,
-            email: data.adminEmail,
-            ...(data.adminPassword && { password: data.adminPassword }),
-            phone: data.adminPhone,
-            position: data.adminPosition,
-          }
+              id: initialData?.admin?.id,
+              name: data.adminName,
+              email: data.adminEmail,
+              ...(data.adminPassword && { password: data.adminPassword }),
+              phone: data.adminPhone,
+              position: data.adminPosition,
+            }
           : undefined,
     };
 
@@ -176,7 +175,6 @@ export function EditDepartmentModal({
     form.reset();
     onSuccess?.();
     onOpenChange(false);
-
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -223,7 +221,9 @@ export function EditDepartmentModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>部门名称 *</FormLabel>
-                        <span className="font-normal text-slate-500">工厂或者出口商的名称</span>
+                        <span className="font-normal text-slate-500">
+                          工厂或者出口商的名称
+                        </span>
                         <FormControl>
                           <Input placeholder="部门名称" {...field} />
                         </FormControl>

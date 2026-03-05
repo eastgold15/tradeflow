@@ -3,8 +3,8 @@
  * 用于缓存各种数据（站点信息、SEO配置、分类树、产品列表等）
  */
 
-import { RedisCache } from './redis-cache';
-import { CACHE_TTL } from './redis';
+import { CACHE_TTL } from "./redis";
+import { RedisCache } from "./redis-cache";
 
 // ============================================================================
 // Redis 缓存实例
@@ -18,10 +18,13 @@ export const redisCache = new RedisCache();
  */
 export const categoryTreeCache = {
   getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) =>
-    redisCache.getOrFetch(`category:${siteId}`, fetchFn, CACHE_TTL.CATEGORY_TREE),
+    redisCache.getOrFetch(
+      `category:${siteId}`,
+      fetchFn,
+      CACHE_TTL.CATEGORY_TREE
+    ),
 
-  delete: (siteId: string) =>
-    redisCache.delete(`category:${siteId}`),
+  delete: (siteId: string) => redisCache.delete(`category:${siteId}`),
 
   deleteByPrefix: (prefix: string) =>
     redisCache.deleteByPrefix(`category:${prefix}`),
@@ -32,9 +35,17 @@ export const categoryTreeCache = {
  * key: "product:{siteId}:{categoryId}:{page}:{limit}"
  */
 export const productListCache = {
-  getOrFetch: <T>(siteId: string, query: { page?: number; limit?: number; categoryId?: string }, fetchFn: () => Promise<T>) => {
-    const queryKey = `${siteId}:${query.categoryId || 'all'}:${query.page || 1}:${query.limit || 10}`;
-    return redisCache.getOrFetch(`product:${queryKey}`, fetchFn, CACHE_TTL.PRODUCT_LIST);
+  getOrFetch: <T>(
+    siteId: string,
+    query: { page?: number; limit?: number; categoryId?: string },
+    fetchFn: () => Promise<T>
+  ) => {
+    const queryKey = `${siteId}:${query.categoryId || "all"}:${query.page || 1}:${query.limit || 10}`;
+    return redisCache.getOrFetch(
+      `product:${queryKey}`,
+      fetchFn,
+      CACHE_TTL.PRODUCT_LIST
+    );
   },
 
   delete: (siteId: string, categoryId?: string) => {
@@ -54,7 +65,11 @@ export const productListCache = {
  */
 export const siteConfigCache = {
   getOrFetch: <T>(siteId: string, key: string, fetchFn: () => Promise<T>) =>
-    redisCache.getOrFetch(`config:${siteId}:${key}`, fetchFn, CACHE_TTL.SITE_CONFIG),
+    redisCache.getOrFetch(
+      `config:${siteId}:${key}`,
+      fetchFn,
+      CACHE_TTL.SITE_CONFIG
+    ),
 
   delete: (siteId: string, key?: string) => {
     if (key) {
@@ -75,8 +90,7 @@ export const siteInfoCache = {
   getOrFetch: <T>(domain: string, fetchFn: () => Promise<T>) =>
     redisCache.getOrFetch(`site:${domain}`, fetchFn, CACHE_TTL.SITE_INFO),
 
-  delete: (domain: string) =>
-    redisCache.delete(`site:${domain}`),
+  delete: (domain: string) => redisCache.delete(`site:${domain}`),
 
   deleteByPrefix: (prefix: string) =>
     redisCache.deleteByPrefix(`site:${prefix}`),
@@ -88,7 +102,11 @@ export const siteInfoCache = {
  */
 export const seoConfigCache = {
   getOrFetch: <T>(siteId: string, code: string, fetchFn: () => Promise<T>) =>
-    redisCache.getOrFetch(`seo:${siteId}:${code}`, fetchFn, CACHE_TTL.SEO_CONFIG),
+    redisCache.getOrFetch(
+      `seo:${siteId}:${code}`,
+      fetchFn,
+      CACHE_TTL.SEO_CONFIG
+    ),
 
   delete: (siteId: string, code?: string) => {
     if (code) {
@@ -97,8 +115,7 @@ export const seoConfigCache = {
     return redisCache.deleteByPrefix(`seo:${siteId}:`);
   },
 
-  clear: () =>
-    redisCache.deleteByPrefix(`seo:`),
+  clear: () => redisCache.deleteByPrefix("seo:"),
 };
 
 /**
@@ -109,8 +126,7 @@ export const heroCardCache = {
   getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) =>
     redisCache.getOrFetch(`hero:${siteId}`, fetchFn, 5 * 60), // 5分钟
 
-  delete: (siteId: string) =>
-    redisCache.delete(`hero:${siteId}`),
+  delete: (siteId: string) => redisCache.delete(`hero:${siteId}`),
 
   deleteByPrefix: (prefix: string) =>
     redisCache.deleteByPrefix(`hero:${prefix}`),
@@ -123,13 +139,11 @@ export const heroCardCache = {
 export const adCache = {
   getOrFetch: <T>(siteId: string, fetchFn: () => Promise<T>) => {
     // 使用当前日期作为缓存键的一部分，确保广告按时更新
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     return redisCache.getOrFetch(`ad:${siteId}:${today}`, fetchFn, 1 * 60); // 1分钟
   },
 
-  delete: (siteId: string) =>
-    redisCache.deleteByPrefix(`ad:${siteId}`),
+  delete: (siteId: string) => redisCache.deleteByPrefix(`ad:${siteId}`),
 
-  deleteByPrefix: (prefix: string) =>
-    redisCache.deleteByPrefix(`ad:${prefix}`),
+  deleteByPrefix: (prefix: string) => redisCache.deleteByPrefix(`ad:${prefix}`),
 };

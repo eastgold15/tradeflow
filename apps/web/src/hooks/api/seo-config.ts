@@ -10,7 +10,7 @@ export type SeoConfigListRes = NonNullable<
   Treaty.Data<typeof rpc.seoconfig.get>
 >;
 
-export type SeoConfigItem = SeoConfigListRes[number]
+export type SeoConfigItem = SeoConfigListRes[number];
 
 export const seoConfigKeys = {
   all: ["seoconfig"] as const,
@@ -34,4 +34,3 @@ export function useSeoConfigList(query: SeoConfigTableParams, enabled = true) {
     enabled: enabled && !!query,
   });
 }
-

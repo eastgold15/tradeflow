@@ -171,63 +171,63 @@ export function VariantMediaModal({
                     {/* 图片预览 */}
                     {form.watch(`variantMedia.${index}.mediaIds`)?.length >
                       0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {form
-                            .watch(`variantMedia.${index}.mediaIds`)
-                            ?.map((mediaId, imgIndex) => {
-                              const media = vm.images.find(
-                                (img) => img.id === mediaId
-                              );
-                              return media ? (
-                                <div
-                                  className="relative h-20 w-20 overflow-hidden rounded-md border"
-                                  key={mediaId}
-                                >
-                                  {/* 根据文件后缀判断是视频还是图片 */}
-                                  {isVideoFile(media.url) ? (
-                                    <video
-                                      className="h-full w-full object-cover"
-                                      muted
-                                      onMouseEnter={(e) => {
-                                        const video = e.currentTarget;
-                                        video
-                                          .play()
-                                          .catch((err) =>
-                                            console.error("视频播放错误:", err)
-                                          );
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        const video = e.currentTarget;
-                                        video.pause();
-                                        video.currentTime = 0;
-                                      }}
-                                      playsInline
-                                      src={media.url}
-                                    />
-                                  ) : (
-                                    <img
-                                      alt={vm.attributeValue}
-                                      className="h-full w-full object-cover"
-                                      src={media.url}
-                                    />
-                                  )}
-                                  {/* 媒体类型标签 */}
-                                  {isVideoFile(media.url) && (
-                                    <span className="absolute top-0 left-0 rounded-br bg-blue-600 px-1 text-[10px] text-white">
-                                      视频
-                                    </span>
-                                  )}
-                                  {/* 🔥 第一张图标记为主图 */}
-                                  {imgIndex === 0 && (
-                                    <span className="absolute top-0 right-0 rounded-bl bg-indigo-600 px-1 text-[10px] text-white">
-                                      主图
-                                    </span>
-                                  )}
-                                </div>
-                              ) : null;
-                            })}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {form
+                          .watch(`variantMedia.${index}.mediaIds`)
+                          ?.map((mediaId, imgIndex) => {
+                            const media = vm.images.find(
+                              (img) => img.id === mediaId
+                            );
+                            return media ? (
+                              <div
+                                className="relative h-20 w-20 overflow-hidden rounded-md border"
+                                key={mediaId}
+                              >
+                                {/* 根据文件后缀判断是视频还是图片 */}
+                                {isVideoFile(media.url) ? (
+                                  <video
+                                    className="h-full w-full object-cover"
+                                    muted
+                                    onMouseEnter={(e) => {
+                                      const video = e.currentTarget;
+                                      video
+                                        .play()
+                                        .catch((err) =>
+                                          console.error("视频播放错误:", err)
+                                        );
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      const video = e.currentTarget;
+                                      video.pause();
+                                      video.currentTime = 0;
+                                    }}
+                                    playsInline
+                                    src={media.url}
+                                  />
+                                ) : (
+                                  <img
+                                    alt={vm.attributeValue}
+                                    className="h-full w-full object-cover"
+                                    src={media.url}
+                                  />
+                                )}
+                                {/* 媒体类型标签 */}
+                                {isVideoFile(media.url) && (
+                                  <span className="absolute top-0 left-0 rounded-br bg-blue-600 px-1 text-[10px] text-white">
+                                    视频
+                                  </span>
+                                )}
+                                {/* 🔥 第一张图标记为主图 */}
+                                {imgIndex === 0 && (
+                                  <span className="absolute top-0 right-0 rounded-bl bg-indigo-600 px-1 text-[10px] text-white">
+                                    主图
+                                  </span>
+                                )}
+                              </div>
+                            ) : null;
+                          })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

@@ -30,5 +30,3 @@ export default async function CategorySlugPage({
     </Suspense>
   );
 }
-
-

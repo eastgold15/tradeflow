@@ -3,7 +3,7 @@
  * 提供类型安全的缓存操作
  */
 
-import { getRedis, cacheKey } from './redis';
+import { cacheKey, getRedis } from "./redis";
 
 export class RedisCache {
   /**
@@ -78,13 +78,13 @@ export class RedisCache {
   async clear(): Promise<number> {
     try {
       const redis = getRedis();
-      const pattern = cacheKey('*');
+      const pattern = cacheKey("*");
       const keys = await redis.keys(pattern);
       if (keys.length === 0) return 0;
       await redis.del(...keys);
       return keys.length;
     } catch (error) {
-      console.error('[RedisCache] Error clearing cache:', error);
+      console.error("[RedisCache] Error clearing cache:", error);
       return 0;
     }
   }
@@ -123,14 +123,14 @@ export class RedisCache {
   async getStats(): Promise<{ total: number; keys: string[] }> {
     try {
       const redis = getRedis();
-      const pattern = cacheKey('*');
+      const pattern = cacheKey("*");
       const keys = await redis.keys(pattern);
       return {
         total: keys.length,
         keys,
       };
     } catch (error) {
-      console.error('[RedisCache] Error getting stats:', error);
+      console.error("[RedisCache] Error getting stats:", error);
       return { total: 0, keys: [] };
     }
   }
@@ -162,11 +162,11 @@ export class RedisCache {
       const result = await redis.set(
         cacheKey(key),
         JSON.stringify(value),
-        'EX', // 设置过期时间
+        "EX", // 设置过期时间
         ttl,
-        'NX' // 只在键不存在时设置
+        "NX" // 只在键不存在时设置
       );
-      return result === 'OK';
+      return result === "OK";
     } catch {
       return false;
     }

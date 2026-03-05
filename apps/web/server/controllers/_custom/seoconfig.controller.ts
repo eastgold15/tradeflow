@@ -6,17 +6,17 @@
  * --------------------------------------------------------
  */
 
-import { Elysia, t } from "elysia";
-
-
-import { dbPlugin } from "~/db/connection";
-
-import { siteMiddleware } from "~/middleware/site";
 import { SeoConfigContract } from "@repo/contract";
+import { Elysia } from "elysia";
+import { dbPlugin } from "~/db/connection";
+import { siteMiddleware } from "~/middleware/site";
 import { seoConfigService } from "~/service";
 
 export const seoconfigController = new Elysia({ prefix: "/seoconfig" })
   .use(dbPlugin)
   .use(siteMiddleware)
-  .get("/", ({ query, db, site }) => seoConfigService.list(query, { db, site }), { query: SeoConfigContract.ListQuery })
-
+  .get(
+    "/",
+    ({ query, db, site }) => seoConfigService.list(query, { db, site }),
+    { query: SeoConfigContract.ListQuery }
+  );

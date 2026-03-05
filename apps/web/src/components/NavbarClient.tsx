@@ -1,11 +1,11 @@
 "use client";
 
-import { SiteCategoryListRes } from "@/hooks/api/site-category";
-import { useNavbarStore } from "@/lib/store/navbar-store";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { SiteCategoryListRes } from "@/hooks/api/site-category";
+import { useNavbarStore } from "@/lib/store/navbar-store";
 import { SearchDropdown } from "./Navbar/SearchDropdown";
 import { UnifiedMenu } from "./Navbar/UnifiedMenu";
 
@@ -14,7 +14,10 @@ interface NavbarClientProps {
   initialCategories: SiteCategoryListRes;
 }
 
-export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps) => {
+export const NavbarClient = ({
+  siteName,
+  initialCategories,
+}: NavbarClientProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -45,23 +48,26 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
     };
   }, [setNavbarHeight]);
 
-
   return (
     <nav
+      className={`sticky top-0 left-0 z-50 w-full border-gray-200 border-b bg-white transition-all duration-300 ${
+        isScrolled ? "py-2 shadow-sm" : "py-4"
+      }`}
       ref={navRef}
-      className={`sticky top-0 left-0 z-50 w-full border-b border-gray-200 bg-white transition-all duration-300 ${isScrolled ? "py-2 shadow-sm" : "py-4"
-        }`}
     >
       <div className="max-w-full px-4 md:px-8">
         <div className="flex items-center justify-between">
-
           {/* 1. 左侧按钮区域 */}
           <div className="flex w-1/5 items-center">
             <button
               className="relative z-51 md:hidden" // z-index 高于移动端抽屉
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
           </div>
 
@@ -90,19 +96,19 @@ export const NavbarClient = ({ siteName, initialCategories }: NavbarClientProps)
       {/* 4. 动态设置 top */}
       <div
         className={twMerge(
-          "fixed inset-x-0 bottom-0 z-40  bg-white transition-transform md:hidden",
+          "fixed inset-x-0 bottom-0 z-40 bg-white transition-transform md:hidden",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{
           top: `${navbarHeight}px`,
-          height: `calc(100vh - ${navbarHeight}px)`
+          height: `calc(100vh - ${navbarHeight}px)`,
         }}
       >
         <div className="h-full overflow-y-auto p-6">
           <UnifiedMenu
             categories={initialCategories}
-            variant="mobile"
             onClose={() => setIsMobileMenuOpen(false)}
+            variant="mobile"
           />
         </div>
       </div>

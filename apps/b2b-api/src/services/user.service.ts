@@ -33,7 +33,9 @@ export class UserService {
         },
       });
       if (!dept) {
-        throw new HttpError.NotFound(`Department (ID: ${currentDeptId})：不存在`);
+        throw new HttpError.NotFound(
+          `Department (ID: ${currentDeptId})：不存在`
+        );
       }
       targetDeptIds = [currentDeptId, ...dept.childrens.map((c) => c.id)];
     } else if (dataScope === "current") {
@@ -82,8 +84,14 @@ export class UserService {
     console.log("=== [UserService.update] 开始 ===");
     console.log("[DEBUG] 接收到的完整 body:", JSON.stringify(body, null, 2));
     console.log("[DEBUG] masterCategoryIds:", body.masterCategoryIds);
-    console.log("[DEBUG] masterCategoryIds 类型:", typeof body.masterCategoryIds);
-    console.log("[DEBUG] masterCategoryIds 是否为数组:", Array.isArray(body.masterCategoryIds));
+    console.log(
+      "[DEBUG] masterCategoryIds 类型:",
+      typeof body.masterCategoryIds
+    );
+    console.log(
+      "[DEBUG] masterCategoryIds 是否为数组:",
+      Array.isArray(body.masterCategoryIds)
+    );
 
     return await ctx.db.transaction(async (tx) => {
       const { masterCategoryIds, roleId, password, ...updateData } = body;
@@ -128,7 +136,10 @@ export class UserService {
       console.log("[DEBUG] masterCategoryIds 值:", masterCategoryIds);
 
       if (masterCategoryIds) {
-        console.log("[DEBUG] 开始处理主分类分配, 数量:", masterCategoryIds.length);
+        console.log(
+          "[DEBUG] 开始处理主分类分配, 数量:",
+          masterCategoryIds.length
+        );
         console.log("[DEBUG] 主分类 ID 列表:", masterCategoryIds);
 
         // 先删除旧的主分类关联
@@ -136,7 +147,10 @@ export class UserService {
           .delete(salesResponsibilityTable)
           .where(eq(salesResponsibilityTable.userId, id))
           .returning();
-        console.log("[DEBUG] 删除旧的主分类关联完成, 删除数量:", deleteResult.length);
+        console.log(
+          "[DEBUG] 删除旧的主分类关联完成, 删除数量:",
+          deleteResult.length
+        );
 
         // 如果有新的主分类，批量插入
         if (masterCategoryIds.length > 0) {
@@ -149,7 +163,10 @@ export class UserService {
               tenantId: ctx.user.context.tenantId!,
             };
           });
-          console.log("[DEBUG] 准备插入的数据:", JSON.stringify(insertData, null, 2));
+          console.log(
+            "[DEBUG] 准备插入的数据:",
+            JSON.stringify(insertData, null, 2)
+          );
 
           try {
             await tx.insert(salesResponsibilityTable).values(insertData);
@@ -285,11 +302,11 @@ export class UserService {
         parentId: dept.parentId,
         site: dept.site
           ? {
-            id: dept.site.id,
-            name: dept.site.name,
-            domain: dept.site.domain,
-            siteType: dept.site.siteType,
-          }
+              id: dept.site.id,
+              name: dept.site.name,
+              domain: dept.site.domain,
+              siteType: dept.site.siteType,
+            }
           : null,
       })),
     };
@@ -305,8 +322,14 @@ export class UserService {
     console.log("=== [UserService.create] 开始 ===");
     console.log("[DEBUG] 接收到的完整 body:", JSON.stringify(body, null, 2));
     console.log("[DEBUG] masterCategoryIds:", body.masterCategoryIds);
-    console.log("[DEBUG] masterCategoryIds 类型:", typeof body.masterCategoryIds);
-    console.log("[DEBUG] masterCategoryIds 是否为数组:", Array.isArray(body.masterCategoryIds));
+    console.log(
+      "[DEBUG] masterCategoryIds 类型:",
+      typeof body.masterCategoryIds
+    );
+    console.log(
+      "[DEBUG] masterCategoryIds 是否为数组:",
+      Array.isArray(body.masterCategoryIds)
+    );
 
     // 使用事务创建用户
     return await db.transaction(async (tx) => {

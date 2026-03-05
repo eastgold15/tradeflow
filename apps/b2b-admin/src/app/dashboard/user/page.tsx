@@ -162,7 +162,8 @@ export default function UsersPage() {
       roleId: user.roles?.[0]?.id || "",
       deptId: user.deptId || user.department?.id || "",
       isActive: user.isActive,
-      masterCategoryIds: user.assignMasterCategories?.map((c: any) => c.id) || [],
+      masterCategoryIds:
+        user.assignMasterCategories?.map((c: any) => c.id) || [],
     });
     setIsModalOpen(true);
   };

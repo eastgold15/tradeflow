@@ -60,14 +60,14 @@ async function getServerHeaders(): Promise<Record<string, string> | undefined> {
 export const rpc = treaty<App>(getBaseURL(), {
   onRequest: isServer
     ? async (path, options) => {
-      const extra = await getServerHeaders();
-      if (extra) {
-        return {
-          ...options,
-          headers: { ...options.headers, ...extra },
-        };
+        const extra = await getServerHeaders();
+        if (extra) {
+          return {
+            ...options,
+            headers: { ...options.headers, ...extra },
+          };
+        }
+        return options;
       }
-      return options;
-    }
     : undefined,
 }).api;

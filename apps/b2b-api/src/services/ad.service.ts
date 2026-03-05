@@ -225,7 +225,9 @@ export class AdService {
       .where(and(...whereConditions));
 
     if (ads.length === 0) {
-      throw new HttpError.NotFound(`Ad (IDs: ${ids.join(", ")})：未找到可删除的记录`);
+      throw new HttpError.NotFound(
+        `Ad (IDs: ${ids.join(", ")})：未找到可删除的记录`
+      );
     }
 
     // 批量删除

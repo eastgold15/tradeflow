@@ -8,7 +8,7 @@
           "apps/b2badmin/.next/**",
           "apps/web/.next/**",
           "apps/api/dist/**"
-        ],
+        ]
         // "deployOnSave": [
         //   "Production Server"
         // ]

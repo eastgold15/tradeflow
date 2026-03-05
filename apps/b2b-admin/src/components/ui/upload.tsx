@@ -162,9 +162,9 @@ export function Upload({
         const fileToUpload =
           uploadFile.name !== uploadFile.originalName
             ? new File([uploadFile.file], uploadFile.name, {
-              type: uploadFile.file.type,
-              lastModified: uploadFile.file.lastModified,
-            } as FilePropertyBag)
+                type: uploadFile.file.type,
+                lastModified: uploadFile.file.lastModified,
+              } as FilePropertyBag)
             : uploadFile.file;
 
         return { fileToUpload, uploadFile };

@@ -33,7 +33,9 @@ export class MediaService {
         });
 
         if (existing) {
-          throw new HttpError.Conflict(`文件名 "${file.name}" 已存在，请修改文件名后重试`);
+          throw new HttpError.Conflict(
+            `文件名 "${file.name}" 已存在，请修改文件名后重试`
+          );
         }
 
         // 2. 物理上传
@@ -84,10 +86,10 @@ export class MediaService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-          tenantId: ctx.user.context.tenantId!,
-          createdBy: ctx.user.id,
-          deptId: ctx.currentDeptId,
-        }
+            tenantId: ctx.user.context.tenantId!,
+            createdBy: ctx.user.id,
+            deptId: ctx.currentDeptId,
+          }
         : {}),
     };
     const [res] = await ctx.db
@@ -105,10 +107,10 @@ export class MediaService {
         deptId: ctx.currentDeptId,
         ...(ids
           ? {
-            id: {
-              in: ids,
-            },
-          }
+              id: {
+                in: ids,
+              },
+            }
           : {}),
         ...(category ? { category } : {}),
         ...(search ? { originalName: { ilike: `%${search}%` } } : {}),
@@ -116,7 +118,7 @@ export class MediaService {
       orderBy: {
         originalName: "desc",
         createdAt: "desc",
-      }
+      },
     });
     return res;
   }
@@ -223,7 +225,8 @@ export class MediaService {
       .where(and(...whereConditions))
       .limit(1);
 
-    if (!file) throw new HttpError.NotFound(`Media (ID: ${id})：不存在或无权访问`);
+    if (!file)
+      throw new HttpError.NotFound(`Media (ID: ${id})：不存在或无权访问`);
 
     // 2. 删除物理文件
 
@@ -247,7 +250,10 @@ export class MediaService {
       .from(mediaTable)
       .where(and(...whereConditions));
 
-    if (files.length === 0) throw new HttpError.NotFound(`Media (IDs: ${ids.join(", ")})：未找到可删除的记录`);
+    if (files.length === 0)
+      throw new HttpError.NotFound(
+        `Media (IDs: ${ids.join(", ")})：未找到可删除的记录`
+      );
 
     // 2. 物理删除
     await Promise.all(files.map((f: any) => client.delete(f.storageKey)));

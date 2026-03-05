@@ -7,10 +7,7 @@
       "DATABASE_URL": "${{DATABASE_URL}}",
       "DOMAIN": "${{DOMAIN}}"
     },
-    "watchPaths": [
-      "apps/web/**",
-      "packages/contract/**"
-    ]
+    "watchPaths": ["apps/web/**", "packages/contract/**"]
   },
   "deploy": {
     "healthcheckPath": "/",

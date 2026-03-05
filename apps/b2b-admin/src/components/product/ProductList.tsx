@@ -362,7 +362,7 @@ export function ProductList({
         const startIndex = Math.min(oldIndex, newIndex);
         const endIndex = Math.max(oldIndex, newIndex);
 
-        for (let i = startIndex;i <= endIndex;i++) {
+        for (let i = startIndex; i <= endIndex; i++) {
           affectedItems.push({
             siteProductId: newProducts[i].siteProductId,
             sortOrder: i,

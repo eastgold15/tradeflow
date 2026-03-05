@@ -1,20 +1,20 @@
 "use client";
 
+import { AlertCircle, ImageIcon } from "lucide-react";
+import Image, { ImageProps as NextImageProps } from "next/image";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentMediaDetail } from "@/hooks/api/meida-hook";
 import { cn } from "@/lib/utils";
-import { AlertCircle, ImageIcon } from "lucide-react";
-import Image, { ImageProps as NextImageProps } from "next/image";
-import { useState, useEffect } from "react";
 
 // 定义组件接收的属性，继承 NextImageProps 并将 src 设为可选
 interface ImageProps extends Omit<NextImageProps, "src"> {
   imageId?: string | null | undefined; // 支持通过 ID 自动获取图片地址
-  src?: string;                         // 也支持直接传入 URL
-  aspectRatio?: string;                 // 控制容器比例 (如 aspect-video)
-  showSkeleton?: boolean;               // 是否启用骨架屏
-  keepSkeletonOnError?: boolean;        // 出错时是否继续显示骨架
-  containerClassName?: string;          // 专门给外层容器的样式
+  src?: string; // 也支持直接传入 URL
+  aspectRatio?: string; // 控制容器比例 (如 aspect-video)
+  showSkeleton?: boolean; // 是否启用骨架屏
+  keepSkeletonOnError?: boolean; // 出错时是否继续显示骨架
+  containerClassName?: string; // 专门给外层容器的样式
 }
 
 export const ImageComponent: React.FC<ImageProps> = ({
@@ -54,13 +54,15 @@ export const ImageComponent: React.FC<ImageProps> = ({
   // 3. 骨架屏显示逻辑
   const shouldShowSkeleton =
     showSkeleton &&
-    (isQueryLoading || (isImgLoading && !isError) || (isError && keepSkeletonOnError));
+    (isQueryLoading ||
+      (isImgLoading && !isError) ||
+      (isError && keepSkeletonOnError));
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden group bg-muted/20",
-        fill ? "h-full w-full" : "w-full h-auto", // 自动适配 fill 模式下的容器
+        "group relative overflow-hidden bg-muted/20",
+        fill ? "h-full w-full" : "h-auto w-full", // 自动适配 fill 模式下的容器
         aspectRatio,
         containerClassName
       )}
@@ -74,7 +76,7 @@ export const ImageComponent: React.FC<ImageProps> = ({
       {isError && !keepSkeletonOnError && (
         <div className="absolute inset-0 z-0 flex flex-col items-center justify-center bg-muted/10 text-muted-foreground">
           <AlertCircle className="h-6 w-6 opacity-40" />
-          <span className="text-[10px] mt-1">Load Failed</span>
+          <span className="mt-1 text-[10px]">Load Failed</span>
         </div>
       )}
 
@@ -83,26 +85,27 @@ export const ImageComponent: React.FC<ImageProps> = ({
       {finalSrc ? (
         <Image
           alt={alt || "image"}
-          src={finalSrc}
           fill={fill}
+          src={finalSrc}
           // 🌟 关键修复：当非 fill 模式时，提供默认宽度和高度
           // 这里的数字不代表最终显示大小，而是为了给 Next.js 提供比例参考
           {...(!fill && { width: 1920, height: 1080 })}
-
-          priority={priority}
-          sizes={sizes}
           className={cn(
             "transition-all duration-700 ease-in-out",
             // 🌟 重点：非 fill 模式必须配合 relative，否则 h-auto 会失效
-            fill ? "object-cover h-full w-full" : "h-auto w-full relative block",
+            fill
+              ? "h-full w-full object-cover"
+              : "relative block h-auto w-full",
             isImgLoading || isError ? "opacity-0" : "opacity-100",
             className
           )}
-          onLoad={() => setIsImgLoading(false)}
           onError={() => {
             setIsImgLoading(false);
             setIsError(true);
           }}
+          onLoad={() => setIsImgLoading(false)}
+          priority={priority}
+          sizes={sizes}
           {...restProps}
         />
       ) : (
@@ -112,9 +115,7 @@ export const ImageComponent: React.FC<ImageProps> = ({
             <ImageIcon className="h-8 w-8 opacity-20" />
           </div>
         )
-      )
-      }
-
+      )}
     </div>
   );
 };

@@ -172,10 +172,14 @@ export function CreateSKUModal({
     fields.forEach((_, index) => {
       if (batchPrice !== null) form.setValue(`skus.${index}.price`, batchPrice);
       if (batchStock !== null) form.setValue(`skus.${index}.stock`, batchStock);
-      if (batchWeight !== null) form.setValue(`skus.${index}.weight`, batchWeight);
-      if (batchVolume !== null) form.setValue(`skus.${index}.volume`, batchVolume);
-      if (batchMarketPrice !== null) form.setValue(`skus.${index}.marketPrice`, batchMarketPrice);
-      if (batchCostPrice !== null) form.setValue(`skus.${index}.costPrice`, batchCostPrice);
+      if (batchWeight !== null)
+        form.setValue(`skus.${index}.weight`, batchWeight);
+      if (batchVolume !== null)
+        form.setValue(`skus.${index}.volume`, batchVolume);
+      if (batchMarketPrice !== null)
+        form.setValue(`skus.${index}.marketPrice`, batchMarketPrice);
+      if (batchCostPrice !== null)
+        form.setValue(`skus.${index}.costPrice`, batchCostPrice);
     });
 
     // --- 新增：应用后切换回列表页 ---
@@ -288,8 +292,8 @@ export function CreateSKUModal({
 
             {/* === 2. 规格生成器区域 === */}
             {selectedProductId &&
-              currentProduct?.specs &&
-              currentProduct.specs.length > 0 ? (
+            currentProduct?.specs &&
+            currentProduct.specs.length > 0 ? (
               <div className="rounded-lg border bg-slate-50 p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="font-semibold text-sm">规格生成器</h3>
@@ -360,8 +364,8 @@ export function CreateSKUModal({
                 {/* Tabs：列表视图 | 批量设置 */}
                 <Tabs
                   className="w-full"
-                  value={activeTab}
                   onValueChange={setActiveTab}
+                  value={activeTab}
                 >
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="list">列表视图</TabsTrigger>
@@ -379,9 +383,7 @@ export function CreateSKUModal({
                               <TableHead key={spec.key}>{spec.label}</TableHead>
                             ))}
                             <TableHead className="w-25">零售价</TableHead>
-                            <TableHead className="w-25">
-                              批发价 *
-                            </TableHead>
+                            <TableHead className="w-25">批发价 *</TableHead>
                             <TableHead className="w-25">出厂价</TableHead>
                             <TableHead className="w-[80px]">库存 *</TableHead>
                             <TableHead className="w-[80px]">重量</TableHead>
@@ -492,7 +494,7 @@ export function CreateSKUModal({
                                       onChange={(e) =>
                                         field.onChange(
                                           Number.parseInt(e.target.value, 10) ||
-                                          0
+                                            0
                                         )
                                       }
                                       type="number"
@@ -578,8 +580,6 @@ export function CreateSKUModal({
                     <div className="rounded-lg border bg-slate-50 p-4">
                       <h4 className="mb-4 font-medium text-sm">批量设置属性</h4>
                       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-
-
                         {/* 零售价 */}
                         <div className="space-y-2">
                           <label className="text-muted-foreground text-xs">

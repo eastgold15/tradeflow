@@ -1,13 +1,16 @@
 import { HttpError } from "@pori15/logixlysia";
 import Elysia from "elysia";
-import { type db, dbPlugin } from "../db/connection";
 import { siteInfoCache } from "@/lib/cache/domain-cache";
+import { type db, dbPlugin } from "../db/connection";
 
 /**
  * 规范化域名
  */
 const normalizeDomain = (h: string) =>
-  h.split(":")[0].toLowerCase().replace(/^www\./, "");
+  h
+    .split(":")[0]
+    .toLowerCase()
+    .replace(/^www\./, "");
 
 /**
  * 站点中间件 - 根据域名查找站点ID并注入上下文
@@ -31,12 +34,16 @@ export const siteMiddleware = new Elysia({ name: "site-middleware" })
     }
 
     // 3. 本地开发环境兜底（只用于本地开发）
-    const isLocalhost = domain === "localhost" || domain === "127.0.0.1" || !domain;
-    const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+    const isLocalhost =
+      domain === "localhost" || domain === "127.0.0.1" || !domain;
+    const isDev =
+      process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
     if (isLocalhost && isDev) {
       domain = normalizeDomain(process.env.DOMAIN || "");
       if (isDev) {
-        console.log(`[SiteMiddleware] Localhost detected, using DOMAIN from env: "${domain}"`);
+        console.log(
+          `[SiteMiddleware] Localhost detected, using DOMAIN from env: "${domain}"`
+        );
       }
     }
 
@@ -45,7 +52,9 @@ export const siteMiddleware = new Elysia({ name: "site-middleware" })
       throw new HttpError.NotFound("Domain configuration missing");
     }
 
-    const site = await siteInfoCache.getOrFetch(domain, () => getSite(domain, db));
+    const site = await siteInfoCache.getOrFetch(domain, () =>
+      getSite(domain, db)
+    );
     return { site, domain };
   })
   .as("global");
@@ -56,13 +65,15 @@ export const siteMiddleware = new Elysia({ name: "site-middleware" })
 async function getSite(domain: string, db: DBtype) {
   const res = await db.query.siteTable.findFirst({
     where: {
-      domain
-    }
+      domain,
+    },
   });
 
   if (!res) {
     console.error(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
-    throw new HttpError.NotFound(`[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`);
+    throw new HttpError.NotFound(
+      `[SiteMiddleware] 数据库中找不到匹配的域名记录: "${domain}"`
+    );
   }
 
   return res;

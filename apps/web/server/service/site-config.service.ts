@@ -1,6 +1,6 @@
 import { SiteConfigContract } from "@repo/contract";
-import { ServiceContext } from "~/middleware/site";
 import { siteConfigCache } from "@/lib/cache/domain-cache";
+import { ServiceContext } from "~/middleware/site";
 
 export class SiteConfigService {
   public async list(

@@ -1,5 +1,5 @@
-import type { ServiceContext } from "~/middleware/site";
 import { adCache } from "@/lib/cache/domain-cache";
+import type { ServiceContext } from "~/middleware/site";
 
 export class AdService {
   // 💡 注意：一定要接收 context (包含 db 和 siteId)
@@ -12,7 +12,7 @@ export class AdService {
           startDate: { lte: now },
           endDate: { gte: now },
           siteId: ctx.site.id,
-        }
+        },
       });
     });
   }

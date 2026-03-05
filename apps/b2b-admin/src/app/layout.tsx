@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import { Providers } from "@/providers/query-provider";
 import "./globals.css";
 
@@ -12,7 +12,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-white font-sans text-black antialiased" suppressHydrationWarning>
+      <body
+        className="bg-white font-sans text-black antialiased"
+        suppressHydrationWarning
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

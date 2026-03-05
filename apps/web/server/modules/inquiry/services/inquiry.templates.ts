@@ -4,7 +4,7 @@
  */
 
 import type { InquiryWithItems } from "~/service/inquiry.service";
-import { EmailTemplate, EmailAttachment } from "~/utils/email/email.types";
+import { EmailAttachment, EmailTemplate } from "~/utils/email/email.types";
 
 // 🔧 从邮箱前缀提取客户名称
 const extractUsernameFromEmail = (email: string): string => {
@@ -30,8 +30,8 @@ export function createCustomerInquiryTemplate(
   inquiryNumber: string,
   productName: string
 ): EmailTemplate {
-
-  const displayName = inquiryData.customerName || extractUsernameFromEmail(inquiryData.email);
+  const displayName =
+    inquiryData.customerName || extractUsernameFromEmail(inquiryData.email);
 
   const subject = `Inquiry Confirmation - Ref: ${inquiryNumber} - DONG QI FOOTWEAR`;
 
@@ -142,15 +142,21 @@ export function createSalesInquiryTemplate(
       ? `<div style="margin-top: 15px; font-size: 13px; color: #666;">
           <strong>Related/Recommended Factories:</strong>
           ${factories
-        .slice(1)
-        .map((f) => `<span style="margin-right:10px;">• ${f.name}</span>`)
-        .join("")}
+            .slice(1)
+            .map((f) => `<span style="margin-right:10px;">• ${f.name}</span>`)
+            .join("")}
          </div>`
       : "";
 
   const items = inquiryData
     .items!.map(
-      (item: { productName: any; productDescription: any; skuQuantity: any; skuPrice: any; customerRequirements: any; }) => `
+      (item: {
+        productName: any;
+        productDescription: any;
+        skuQuantity: any;
+        skuPrice: any;
+        customerRequirements: any;
+      }) => `
     <tr>
       <td style="padding: 12px; border: 1px solid #ddd; background-color: #f8f9fa; font-weight: bold;">${item.productName}</td>
       <td style="padding: 12px; border: 1px solid #ddd;">${item.productDescription || "N/A"}</td>
@@ -200,11 +206,11 @@ export function createSalesInquiryTemplate(
     <div style="background-color: #f8f9fa; padding: 25px; border-radius: 6px; margin-top: 30px; border: 1px solid #eee;">
       <h4 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">👤 </h4>
       <table style="width: 100%; font-size: 14px; color: #444; line-height: 2;">
-        ${inquiryData.customerName || displayName ? `<tr><td style="width: 120px; font-weight: bold;">Contact Name:</td><td>${inquiryData.customerName || displayName}</td></tr>` : ''}
-        ${inquiryData.customerCompany ? `<tr><td style="font-weight: bold;">Company:</td><td>${inquiryData.customerCompany}</td></tr>` : ''}
-        ${inquiryData.customerEmail ? `<tr><td style="font-weight: bold;">Email:</td><td><a href="mailto:${inquiryData.customerEmail}" style="color: #4ca1af;">${inquiryData.customerEmail}</a></td></tr>` : ''}
-        ${inquiryData.customerPhone ? `<tr><td style="font-weight: bold;">Phone:</td><td>${inquiryData.customerPhone}</td></tr>` : ''}
-        ${inquiryData.customerWhatsapp ? `<tr><td style="font-weight: bold;">WhatsApp:</td><td>${inquiryData.customerWhatsapp}</td></tr>` : ''}
+        ${inquiryData.customerName || displayName ? `<tr><td style="width: 120px; font-weight: bold;">Contact Name:</td><td>${inquiryData.customerName || displayName}</td></tr>` : ""}
+        ${inquiryData.customerCompany ? `<tr><td style="font-weight: bold;">Company:</td><td>${inquiryData.customerCompany}</td></tr>` : ""}
+        ${inquiryData.customerEmail ? `<tr><td style="font-weight: bold;">Email:</td><td><a href="mailto:${inquiryData.customerEmail}" style="color: #4ca1af;">${inquiryData.customerEmail}</a></td></tr>` : ""}
+        ${inquiryData.customerPhone ? `<tr><td style="font-weight: bold;">Phone:</td><td>${inquiryData.customerPhone}</td></tr>` : ""}
+        ${inquiryData.customerWhatsapp ? `<tr><td style="font-weight: bold;">WhatsApp:</td><td>${inquiryData.customerWhatsapp}</td></tr>` : ""}
       </table>
     </div>
 

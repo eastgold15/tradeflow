@@ -1,9 +1,8 @@
+import { SiteConfigContract } from "@repo/contract";
 import { Elysia, t } from "elysia";
 import { dbPlugin } from "~/db/connection";
 import { authGuardMid } from "~/middleware/auth";
-
 import { SiteConfigService } from "../services/site-config.service";
-import { SiteConfigContract } from "@repo/contract";
 
 const siteConfigService = new SiteConfigService();
 

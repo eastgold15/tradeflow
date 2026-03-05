@@ -1,7 +1,7 @@
-import { getSiteByDomain, normalizeDomain } from "@/lib/site";
-import { NextResponse } from "next/server";
-import { db } from "~/db/connection";
 import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import { getSiteByDomain, normalizeDomain } from "@/lib/site";
+import { db } from "~/db/connection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,7 +67,13 @@ export async function GET() {
     where: { siteId: site.id, isActive: true },
   });
 
-  console.log("[sitemap] Found", products.length, "products and", categories.length, "categories");
+  console.log(
+    "[sitemap] Found",
+    products.length,
+    "products and",
+    categories.length,
+    "categories"
+  );
 
   // 生成 XML
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -81,24 +87,31 @@ export async function GET() {
   </url>
 
   <!-- 产品页面 (${products.length} 个) -->
-  ${products.map((p) => `
+  ${products
+    .map(
+      (p) => `
   <url>
     <loc>${baseUrl}/product/${p.slug || p.id}</loc>
     <lastmod>${p.product?.updatedAt || p.updatedAt}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-  </url>`).join("")}
+  </url>`
+    )
+    .join("")}
 
   <!-- 分类页面 (${categories.filter((c) => c.slug).length} 个) -->
   ${categories
-      .filter((c) => c.slug)
-      .map((c) => `
+    .filter((c) => c.slug)
+    .map(
+      (c) => `
   <url>
     <loc>${baseUrl}/category${c.slug}</loc>
     <lastmod>${c.updatedAt}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`).join("")}
+  </url>`
+    )
+    .join("")}
 
   <!-- 搜索页面 -->
   <url>

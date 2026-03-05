@@ -13,7 +13,7 @@ export const SITE_CONFIG_KEY_ENUM = {
   SITE_ERWEIMA: "site_erweima",
 
   // ICP 备案信息
-  BEIAN_INFO: "beian_info",              // ICP 备案号
+  BEIAN_INFO: "beian_info", // ICP 备案号
 
   // 页面内容配置
   PAGE_ABOUT_CONTENT: "page_about_content",

@@ -12,8 +12,7 @@ import {
   createInquiryAttachment,
   createSalesInquiryTemplate,
 } from "../../../modules/inquiry/services/inquiry.templates";
-import { EmailAttachment, resendEmailService, sendEmailViaResend } from "./email-resend";
-
+import { sendEmailViaResend } from "./email-resend";
 
 /**
  * 📧 发送客户询价确认邮件（使用 Resend）
@@ -89,8 +88,10 @@ export async function sendSalesInquiryEmailViaResend(
     bcc: bccEmails.length > 0 ? bccEmails : undefined,
     template: {
       ...template,
-      attachments: excelBuffer ? [createInquiryAttachment(inquiryNumber, excelBuffer)] : undefined
-    }
+      attachments: excelBuffer
+        ? [createInquiryAttachment(inquiryNumber, excelBuffer)]
+        : undefined,
+    },
   });
 
   return result;
@@ -134,7 +135,9 @@ export async function sendInquiryEmailPackageViaResend(params: {
   excelBuffer?: Buffer;
 }) {
   const results = {
-    customerEmail: null as Awaited<ReturnType<typeof sendEmailViaResend>> | null,
+    customerEmail: null as Awaited<
+      ReturnType<typeof sendEmailViaResend>
+    > | null,
     salesEmail: null as Awaited<ReturnType<typeof sendEmailViaResend>> | null,
   };
 

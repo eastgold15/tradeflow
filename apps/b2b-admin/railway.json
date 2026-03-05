@@ -3,10 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "apps/b2b-admin/Dockerfile",
-    "watchPaths": [
-      "apps/b2b-admin/**",
-      "packages/contract/**"
-    ]
+    "watchPaths": ["apps/b2b-admin/**", "packages/contract/**"]
   },
   "deploy": {
     "healthcheckPath": "/",

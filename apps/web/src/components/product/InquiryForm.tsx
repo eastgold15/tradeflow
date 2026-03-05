@@ -27,7 +27,7 @@ export const inquirySchema = z
   })
   .refine((data) => data.phone || data.email || data.whatsapp, {
     message: "Please provide at least one contact method",
-    path: ['phone'], // 错误信息显示在 email 下方，或者你可以显示在顶层
+    path: ["phone"], // 错误信息显示在 email 下方，或者你可以显示在顶层
   });
 
 export type InquiryFormValues = z.infer<typeof inquirySchema>;
@@ -58,7 +58,6 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
   return (
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-
         {/* Company Field */}
         <FormField
           control={form.control}
@@ -98,7 +97,7 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
 
         {/* Contact Group */}
         <div className="space-y-4 border-gray-100 border-t pt-4">
-          <p className="font-bold text-[10px] text-gray-400  tracking-wider">
+          <p className="font-bold text-[10px] text-gray-400 tracking-wider">
             Contact (Provide at least one)
           </p>
 
@@ -140,7 +139,6 @@ export function InquiryForm({ onSubmit, defaultValues }: InquiryFormProps) {
               </FormItem>
             )}
           />
-
         </div>
 
         {/* Remarks */}

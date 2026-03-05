@@ -2,7 +2,12 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, value, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  type,
+  value,
+  ...props
+}: React.ComponentProps<"input">) {
   // 将 null 转换为 undefined，防止 React 控制组件警告
   const safeValue = value === null ? undefined : value;
 

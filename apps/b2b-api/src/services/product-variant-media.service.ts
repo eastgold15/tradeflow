@@ -41,7 +41,9 @@ export class ProductVariantMediaService {
         .limit(1);
 
       if (!product) {
-        throw new HttpError.NotFound(`Product (ID: ${productId})：不存在或无权操作`);
+        throw new HttpError.NotFound(
+          `Product (ID: ${productId})：不存在或无权操作`
+        );
       }
 
       // 2. 删除该产品+属性值的所有旧图片
@@ -360,7 +362,9 @@ export class ProductVariantMediaService {
     // 1. 识别颜色属性
     const colorAttr = await this.identifyColorAttribute(productId, ctx);
     if (!colorAttr) {
-      throw new HttpError.BadRequest(`Product (ID: ${productId})：未配置颜色属性`);
+      throw new HttpError.BadRequest(
+        `Product (ID: ${productId})：未配置颜色属性`
+      );
     }
 
     // 2. 查询该颜色属性的所有可选值

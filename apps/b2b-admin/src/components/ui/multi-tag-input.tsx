@@ -81,9 +81,11 @@ export function MultiTagInput({
   };
 
   // 判断是否全选
-  const isAllSelected = options.length > 0 && options.every((option) => value.includes(option));
+  const isAllSelected =
+    options.length > 0 && options.every((option) => value.includes(option));
   // 判断是否部分选中
-  const isPartiallySelected = options.some((option) => value.includes(option)) && !isAllSelected;
+  const isPartiallySelected =
+    options.some((option) => value.includes(option)) && !isAllSelected;
 
   return (
     <div className="flex flex-col gap-2">
@@ -95,19 +97,23 @@ export function MultiTagInput({
           "flex flex-wrap gap-2 rounded-md border bg-background p-2",
           // 1. 确保 max-height 是有效的数值（如 120px 或 max-h-32）
           // 2. 确保设置了 overflow-y-auto
-          "min-h-10 max-h-30 overflow-y-auto",
+          "max-h-30 min-h-10 overflow-y-auto"
         )}
       >
         {value.length === 0 ? (
-          <span className="text-muted-foreground text-sm flex items-center">
+          <span className="flex items-center text-muted-foreground text-sm">
             {placeholder}
           </span>
         ) : (
           value.map((tag) => (
-            <Badge className="gap-1 pr-1 shrink-0" key={tag} variant="secondary">
+            <Badge
+              className="shrink-0 gap-1 pr-1"
+              key={tag}
+              variant="secondary"
+            >
               {tag}
               <button
-                className="rounded-full p-0.5 hover:bg-destructive/20 transition-colors"
+                className="rounded-full p-0.5 transition-colors hover:bg-destructive/20"
                 onClick={() => handleRemoveTag(tag)}
                 type="button"
               >
@@ -171,7 +177,8 @@ export function MultiTagInput({
                       {isAllSelected ? "取消全选" : "全选"}
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      {value.filter((v) => options.includes(v)).length}/{options.length}
+                      {value.filter((v) => options.includes(v)).length}/
+                      {options.length}
                     </span>
                   </CommandItem>
                 </CommandGroup>

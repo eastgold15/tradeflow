@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import ProductDetail from "@/components/product/ProductDetail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProductDetailBySlug } from "@/hooks/api/site-product";
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function ProductPage() {
   const { slug } = useParams();

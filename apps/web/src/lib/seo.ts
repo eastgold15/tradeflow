@@ -6,8 +6,8 @@
 import { Metadata } from "next";
 
 import { db } from "~/db/connection";
-import { getSite } from "./site";
 import { seoConfigCache } from "./cache/domain-cache";
+import { getSite } from "./site";
 
 /**
  * 根据 code 获取 SEO 配置并生成 Metadata
@@ -23,14 +23,26 @@ export async function getSeoMetadata(
     const site = await getSite();
 
     if (!site) {
-      console.warn(`[SEO] No site found, using fallback metadata for code: "${code}"`);
+      console.warn(
+        `[SEO] No site found, using fallback metadata for code: "${code}"`
+      );
       return fallback || getDefaultMetadata();
     }
 
     // 2. 使用缓存
-    const metadata = await seoConfigCache.getOrFetch(site.id, code, async () => {
-      return fetchSeoMetadata(site.id, site.tenantId, site.domain, code, fallback);
-    });
+    const metadata = await seoConfigCache.getOrFetch(
+      site.id,
+      code,
+      async () => {
+        return fetchSeoMetadata(
+          site.id,
+          site.tenantId,
+          site.domain,
+          code,
+          fallback
+        );
+      }
+    );
 
     return metadata;
   } catch (error) {
@@ -50,7 +62,7 @@ async function fetchSeoMetadata(
   fallback?: Partial<Metadata>
 ): Promise<Metadata> {
   if (process.env.NODE_ENV !== "production") {
-    console.log(`[SEO] Fetching config:`, {
+    console.log("[SEO] Fetching config:", {
       siteId,
       tenantId,
       domain,
@@ -63,14 +75,14 @@ async function fetchSeoMetadata(
     where: {
       siteId,
       tenantId,
-      code: code,
+      code,
       isActive: true,
     },
   });
 
   if (!config) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn(`[SEO] No config found for`, {
+      console.warn("[SEO] No config found for", {
         siteId,
         tenantId,
         code,
@@ -81,7 +93,7 @@ async function fetchSeoMetadata(
   }
 
   if (process.env.NODE_ENV !== "production") {
-    console.log(`[SEO] Found config:`, {
+    console.log("[SEO] Found config:", {
       siteId,
       code: config.code,
       title: config.title,
@@ -94,7 +106,7 @@ async function fetchSeoMetadata(
   const metadataBase =
     process.env.NODE_ENV === "production"
       ? new URL(`https://${cleanDomain}`)
-      : new URL(`http://localhost:8001`);
+      : new URL("http://localhost:8001");
 
   // 构建完整的 Metadata
   const metadata: Metadata = {
@@ -111,12 +123,12 @@ async function fetchSeoMetadata(
     },
     twitter: config.twitterCard
       ? {
-        card: config.twitterCard as "summary" | "summary_large_image",
-        title: config.twitterTitle || config.title || undefined,
-        description:
-          config.twitterDescription || config.description || undefined,
-        images: config.twitterImage ? [config.twitterImage] : undefined,
-      }
+          card: config.twitterCard as "summary" | "summary_large_image",
+          title: config.twitterTitle || config.title || undefined,
+          description:
+            config.twitterDescription || config.description || undefined,
+          images: config.twitterImage ? [config.twitterImage] : undefined,
+        }
       : undefined,
     alternates: config.canonicalUrl
       ? { canonical: config.canonicalUrl }
@@ -135,7 +147,8 @@ export function getDefaultMetadata(): Metadata {
     title: "mo ren New Era Fashions - 专业服装出口供应商 | OEM/ODM定制",
     description:
       "HUAIXIN APPAREL CITY 提供女装、男装、礼服等全品类服装批发与定制服务，支持全球出口订单。",
-    keywords: "服装批发, 外贸服装, OEM定制, 服装厂家, 时尚女装, 男装批发, 礼服定制",
+    keywords:
+      "服装批发, 外贸服装, OEM定制, 服装厂家, 时尚女装, 男装批发, 礼服定制",
     openGraph: {
       title: "New Era Fashions - 全球服装供应商",
       description: "高品质服装出口，支持OEM/ODM，快速打样，一站式采购。",

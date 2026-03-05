@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import "./src/env.ts";
 import path from "node:path";
-import { env } from "./src/env.ts";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -45,7 +44,6 @@ const nextConfig: NextConfig = {
       destination: "https://b2b-api-production-1.up.railway.app/api/:path*",
     },
   ],
-
 };
 
 export default nextConfig;

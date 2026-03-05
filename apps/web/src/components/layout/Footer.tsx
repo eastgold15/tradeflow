@@ -1,13 +1,18 @@
-import { NewsletterForm } from "@/components/NewsletterForm";
 import { SITE_CONFIG_KEY_ENUM } from "@repo/contract";
 import Image from "next/image";
 import Link from "next/link";
-import { getSiteConfigValueForSSR, getSiteConfigJsonForSSR } from "@/lib/server-fetch";
+import { NewsletterForm } from "@/components/NewsletterForm";
+import {
+  getSiteConfigJsonForSSR,
+  getSiteConfigValueForSSR,
+} from "@/lib/server-fetch";
 
 // 获取 Footer 配置数据
 async function getFooterConfig(): Promise<FooterContent | null> {
   try {
-    const result = await getSiteConfigJsonForSSR<FooterContent>(SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT);
+    const result = await getSiteConfigJsonForSSR<FooterContent>(
+      SITE_CONFIG_KEY_ENUM.FOOTER_CONTENT
+    );
     console.log("[Footer] Footer config fetched from DB:", !!result);
     return result;
   } catch (error) {
@@ -22,24 +27,26 @@ async function getSiteConfigValue(key: string): Promise<string | null> {
     const value = await getSiteConfigValueForSSR(key);
     return value;
   } catch (error) {
-    console.error(`[Footer] Exception fetching config value for key: ${key}`, error);
+    console.error(
+      `[Footer] Exception fetching config value for key: ${key}`,
+      error
+    );
     return null;
   }
 }
 
-
 // 获取 Footer 配置数据
 async function getBeianConfig(): Promise<BEIAN_INFO | null> {
   try {
-    const result = await getSiteConfigJsonForSSR<BEIAN_INFO>(SITE_CONFIG_KEY_ENUM.BEIAN_INFO);
+    const result = await getSiteConfigJsonForSSR<BEIAN_INFO>(
+      SITE_CONFIG_KEY_ENUM.BEIAN_INFO
+    );
     return result;
   } catch (error) {
     console.error("[Footer] Exception fetching beian config:", error);
     return null;
   }
 }
-
-
 
 // Footer 列类型定义
 interface FooterLink {
@@ -71,14 +78,15 @@ interface BEIAN_INFO {
 
 export default async function Footer() {
   // 并行获取所有配置数据
-  const [footerContent, copyright, phone, email, qrCode, beianConfig] = await Promise.all([
-    getFooterConfig(),
-    getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_COPYRIGHT),
-    getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_PHONE),
-    getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_EMAIL),
-    getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_ERWEIMA),
-    getBeianConfig(),
-  ]);
+  const [footerContent, copyright, phone, email, qrCode, beianConfig] =
+    await Promise.all([
+      getFooterConfig(),
+      getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_COPYRIGHT),
+      getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_PHONE),
+      getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_EMAIL),
+      getSiteConfigValue(SITE_CONFIG_KEY_ENUM.SITE_ERWEIMA),
+      getBeianConfig(),
+    ]);
 
   const columns = footerContent?.columns || [];
 
@@ -127,27 +135,24 @@ export default async function Footer() {
                     // </Link>
 
                     <Link
-                      key={socialIndex}
-                      href={social.href}
                       className="group flex cursor-pointer items-center justify-center"
+                      href={social.href}
+                      key={socialIndex}
                     >
                       <span
-                        className="block w-6 h-6 bg-gray-700 transition-colors group-hover:bg-black"
+                        className="block h-6 w-6 bg-gray-700 transition-colors group-hover:bg-black"
                         style={{
                           // 直接引用 Iconify 的公开 API 地址作为遮罩
-                          maskImage: `url('https://api.iconify.design/${social.icon.replace('--', '/')}.svg')`,
-                          WebkitMaskImage: `url('https://api.iconify.design/${social.icon.replace('--', '/')}.svg')`,
-                          maskRepeat: 'no-repeat',
-                          maskSize: '100% 100%'
+                          maskImage: `url('https://api.iconify.design/${social.icon.replace("--", "/")}.svg')`,
+                          WebkitMaskImage: `url('https://api.iconify.design/${social.icon.replace("--", "/")}.svg')`,
+                          maskRepeat: "no-repeat",
+                          maskSize: "100% 100%",
                         }}
                       />
                     </Link>
                   ))}
                 </div>
               )}
-
-
-
             </div>
           ))}
 
@@ -185,14 +190,22 @@ export default async function Footer() {
               {/* 备案信息 - 放在二维码下面 */}
               {beianConfig && (
                 <div className="flex flex-col items-center gap-1 text-gray-500">
-                  {beianConfig.icp && <span className="text-[10px]">ICP备案号: {beianConfig.icp}</span>}
-                  {beianConfig.police && <span className="text-[10px]">公安备案号: {beianConfig.police}</span>}
+                  {beianConfig.icp && (
+                    <span className="text-[10px]">
+                      ICP备案号: {beianConfig.icp}
+                    </span>
+                  )}
+                  {beianConfig.police && (
+                    <span className="text-[10px]">
+                      公安备案号: {beianConfig.police}
+                    </span>
+                  )}
                   {beianConfig.link && (
                     <a
+                      className="text-[10px] text-blue-400 transition-colors hover:text-blue-500"
                       href={beianConfig.link}
-                      target="_blank"
                       rel="nofollow"
-                      className="text-blue-400 hover:text-blue-500 transition-colors text-[10px]"
+                      target="_blank"
                     >
                       备案信息
                     </a>
@@ -206,7 +219,7 @@ export default async function Footer() {
               {/* WhatsApp */}
               {phone && (
                 <span className="flex items-center">
-                  <div className="icon-[ic--baseline-whatsapp] text-green-500 text-2xl mr-2" />
+                  <div className="icon-[ic--baseline-whatsapp] mr-2 text-2xl text-green-500" />
                   WhatsApp +86 {phone}
                 </span>
               )}

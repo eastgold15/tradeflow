@@ -37,7 +37,7 @@ const Shop: React.FC<ShopProps> = ({ onProductSelect }) => {
   const products = data.items || [];
 
   return (
-    <div className="flex h-150 md:h-full w-full flex-col items-center justify-center bg-white p-4 md:p-3">
+    <div className="flex h-150 w-full flex-col items-center justify-center bg-white p-4 md:h-full md:p-3">
       <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-x-3 gap-y-4">
         {products.slice(0, 4).map((product) => (
           <div

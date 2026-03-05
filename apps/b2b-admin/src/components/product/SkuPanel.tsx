@@ -136,7 +136,9 @@ export function SkuPanel({
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">¥{sku.marketPrice}</TableCell>
+                <TableCell className="font-medium">
+                  ¥{sku.marketPrice}
+                </TableCell>
                 <TableCell className="font-medium">¥{sku.price}</TableCell>
                 <TableCell className="font-medium">¥{sku.costPrice}</TableCell>
                 <TableCell>

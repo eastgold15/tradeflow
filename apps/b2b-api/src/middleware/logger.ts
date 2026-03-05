@@ -34,7 +34,7 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" })
           problemJson: {
             typeBaseUrl: "https://gin-shopping.com",
           },
-          verboseErrorLogging: true
+          verboseErrorLogging: true,
         },
       },
     })

@@ -168,7 +168,6 @@ export function CreateTemplateModal({
 
   // 提交表单
   const onSubmit = async (data: TemplateFormValues) => {
-
     const submitData = {
       name: data.name.trim(),
       masterCategoryId: data.masterCategoryId,
@@ -182,8 +181,8 @@ export function CreateTemplateModal({
         value: f.value,
         ...(f.options &&
           f.options.length > 0 && {
-          options: f.options,
-        }),
+            options: f.options,
+          }),
       })),
     };
 
@@ -200,7 +199,6 @@ export function CreateTemplateModal({
 
     onSuccess?.();
     handleOpenChange(false);
-
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -543,14 +541,19 @@ function TemplateFieldItem({
                             className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             onChange={(e) => {
                               const text = e.target.value;
-                              const lines = text.split("\n").map((s) => s.trim()).filter(Boolean);
+                              const lines = text
+                                .split("\n")
+                                .map((s) => s.trim())
+                                .filter(Boolean);
 
                               // 获取当前的 options 状态，用于保留已有的 UUID
                               const currentOptions = options || [];
 
                               const newOptions = lines.map((line) => {
                                 // 尝试在现有 options 中找匹配文字的项，保留其 UUID
-                                const existing = currentOptions.find((o: any) => o.value === line);
+                                const existing = currentOptions.find(
+                                  (o: any) => o.value === line
+                                );
                                 return {
                                   id: existing?.id, // 如果是新输入的文字，id 就是 undefined
                                   value: line,

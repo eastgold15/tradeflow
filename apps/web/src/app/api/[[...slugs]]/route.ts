@@ -14,9 +14,6 @@ process.on("uncaughtException", (error) => {
   console.error("❌ 未捕获的异常:", error);
 });
 
-
-
-
 /**
  * 使用 server.ts 中定义的服务器实例
  * 设置 /api 前缀以匹配路由路径
@@ -57,13 +54,12 @@ const app = new Elysia({ name: "app", prefix: "/api" })
   // 自动挂载所有控制器（包括自定义和生成的）
   .use(appRouter);
 
-
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const path = url.pathname;
 
   // ✅ 让 Next.js 自己处理 sitemap 和 robots（不交给 Elysia）
-  if (path === '/api/sitemap-dynamic.xml' || path === '/robots.txt') {
+  if (path === "/api/sitemap-dynamic.xml" || path === "/robots.txt") {
     return NextResponse.next(); // 交给 Next.js 路由系统
   }
 

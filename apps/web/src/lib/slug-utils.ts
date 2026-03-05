@@ -8,16 +8,16 @@
  * 将商品名称转换为 URL 友好的格式
  */
 export function generateSlug(text: string): string {
-  if (!text) return '';
+  if (!text) return "";
 
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s\u4e00-\u9fa5-]/g, '') // 保留中文字符和连字符
-    .replace(/\s+/g, '-')                  // 空格替换为连字符
-    .replace(/-+/g, '-')                   // 多个连字符合并为一个
-    .replace(/^-+/, '')                    // 移除开头的连字符
-    .replace(/-+$/, '');                   // 移除结尾的连字符
+    .replace(/[^\w\s\u4e00-\u9fa5-]/g, "") // 保留中文字符和连字符
+    .replace(/\s+/g, "-") // 空格替换为连字符
+    .replace(/-+/g, "-") // 多个连字符合并为一个
+    .replace(/^-+/, "") // 移除开头的连字符
+    .replace(/-+$/, ""); // 移除结尾的连字符
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   templateTable,
   templateValueTable,
 } from "@repo/contract";
-import { asc, eq, inArray, like } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { Transaction } from "~/db/connection";
 import { type ServiceContext } from "../lib/type";
 
@@ -37,7 +37,11 @@ export class TemplateService {
             field;
 
           // 🔴 逻辑校验：只有选择类型的属性才能作为 SKU 规格
-          if (isSkuSpec && inputType !== "select" && inputType !== "multiselect") {
+          if (
+            isSkuSpec &&
+            inputType !== "select" &&
+            inputType !== "multiselect"
+          ) {
             throw new HttpError.BadRequest(
               `属性 [${key}] 校验失败：只有选择框类型（select/multiselect）才能设置为 SKU 规格`
             );
@@ -104,13 +108,13 @@ export class TemplateService {
           with: {
             values: {
               orderBy: {
-                sortOrder: "asc"
-              }
-            }
-          }
-        }
-      }
-    })
+                sortOrder: "asc",
+              },
+            },
+          },
+        },
+      },
+    });
     // 将数据库结构映射为 UI 需要的结构
     return templates.map((t) => ({
       id: t.id,
@@ -124,7 +128,8 @@ export class TemplateService {
         }));
 
         // 处理逻辑：根据 inputType 格式化输出
-        const isSelect = k.inputType === "select" || k.inputType === "multiselect";
+        const isSelect =
+          k.inputType === "select" || k.inputType === "multiselect";
 
         return {
           id: k.id,
@@ -135,7 +140,7 @@ export class TemplateService {
           // 如果是选择框，value 显示为逗号分隔的预览，否则取第一个值
           value: isSelect
             ? rawOptions.map((o) => o.value).join(", ")
-            : (rawOptions[0]?.value || ""),
+            : rawOptions[0]?.value || "",
           options: isSelect ? rawOptions : [],
         };
       }),
@@ -208,7 +213,11 @@ export class TemplateService {
           } = field;
 
           // 🔴 逻辑校验：只有选择类型的属性才能作为 SKU 规格
-          if (isSkuSpec && inputType !== "select" && inputType !== "multiselect") {
+          if (
+            isSkuSpec &&
+            inputType !== "select" &&
+            inputType !== "multiselect"
+          ) {
             throw new HttpError.BadRequest(
               `属性 [${key}] 校验失败：只有选择框类型（select/multiselect）才能设置为 SKU 规格`
             );
@@ -332,10 +341,10 @@ export class TemplateService {
   }
 
   /**
-     * 增量更新模板值：更新已有、删除多余、插入新增
-     * 采用“三桶”策略：Delete 桶, Update 桶, Insert 桶
-     * 🔥 兜底逻辑：即使前端没传 ID，但 value 字符串完全一致，也会自动匹配到现有的 UUID
-     */
+   * 增量更新模板值：更新已有、删除多余、插入新增
+   * 采用“三桶”策略：Delete 桶, Update 桶, Insert 桶
+   * 🔥 兜底逻辑：即使前端没传 ID，但 value 字符串完全一致，也会自动匹配到现有的 UUID
+   */
   private async upsertTemplateValues(
     keyId: string,
     field: any,
@@ -350,17 +359,19 @@ export class TemplateService {
       .where(eq(templateValueTable.templateKeyId, keyId));
 
     // 建立映射表，方便快速查找
-    const dbValueMap = new Map(dbValues.map(v => [v.id, v]));
-    const dbContentToIdMap = new Map(dbValues.map(v => [v.value, v.id]));
+    const dbValueMap = new Map(dbValues.map((v) => [v.id, v]));
+    const dbContentToIdMap = new Map(dbValues.map((v) => [v.value, v.id]));
 
     // 2. 准备三个操作集合
     const toDeleteIds: string[] = [];
-    const toUpdate: { id: string, value: string, sortOrder: number }[] = [];
+    const toUpdate: { id: string; value: string; sortOrder: number }[] = [];
     const toInsert: any[] = [];
 
     // 计算哪些 ID 应该被删除（数据库有，但提交的 options 里没出现的 ID）
-    const submittedIds = new Set(incomingOptions.map((o: any) => o.id).filter(Boolean));
-    dbValues.forEach(v => {
+    const submittedIds = new Set(
+      incomingOptions.map((o: any) => o.id).filter(Boolean)
+    );
+    dbValues.forEach((v) => {
       if (!submittedIds.has(v.id)) {
         toDeleteIds.push(v.id);
       }
@@ -369,7 +380,11 @@ export class TemplateService {
     // 3. 处理前端提交的数据
     for (const [index, opt] of incomingOptions.entries()) {
       // 增加正则校验，确保 opt.id 看起来像一个真正的 UUID
-      const isRealUUID = opt.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opt.id);
+      const isRealUUID =
+        opt.id &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          opt.id
+        );
 
       if (isRealUUID && dbValueMap.has(opt.id)) {
         // 情况 A: 正常的更新（带 ID 且数据库存在）

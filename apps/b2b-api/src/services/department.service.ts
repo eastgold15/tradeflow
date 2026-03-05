@@ -11,7 +11,6 @@ import { eq, inArray } from "drizzle-orm";
 import { auth } from "~/lib/auth";
 import { type ServiceContext } from "../lib/type";
 
-
 export class DepartmentService {
   public async create(body: DepartmentContract["Create"], ctx: ServiceContext) {
     const insertData = {
@@ -19,10 +18,10 @@ export class DepartmentService {
       // 自动注入租户信息
       ...(ctx.user
         ? {
-          tenantId: ctx.user.context.tenantId!,
-          createdBy: ctx.user.id,
-          deptId: ctx.currentDeptId,
-        }
+            tenantId: ctx.user.context.tenantId!,
+            createdBy: ctx.user.id,
+            deptId: ctx.currentDeptId,
+          }
         : {}),
     };
     const [res] = await ctx.db
@@ -55,7 +54,9 @@ export class DepartmentService {
         },
       });
       if (!dept) {
-        throw new HttpError.NotFound(`Department (ID: ${currentDeptId})：不存在`);
+        throw new HttpError.NotFound(
+          `Department (ID: ${currentDeptId})：不存在`
+        );
       }
       const allRelatedIds = [
         currentDeptId, // 包含自己
@@ -98,7 +99,9 @@ export class DepartmentService {
       // 查找所有管理员（用于检测异常情况）
       const allManagers =
         dept.users?.filter((u) =>
-          u.roles?.some((r) => r.name === "工厂管理员" || r.name === "出口商管理员")
+          u.roles?.some(
+            (r) => r.name === "工厂管理员" || r.name === "出口商管理员"
+          )
         ) ?? [];
 
       // 业务规则：一个部门只能有一个管理员
@@ -115,11 +118,11 @@ export class DepartmentService {
         ...deptWithoutUsers,
         manager: manager
           ? {
-            id: manager.id,
-            name: manager.name,
-            email: manager.email,
-            phone: manager.phone,
-          }
+              id: manager.id,
+              name: manager.name,
+              email: manager.email,
+              phone: manager.phone,
+            }
           : null,
       };
     });
@@ -160,7 +163,9 @@ export class DepartmentService {
         where: { parentId: id },
       });
       if (children.length > 0) {
-        throw new HttpError.BadRequest(`Department (ID: ${id})：请先删除子部门`);
+        throw new HttpError.BadRequest(
+          `Department (ID: ${id})：请先删除子部门`
+        );
       }
 
       // 3. 删除该部门的所有用户（及用户角色关联）
@@ -221,12 +226,13 @@ export class DepartmentService {
     }
 
     // 查找所有管理员（用于检测异常情况）
-    const allManagers = department.users?.filter(
-      (user) =>
-        user.roles.some(
-          (role) => role.name === "工厂管理员" || role.name === "出口商管理员"
-        ) && user.isActive
-    ) ?? [];
+    const allManagers =
+      department.users?.filter(
+        (user) =>
+          user.roles.some(
+            (role) => role.name === "工厂管理员" || role.name === "出口商管理员"
+          ) && user.isActive
+      ) ?? [];
 
     console.log("筛选出的管理员数量:", allManagers.length);
 
@@ -243,11 +249,11 @@ export class DepartmentService {
       ...department,
       manager: manager
         ? {
-          id: manager.id,
-          name: manager.name,
-          email: manager.email,
-          phone: manager.phone,
-        }
+            id: manager.id,
+            name: manager.name,
+            email: manager.email,
+            phone: manager.phone,
+          }
         : null,
     };
   }
@@ -344,7 +350,8 @@ export class DepartmentService {
     console.log("新管理员创建完成，userId:", adminUserId);
 
     // 步骤3：根据部门类型分配角色给用户
-    const roleName = dept.category === "factory" ? "工厂管理员" : "出口商管理员";
+    const roleName =
+      dept.category === "factory" ? "工厂管理员" : "出口商管理员";
     const role = await db.query.roleTable.findFirst({
       where: {
         name: roleName,
@@ -363,7 +370,9 @@ export class DepartmentService {
         roleId: role.id,
       });
     } else {
-      throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
+      throw new HttpError.InternalServerError(
+        `角色 "${roleName}" 不存在，请联系管理员`
+      );
     }
 
     // 构造返回结果
@@ -419,7 +428,9 @@ export class DepartmentService {
       });
 
       if (!existingDept) {
-        throw new HttpError.NotFound(`Department (ID: ${departmentId})：不存在`);
+        throw new HttpError.NotFound(
+          `Department (ID: ${departmentId})：不存在`
+        );
       }
 
       // 2. 更新部门
@@ -502,9 +513,12 @@ export class DepartmentService {
           },
         });
         // 查找具有管理员角色的用户
-        targetUser = deptUsers.find((u) =>
-          u.roles.some((r) => r.name === "工厂管理员" || r.name === "出口商管理员")
-        ) ?? null;
+        targetUser =
+          deptUsers.find((u) =>
+            u.roles.some(
+              (r) => r.name === "工厂管理员" || r.name === "出口商管理员"
+            )
+          ) ?? null;
       }
 
       if (targetUser) {
@@ -587,7 +601,8 @@ export class DepartmentService {
       }
 
       // 步骤3：根据部门类型分配角色给用户
-      const roleName = dept.category === "factory" ? "工厂管理员" : "出口商管理员";
+      const roleName =
+        dept.category === "factory" ? "工厂管理员" : "出口商管理员";
       const role = await db.query.roleTable.findFirst({
         where: {
           name: roleName,
@@ -606,7 +621,9 @@ export class DepartmentService {
           roleId: role.id,
         });
       } else {
-        throw new HttpError.InternalServerError(`角色 "${roleName}" 不存在，请联系管理员`);
+        throw new HttpError.InternalServerError(
+          `角色 "${roleName}" 不存在，请联系管理员`
+        );
       }
     }
 

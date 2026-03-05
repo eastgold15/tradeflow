@@ -45,7 +45,9 @@ export async function getSite(): Promise<Site | null> {
     const domainHeader = headersList.get("x-site-domain");
 
     if (!domainHeader) {
-      console.error(`[Site] No x-site-domain header found. This should never happen in production.`);
+      console.error(
+        "[Site] No x-site-domain header found. This should never happen in production."
+      );
       return null;
     }
 
@@ -54,7 +56,7 @@ export async function getSite(): Promise<Site | null> {
     // 查询数据库获取站点信息
     const site = await db.query.siteTable.findFirst({
       where: {
-        domain: normalizedDomain
+        domain: normalizedDomain,
       },
     });
 
@@ -64,18 +66,18 @@ export async function getSite(): Promise<Site | null> {
     }
 
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[Site] Found site:`, {
+      console.log("[Site] Found site:", {
         id: site.id,
         name: site.name,
         domain: site.domain,
         tenantId: site.tenantId,
-        siteType: site.siteType
+        siteType: site.siteType,
       });
     }
 
     return site as Site;
   } catch (error) {
-    console.error(`[Site] Error getting site:`, error);
+    console.error("[Site] Error getting site:", error);
     return null;
   }
 }
@@ -89,7 +91,7 @@ export async function getSiteByDomain(domain: string): Promise<Site | null> {
 
     const site = await db.query.siteTable.findFirst({
       where: {
-        domain: normalizedDomain
+        domain: normalizedDomain,
       },
     });
 

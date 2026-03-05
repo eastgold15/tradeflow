@@ -5,9 +5,6 @@
  * 解决：直接从数据库读取，通过 next/headers 获取当前请求的域名信息
  */
 
-import { siteCategoryTable, siteConfigTable } from "@repo/contract";
-import { eq } from "drizzle-orm";
-
 import { db } from "~/db/connection";
 import { siteInfoCache } from "./cache/domain-cache";
 
@@ -15,7 +12,10 @@ import { siteInfoCache } from "./cache/domain-cache";
  * 规范化域名
  */
 const normalizeDomain = (h: string) =>
-  h.split(":")[0].toLowerCase().replace(/^www\./, "");
+  h
+    .split(":")[0]
+    .toLowerCase()
+    .replace(/^www\./, "");
 
 /**
  * 获取当前请求的站点信息
@@ -43,7 +43,9 @@ export async function getCurrentSite() {
     console.log("[server-fetch] Getting site for domain:", domain);
 
     // 从缓存或数据库获取站点信息
-    const site = await siteInfoCache.getOrFetch(domain, () => getSiteFromDb(domain));
+    const site = await siteInfoCache.getOrFetch(domain, () =>
+      getSiteFromDb(domain)
+    );
 
     return site;
   } catch (error) {
@@ -116,7 +118,11 @@ export async function getSiteCategoriesForSSR() {
     }
   }
 
-  console.log("[server-fetch] Returning", rootCategories.length, "root categories");
+  console.log(
+    "[server-fetch] Returning",
+    rootCategories.length,
+    "root categories"
+  );
   return rootCategories;
 }
 
@@ -135,11 +141,16 @@ export async function getSiteConfigValueForSSR(key: string) {
   const config = await db.query.siteConfigTable.findFirst({
     where: {
       key,
-      siteId: site.id,  // 🔥 关键：必须加上 siteId 过滤
+      siteId: site.id, // 🔥 关键：必须加上 siteId 过滤
     },
   });
 
-  console.log("[server-fetch] Config value for key:", key, "=", config?.value || "null");
+  console.log(
+    "[server-fetch] Config value for key:",
+    key,
+    "=",
+    config?.value || "null"
+  );
   return config?.value || null;
 }
 
@@ -147,7 +158,9 @@ export async function getSiteConfigValueForSSR(key: string) {
  * 获取站点 JSON 配置
  * Server Component 安全
  */
-export async function getSiteConfigJsonForSSR<T = any>(key: string): Promise<T | null> {
+export async function getSiteConfigJsonForSSR<T = any>(
+  key: string
+): Promise<T | null> {
   const site = await getCurrentSite();
 
   if (!site) {
@@ -158,10 +171,15 @@ export async function getSiteConfigJsonForSSR<T = any>(key: string): Promise<T |
   const config = await db.query.siteConfigTable.findFirst({
     where: {
       key,
-      siteId: site.id,  // 🔥 关键：必须加上 siteId 过滤
+      siteId: site.id, // 🔥 关键：必须加上 siteId 过滤
     },
   });
 
-  console.log("[server-fetch] Config JSON for key:", key, "found:", !!config?.jsonValue);
-  return config?.jsonValue as T || null;
+  console.log(
+    "[server-fetch] Config JSON for key:",
+    key,
+    "found:",
+    !!config?.jsonValue
+  );
+  return (config?.jsonValue as T) || null;
 }

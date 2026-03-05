@@ -55,7 +55,10 @@ export class SkuService {
         )
         .limit(1);
 
-      if (!siteProduct) throw new HttpError.NotFound(`SiteProduct (ProductID: ${productId})：请先在当前站点创建商品`);
+      if (!siteProduct)
+        throw new HttpError.NotFound(
+          `SiteProduct (ProductID: ${productId})：请先在当前站点创建商品`
+        );
 
       // 3. 检查 SKU 编码重复 (在当前商品下)
       const skuCodes = skus.map((s) => s.skuCode);
@@ -196,8 +199,10 @@ export class SkuService {
         if (updateFields.weight) physicalUpdate.weight = updateFields.weight;
         if (updateFields.volume) physicalUpdate.volume = updateFields.volume;
         if (updateFields.price) physicalUpdate.price = updateFields.price; // 更新指导价
-        if (updateFields.marketPrice) physicalUpdate.marketPrice = updateFields.marketPrice; // 更新市场价
-        if (updateFields.costPrice) physicalUpdate.costPrice = updateFields.costPrice; // 更新成本价
+        if (updateFields.marketPrice)
+          physicalUpdate.marketPrice = updateFields.marketPrice; // 更新市场价
+        if (updateFields.costPrice)
+          physicalUpdate.costPrice = updateFields.costPrice; // 更新成本价
         if (updateFields.specJson)
           physicalUpdate.specJson = updateFields.specJson;
 
@@ -255,8 +260,10 @@ export class SkuService {
         // 准备更新数据
         const siteUpdateData: any = {};
         if (updateFields.price) siteUpdateData.price = updateFields.price;
-        if (updateFields.marketPrice) siteUpdateData.marketPrice = updateFields.marketPrice;
-        if (updateFields.costPrice) siteUpdateData.costPrice = updateFields.costPrice;
+        if (updateFields.marketPrice)
+          siteUpdateData.marketPrice = updateFields.marketPrice;
+        if (updateFields.costPrice)
+          siteUpdateData.costPrice = updateFields.costPrice;
         // 如果 body 里有 status 字段，可以映射为 isActive
         // if (updateFields.status !== undefined) siteUpdateData.isActive = updateFields.status === 1;
 
@@ -303,7 +310,9 @@ export class SkuService {
       .returning({ id: skuTable.id });
 
     if (deleted.length === 0) {
-      throw new HttpError.NotFound(`SKU (IDs: ${ids.join(", ")})：不存在或无权删除`);
+      throw new HttpError.NotFound(
+        `SKU (IDs: ${ids.join(", ")})：不存在或无权删除`
+      );
     }
 
     return {
@@ -443,7 +452,6 @@ export class SkuService {
         originalPrice: skuTable.price,
         marketPrice: skuTable.marketPrice,
         costPrice: skuTable.costPrice,
-
 
         // 上下架状态 (site_sku 控制)
         // 如果 site_sku 没记录，默认为"上架" (或者根据业务定为下架)

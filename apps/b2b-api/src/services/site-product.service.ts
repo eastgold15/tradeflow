@@ -77,7 +77,9 @@ export class SiteProductService {
           .limit(1);
 
         if (!existsProduct) {
-          throw new HttpError.NotFound(`Product (ID: ${productId})：商品池中未找到该商品`);
+          throw new HttpError.NotFound(
+            `Product (ID: ${productId})：商品池中未找到该商品`
+          );
         }
 
         // 收录时，默认使用原厂名称和描述

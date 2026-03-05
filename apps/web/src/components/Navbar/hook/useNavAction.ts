@@ -11,7 +11,7 @@ export const useNavAction = () => {
    */
   const getCategoryHref = useCallback((slug: string) => {
     // 移除前导斜杠，防止产生双斜杠
-    const cleanSlug = slug.startsWith('/') ? slug.substring(1) : slug;
+    const cleanSlug = slug.startsWith("/") ? slug.substring(1) : slug;
     return `/category/${cleanSlug}`;
   }, []);
 

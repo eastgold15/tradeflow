@@ -385,8 +385,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.templateKeyTable.id,
       to: r.templateValueTable.templateKeyId,
     }),
-
-
   },
 
   templateValueTable: {

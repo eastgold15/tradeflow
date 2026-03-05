@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
 import {
   AlertCircle,
   Building2,
@@ -13,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useMemo } from "react";
 import { Can } from "@/components/auth/Can";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotifications, useStatistics } from "@/hooks/api/statistics";

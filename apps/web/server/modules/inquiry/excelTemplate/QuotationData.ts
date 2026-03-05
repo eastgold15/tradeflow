@@ -27,15 +27,15 @@ export interface QuotationData {
   factoryAddr1: string;
   factoryAddr2?: string; // 设为可选
   factoryAddr3?: string; // 设为可选
-  factoryWeb1?: string;  // 设为可选
-  factoryWeb2?: string;  // 设为可选
-  factoryWeb3?: string;  // 设为可选
+  factoryWeb1?: string; // 设为可选
+  factoryWeb2?: string; // 设为可选
+  factoryWeb3?: string; // 设为可选
   factoryPhone: string;
 
   // 🔥 新增字段（兼容新模板）
-  factoryAddr?: string;    // FTY ADDR - 工厂地址（合并或单行显示）
-  fatoryWeb?: string;       // web - 工厂网站（注意模板拼写错误：fatoryWeb）
-  factoryEmail?: string;    // email - 工厂邮箱
+  factoryAddr?: string; // FTY ADDR - 工厂地址（合并或单行显示）
+  fatoryWeb?: string; // web - 工厂网站（注意模板拼写错误：fatoryWeb）
+  factoryEmail?: string; // email - 工厂邮箱
 
   // Client (客户)
   clientCompanyName: string;
@@ -54,15 +54,15 @@ export interface QuotationData {
   termsRemark1: string;
   termsTTL: number;
   termsUSD: number;
-  termsCode2?: string;   // 设为可选
-  termsDesc2?: string;   // 设为可选
-  termsUnits2?: string;  // 设为可选
-  termsUsd2?: string;    // 设为可选
+  termsCode2?: string; // 设为可选
+  termsDesc2?: string; // 设为可选
+  termsUnits2?: string; // 设为可选
+  termsUsd2?: string; // 设为可选
   termsRemark2?: string; // 设为可选
-  termsCode3?: string;   // 设为可选
-  termsDesc3?: string;   // 设为可选
-  termsUnits3?: string;  // 设为可选
-  termsUsd3?: string;    // 设为可选
+  termsCode3?: string; // 设为可选
+  termsDesc3?: string; // 设为可选
+  termsUnits3?: string; // 设为可选
+  termsUsd3?: string; // 设为可选
   termsRemark3?: string; // 设为可选
 
   // Bank Info (银行信息)

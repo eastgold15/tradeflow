@@ -8,7 +8,7 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" }).use(
   logixlysia({
     // Phase 1: Transform - 将原始错误映射为标准错误
     transform: (error) => {
-      console.log('[error]:', error)
+      console.log("[error]:", error);
 
       // 如果是数据库错误，进行映射
       if (isDatabaseError(error)) {
@@ -32,9 +32,8 @@ export const loggerPlugin = new Elysia({ name: "loggerPlugin" }).use(
         problemJson: {
           typeBaseUrl: "https://gin-shopping.com",
         },
-        verboseErrorLogging: true
+        verboseErrorLogging: true,
       },
-
     },
   })
 );

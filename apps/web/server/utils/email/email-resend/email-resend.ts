@@ -9,7 +9,11 @@
 
 import { CreateEmailOptions, Resend } from "resend";
 
-import type { EmailAttachment, EmailRequest, EmailResult, EmailTemplate } from "../email.types";
+import type {
+  EmailAttachment,
+  EmailRequest,
+  EmailResult,
+} from "../email.types";
 
 /**
  * Resend 邮件服务类
@@ -22,7 +26,9 @@ class ResendEmailService {
   constructor() {
     // 检查 Resend 是否已配置
     const resendApiKey = process.env.RESEND_API_KEY;
-    this.fromEmail = process.env.RESEND_FROM_EMAIL || "Dong Qi Footwear <sales@asiashoefactory.com>";
+    this.fromEmail =
+      process.env.RESEND_FROM_EMAIL ||
+      "Dong Qi Footwear <sales@asiashoefactory.com>";
 
     this.isConfigured = !!resendApiKey;
 
@@ -31,7 +37,9 @@ class ResendEmailService {
       console.log("[Resend] Resend 邮件服务已初始化");
     } else {
       this.resend = null;
-      console.warn("[Resend] Resend 邮件服务未配置，RESEND_API_KEY 环境变量未设置");
+      console.warn(
+        "[Resend] Resend 邮件服务未配置，RESEND_API_KEY 环境变量未设置"
+      );
     }
   }
 
@@ -66,11 +74,12 @@ class ResendEmailService {
     const { to, cc, bcc, template } = request;
 
     // 如果 Resend 未配置，使用控制台输出
-    if (!this.isConfigured || !this.resend) {
+    if (!(this.isConfigured && this.resend)) {
       console.log("=== Resend 邮件发送（开发模式/未配置） ===");
       console.log(`收件人: ${Array.isArray(to) ? to.join(", ") : to}`);
       if (cc) console.log(`抄送: ${Array.isArray(cc) ? cc.join(", ") : cc}`);
-      if (bcc) console.log(`密送: ${Array.isArray(bcc) ? bcc.join(", ") : bcc}`);
+      if (bcc)
+        console.log(`密送: ${Array.isArray(bcc) ? bcc.join(", ") : bcc}`);
       console.log(`主题: ${template.subject}`);
       console.log(`内容: ${template.text}`);
       if (template.attachments && template.attachments.length > 0) {
@@ -161,7 +170,7 @@ class ResendEmailService {
    * 验证 Resend 服务配置
    */
   async verifyConnection() {
-    if (!this.isConfigured || !this.resend) {
+    if (!(this.isConfigured && this.resend)) {
       console.log("[Resend] Resend 邮件服务未配置，跳过连接验证");
       return { success: true, devMode: true };
     }
@@ -207,7 +216,3 @@ export type {
   EmailResult,
   EmailTemplate,
 } from "../email.types";
-
-
-
-

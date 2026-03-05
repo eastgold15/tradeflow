@@ -144,7 +144,7 @@ export function MediaSelect({
 
           {/* 添加媒体按钮 */}
           {(!multiple && value.length === 0) ||
-            (multiple && value.length < effectiveMaxCount) ? (
+          (multiple && value.length < effectiveMaxCount) ? (
             <Button
               className="w-full"
               onClick={() => setDialogOpen(true)}
